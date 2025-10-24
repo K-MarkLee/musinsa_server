@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.payment.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -22,13 +22,13 @@ public class PaymentMethod extends BaseEntity {
     private Integer id;
     
     @Column(name = "payment_name", nullable = false, length = 50, unique = true)
-    private String paymentName;
-
+    private String paymentName; // 결제 수단명 (카드, 계좌이체 등)
+    
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
     
     /**
-     * 결제 수단 생성t
+     * 결제 수단 생성
      */
     public static PaymentMethod create(String paymentName) {
         PaymentMethod paymentMethod = new PaymentMethod();
@@ -36,14 +36,14 @@ public class PaymentMethod extends BaseEntity {
         paymentMethod.isActive = true;
         return paymentMethod;
     }
-
+    
     /**
      * 활성화
      */
     public void activate() {
         this.isActive = true;
     }
-
+    
     /**
      * 비활성화
      */

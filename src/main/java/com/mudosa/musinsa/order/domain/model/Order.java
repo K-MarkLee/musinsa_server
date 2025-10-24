@@ -1,12 +1,13 @@
 package com.mudosa.musinsa.order.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
-import com.mudosa.musinsa.common.vo.Money;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,44 +28,32 @@ public class Order extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId; // User 애그리거트 참조 (ID만)
     
-    @Column(name = "brand_id", nullable = false)
-    private Long brandId; // Brand 애그리거트 참조 (ID만)
-    
     @Column(name = "coupon_id")
     private Long couponId; // Coupon 애그리거트 참조 (ID만)
+    
+    @Column(name = "brand_id", nullable = false)
+    private Long brandId; // Brand 애그리거트 참조 (ID만)
     
     @Column(name = "order_status", nullable = false)
     private Integer orderStatus; // StatusCode FK
     
-    @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "total_amount"))
-    })
-    private Money totalAmount;
+    @Column(name = "order_no", nullable = false, length = 50, unique = true)
+    private String orderNo; // 외부 노출용 주문번호
     
-    @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "discount_amount"))
-    })
-    private Money discountAmount;
+    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalPrice; // 주문 총액 (할인 전)
     
-    @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "final_amount"))
-    })
-    private Money finalAmount;
+    @Column(name = "total_discount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalDiscount = BigDecimal.ZERO; // 총 할인 금액
     
-    @Column(name = "recipient_name", nullable = false, length = 50)
-    private String recipientName;
+    @Column(name = "final_payment_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal finalPaymentAmount; // 최종 결제 금액
     
-    @Column(name = "recipient_phone", nullable = false, length = 20)
-    private String recipientPhone;
+    @Column(name = "is_settleable", nullable = false)
+    private Boolean isSettleable = false; // 정산 가능 여부
     
-    @Column(name = "shipping_address", nullable = false)
-    private String shippingAddress;
-    
-    @Column(name = "shipping_request", length = 255)
-    private String shippingRequest;
+    @Column(name = "settled_at")
+    private LocalDateTime settledAt; // 정산 완료 일시
     
     // 주문 상품 (같은 애그리거트)
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -78,24 +67,21 @@ public class Order extends BaseEntity {
         Long brandId,
         Long couponId,
         Integer orderStatus,
-        Money totalAmount,
-        Money discountAmount,
-        Money finalAmount,
-        String recipientName,
-        String recipientPhone,
-        String shippingAddress
+        String orderNo,
+        BigDecimal totalPrice,
+        BigDecimal totalDiscount,
+        BigDecimal finalPaymentAmount
     ) {
         Order order = new Order();
         order.userId = userId;
         order.brandId = brandId;
         order.couponId = couponId;
         order.orderStatus = orderStatus;
-        order.totalAmount = totalAmount;
-        order.discountAmount = discountAmount;
-        order.finalAmount = finalAmount;
-        order.recipientName = recipientName;
-        order.recipientPhone = recipientPhone;
-        order.shippingAddress = shippingAddress;
+        order.orderNo = orderNo;
+        order.totalPrice = totalPrice;
+        order.totalDiscount = totalDiscount;
+        order.finalPaymentAmount = finalPaymentAmount;
+        order.isSettleable = false;
         return order;
     }
     
@@ -112,5 +98,22 @@ public class Order extends BaseEntity {
      */
     public void changeStatus(Integer newStatus) {
         this.orderStatus = newStatus;
+    }
+    
+    /**
+     * 정산 가능하도록 설정
+     */
+    public void markAsSettleable() {
+        this.isSettleable = true;
+    }
+    
+    /**
+     * 정산 완료 처리
+     */
+    public void settle() {
+        if (!this.isSettleable) {
+            throw new IllegalStateException("정산 가능한 주문이 아닙니다.");
+        }
+        this.settledAt = LocalDateTime.now();
     }
 }

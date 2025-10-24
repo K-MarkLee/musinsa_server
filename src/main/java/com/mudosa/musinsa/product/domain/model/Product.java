@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.product.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -42,11 +42,8 @@ public class Product extends BaseEntity {
     @Column(name = "brand_name", nullable = false, length = 100)
     private String brandName; // 비정규화 (조회 성능)
     
-    @Column(name = "category_path", nullable = false)
+    @Column(name = "category_path", nullable = false, length = 255)
     private String categoryPath;
-    
-    @Column(name = "like_count", nullable = false)
-    private Integer likeCount = 0;
     
     // 상품 옵션 (같은 애그리거트)
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -75,7 +72,6 @@ public class Product extends BaseEntity {
         product.brandName = brandName;
         product.categoryPath = categoryPath;
         product.isAvailable = true;
-        product.likeCount = 0;
         return product;
     }
     
@@ -93,21 +89,5 @@ public class Product extends BaseEntity {
     public void addImage(Image image) {
         this.images.add(image);
         image.assignProduct(this);
-    }
-    
-    /**
-     * 좋아요 증가
-     */
-    public void incrementLikeCount() {
-        this.likeCount++;
-    }
-    
-    /**
-     * 좋아요 감소
-     */
-    public void decrementLikeCount() {
-        if (this.likeCount > 0) {
-            this.likeCount--;
-        }
     }
 }
