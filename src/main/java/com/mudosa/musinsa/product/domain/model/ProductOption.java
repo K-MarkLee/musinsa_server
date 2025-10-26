@@ -2,6 +2,7 @@ package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.product.domain.vo.ProductPrice;
+import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
@@ -37,9 +38,9 @@ public class ProductOption extends BaseEntity {
     @JoinColumn(name = "product_id", insertable = false, updatable = false)  
     private Product product;
 
-    // 아직 구현되지 않은 엔티티들은 주석 처리 (재고관리)
-    // @OneToMany(mappedBy = "productOption", cascade = CascadeType.ALL, orphanRemoval = true)
-    // private List<Inventory> inventories = new ArrayList<>();
+    // 연관관계 - Inventory 연결
+    @OneToMany(mappedBy = "productOption", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Inventory> inventories = new ArrayList<>();
 
     // 생성 메서드
     public static ProductOption create(Long productId, ProductPrice productPrice) {
@@ -64,12 +65,30 @@ public class ProductOption extends BaseEntity {
         productValueOptionMappings.remove(mapping);
     }
 
-    // 아직 구현되지 않은 엔티티들은 주석 처리
-    /*
+    // 연관관계 메서드 - Inventory 연결
     public void addInventory(Inventory inventory) {
         inventories.add(inventory);
     }
-    */
+
+    // 연관관계 메서드 - Inventory 연결 해제
+    public void removeInventory(Inventory inventory) {
+        inventories.remove(inventory);
+    }
+
+    // 비즈니스 메서드 - 재고 관리
+    public Inventory getInventory() {
+        return inventories.isEmpty() ? null : inventories.get(0);
+    }
+
+    public boolean hasInventory() {
+        return !inventories.isEmpty();
+    }
+
+    public StockQuantity getTotalStock() {
+        return inventories.stream()
+            .map(Inventory::getStockQuantity)
+            .reduce(StockQuantity.of(0), StockQuantity::add);
+    }
 
     // JPA를 위한 protected 생성자
     protected ProductOption(Long productId, ProductPrice productPrice) {
