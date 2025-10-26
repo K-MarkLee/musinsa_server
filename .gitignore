@@ -40,3 +40,5 @@ out/
 .env.dev
 .env.test
 .gradle/
+.DS_Store
+*.log
