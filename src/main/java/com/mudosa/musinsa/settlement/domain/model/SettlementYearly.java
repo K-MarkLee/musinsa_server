@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -107,7 +108,7 @@ public class SettlementYearly extends BaseEntity {
         try {
             ZoneId.of(timezone);
             settlement.settlementTimezone = timezone;
-        } catch (Exception e) {
+        } catch (DateTimeException e) {
             log.warn("Invalid timezone: {}. Defaulting to UTC.", timezone, e);
             settlement.settlementTimezone = "UTC";
         }
