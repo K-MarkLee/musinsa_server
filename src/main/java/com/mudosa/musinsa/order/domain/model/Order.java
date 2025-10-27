@@ -101,6 +101,33 @@ public class Order extends BaseEntity {
     }
     
     /**
+     * 주문 상태가 PENDING인지 검증
+     */
+    public void validatePending() {
+        // TODO: OrderStatus enum 또는 상수로 관리 필요
+        // 임시로 1 = PENDING, 2 = COMPLETED로 가정
+        if (this.orderStatus != 1) {
+            throw new IllegalStateException("이미 처리된 주문입니다. 현재 상태: " + this.orderStatus);
+        }
+    }
+    
+    /**
+     * 주문 완료 처리 (상태를 COMPLETED로 변경)
+     */
+    public void complete() {
+        this.orderStatus = 2; // COMPLETED
+        this.isSettleable = true; // 정산 가능하도록 설정
+    }
+    
+    /**
+     * 주문 롤백 (상태를 PENDING으로 원복)
+     */
+    public void rollback() {
+        this.orderStatus = 1; // PENDING
+        this.isSettleable = false;
+    }
+    
+    /**
      * 정산 가능하도록 설정
      */
     public void markAsSettleable() {

@@ -37,8 +37,13 @@ public class PaymentLog extends BaseEntity {
     /**
      * 결제 로그 생성
      */
-    public static PaymentLog create(Long userId, String eventStatus, String eventMessage) {
+    public static PaymentLog create(
+            Payment payment,
+            String eventStatus, 
+            String eventMessage,
+            Long userId) {
         PaymentLog log = new PaymentLog();
+        log.payment = payment;
         log.userId = userId;
         log.eventStatus = eventStatus;
         log.eventMessage = eventMessage;

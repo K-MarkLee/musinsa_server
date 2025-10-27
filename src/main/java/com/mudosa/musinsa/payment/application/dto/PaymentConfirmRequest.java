@@ -15,6 +15,9 @@ public class PaymentConfirmRequest {
     @NotBlank(message = "결제 키는 필수입니다")
     private String paymentKey;
 
+    @NotBlank(message = "결제 ID는 필수입니다. ")
+    private Long paymentId;
+
     @NotBlank(message = "주문 ID는 필수입니다")
     private String orderId;
 
