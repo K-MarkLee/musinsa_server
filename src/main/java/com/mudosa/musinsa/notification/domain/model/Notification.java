@@ -1,10 +1,11 @@
 package com.mudosa.musinsa.notification.domain.model;
 
 import com.mudosa.musinsa.common.domain.BaseEntity;
+import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.time.LocalDateTime;
 
 /**
  * 알림 애그리거트 루트
@@ -12,56 +13,27 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "notification")
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "notification_id")
-    private Long id;
-    
-    @Column(name = "user_id", nullable = false)
-    private Long userId; // User 애그리거트 참조 (ID만)
-    
-    @Column(name = "n_metadata_id", nullable = false)
-    private Long nMetadataId; // NotificationMetadata 참조 (ID만)
+    private Long notificationId;
 
-//  허승돈 작성
-    @Column(name = "title", nullable = false, length = 200)
-    private String title;
+    @ManyToOne
+    @JoinColumn(name="user")
+    private User user;
 
-    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
-    private String message;
+    @ManyToOne
+    @JoinColumn(name="notification_metadata")
+    private NotificationMetadata notificationMetadata;
 
-    @Column(name = "link_url", length = 2048)
-    private String linkUrl;
-//  허승돈 작성 종료
+    private String notificationTitle;
+    private String notificationMessage;
+    private String notificationUrl;
+    private Boolean notificationStatus;
+    private LocalDateTime readAt;
 
-    @Column(name = "is_read", nullable = false)
-    private Boolean isRead = false;
-    
-    /**
-     * 알림 생성
-     */
-    public static Notification create(Long userId,
-                                      Long metadataId,
-                                      String title,
-                                      String message,
-                                      String linkUrl) {
-        Notification notification = new Notification();
-        notification.userId = userId;
-        notification.nMetadataId = metadataId;
-        notification.isRead = false;
-        notification.title = title;
-        notification.message = message;
-        notification.linkUrl = linkUrl;
-        return notification;
-    }
-    
-    /**
-     * 읽음 처리
-     */
-    public void markAsRead() {
-        this.isRead = true;
-    }
 }
