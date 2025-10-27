@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.domain.chat.entity;
 
+import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.domain.chat.enums.ChatRoomType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -21,9 +22,6 @@ public class ChatRoom {
   @Column(name = "chat_id")
   private Long chatId;
 
-  @Column(name = "brand_id", nullable = false)
-  private Long brandId;
-
   @Enumerated(EnumType.STRING)
   @Column(name = "type", nullable = false, length = 10)
   private ChatRoomType type; // GROUP, DM
@@ -39,6 +37,10 @@ public class ChatRoom {
   @Column(name = "updated_at", nullable = false, insertable = false, updatable = false,
       columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
   private LocalDateTime updatedAt;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "brand_id", nullable = false)
+  private Brand brand;
 
   // ==== 연관관계 ====
   @OneToMany(mappedBy = "chatRoom", orphanRemoval = false)
