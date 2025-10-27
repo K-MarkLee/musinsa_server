@@ -52,4 +52,5 @@ public class Inventory extends BaseEntity {
     public boolean isInStock() {
         return this.stockQuantity.getValue() > 0;
     }
+    
 }
