@@ -11,6 +11,12 @@ import org.modelmapper.ModelMapper;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 필요한 기능
+ * 1. 어떤 사용자의 알림 목록 열람
+ * 2. 어떤
+ */
+
 @Service
 @Transactional
 @RequiredArgsConstructor

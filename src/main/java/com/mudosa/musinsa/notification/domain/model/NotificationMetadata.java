@@ -2,7 +2,8 @@ package com.mudosa.musinsa.notification.domain.model;
 
 import com.mudosa.musinsa.common.domain.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -13,46 +14,19 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "notification_metadata")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class NotificationMetadata extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "n_metadata_id")
-    private Long id;
-    
-    @Column(name = "notification_type", nullable = false, length = 50)
+    private Long nMetadataId;
+
+    private String notificationTitle;
+    private String notificationMessage;
     private String notificationType;
-    
-    @Column(name = "title", nullable = false, length = 200)
-    private String title;
-    
-    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
-    private String message;
-    
-    @Column(name = "link_url", length = 2048)
-    private String linkUrl;
-//  허승돈 작성
-    @Column(name = "notification_category", nullable = false, length = 50)
     private String notificationCategory;
-//  허승돈 작성 종료
-    
-    /**
-     * 알림 메타데이터 생성
-     */
-    public static NotificationMetadata create(
-        String notificationType,
-        String title,
-        String message,
-        String linkUrl,
-        String notificationCategory
-    ) {
-        NotificationMetadata metadata = new NotificationMetadata();
-        metadata.notificationType = notificationType;
-        metadata.title = title;
-        metadata.message = message;
-        metadata.linkUrl = linkUrl;
-        metadata.notificationCategory = notificationCategory;
-        return metadata;
-    }
+    private String notificationUrl;
+
 }
