@@ -17,6 +17,8 @@ public interface ChatPartRepository extends JpaRepository<ChatPart, Long> {
    */
   List<ChatPart> findByChatRoom_ChatId(Long chatId);
 
+  Optional<ChatPart> findByChatRoomChatIdAndUserId(Long chatId, Long userId);
+
   /**
    * 사용자가 참여 중인 모든 채팅방 조회
    */
