@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.common.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

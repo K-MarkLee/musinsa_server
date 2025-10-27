@@ -1,77 +1,48 @@
 package com.mudosa.musinsa.product.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.common.vo.Money;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- * 상품 옵션 엔티티
- * Product 애그리거트 내부
- */
 @Entity
-@Table(name = "product_option")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "product_option")
 public class ProductOption extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "product_option_id")
-    private Long id;
+    private Long productOptionId;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id", nullable = false, foreignKey = @ForeignKey(name = "fk_product_option_product"))
     private Product product;
     
-    @Column(name = "option_name", nullable = false, length = 100)
-    private String optionName;
+    @Embedded
+    @AttributeOverride(name = "amount", column = @Column(name = "product_price", nullable = false, precision = 10, scale = 2))
+    private Money productPrice;
     
-    @Column(name = "product_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal productPrice;
+    @OneToMany(mappedBy = "productOption", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ProductValueOptionMapping> productValueOptionMappings = new ArrayList<>();
     
-    @Column(name = "stock_quantity", nullable = false)
-    private Integer stockQuantity = 0;
-    
-    @Column(name = "is_available", nullable = false)
-    private Boolean isAvailable = true;
-    
-    /**
-     * 상품 옵션 생성
-     */
-    public static ProductOption create(String optionName, BigDecimal price, Integer stock) {
-        ProductOption option = new ProductOption();
-        option.optionName = optionName;
-        option.productPrice = price;
-        option.stockQuantity = stock;
-        option.isAvailable = true;
-        return option;
-    }
-    
-    /**
-     * Product 할당 (Package Private)
-     */
-    void assignProduct(Product product) {
+    @Builder
+    public ProductOption(Product product, Money productPrice) {
         this.product = product;
+        this.productPrice = productPrice;
     }
     
-    /**
-     * 재고 차감
-     */
-    public void decreaseStock(int quantity) {
-        if (this.stockQuantity < quantity) {
-            throw new IllegalStateException("재고가 부족합니다.");
+    // 도메인 로직: 통합 수정
+    public void modify(Money productPrice) {
+        if (productPrice != null) {
+            this.productPrice = productPrice;
         }
-        this.stockQuantity -= quantity;
-    }
-    
-    /**
-     * 재고 증가
-     */
-    public void increaseStock(int quantity) {
-        this.stockQuantity += quantity;
     }
 }

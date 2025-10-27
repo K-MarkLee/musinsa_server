@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.common.domain;
+package com.mudosa.musinsa.common.domain.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

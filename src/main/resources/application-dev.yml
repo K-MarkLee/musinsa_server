@@ -100,6 +100,13 @@ jwt:
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7일
 
 # ========================================
+# 토스페이먼츠 개발 환경 설정
+# ========================================
+tosspayments:
+  secret-key: ${TOSS_SECRET_KEY:test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}  # 테스트 시크릿 키 (개발자센터에서 발급)
+  client-key: ${TOSS_CLIENT_KEY:test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm}  # 테스트 클라이언트 키
+
+# ========================================
 # Swagger 개발 환경 설정
 # ========================================
 springdoc:

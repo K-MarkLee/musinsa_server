@@ -1,11 +1,12 @@
 package com.mudosa.musinsa.order.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
-import com.mudosa.musinsa.common.vo.Money;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 
 /**
  * 주문 상품 엔티티
@@ -35,33 +36,24 @@ public class OrderProduct extends BaseEntity {
     @Column(name = "product_option_id", nullable = false)
     private Long productOptionId;
     
+    @Column(name = "product_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal productPrice; // 구매 시점 가격 스냅샷
+    
+    @Column(name = "product_quantity", nullable = false)
+    private Integer productQuantity = 1;
+    
     @Column(name = "event_id")
-    private Long eventId;
+    private Long eventId; // 이벤트를 통한 구매
     
     @Column(name = "event_option_id")
     private Long eventOptionId;
     
-    @Column(name = "quantity", nullable = false)
-    private Integer quantity;
-    
-    @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "unit_price"))
-    })
-    private Money unitPrice;
-    
-    @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "amount", column = @Column(name = "total_price"))
-    })
-    private Money totalPrice;
+    @Column(name = "paid_flag", nullable = false)
+    private Boolean paidFlag = false; // 결제 완료 여부
     
     @Enumerated(EnumType.STRING)
     @Column(name = "limit_scope")
     private LimitScope limitScope;
-    
-    @Column(name = "paid_flag", nullable = false)
-    private Boolean paidFlag = false;
     
     /**
      * 주문 상품 생성
@@ -70,21 +62,20 @@ public class OrderProduct extends BaseEntity {
         Long userId,
         Long productId,
         Long productOptionId,
+        BigDecimal productPrice,
+        Integer productQuantity,
         Long eventId,
         Long eventOptionId,
-        int quantity,
-        Money unitPrice,
         LimitScope limitScope
     ) {
         OrderProduct orderProduct = new OrderProduct();
         orderProduct.userId = userId;
         orderProduct.productId = productId;
         orderProduct.productOptionId = productOptionId;
+        orderProduct.productPrice = productPrice;
+        orderProduct.productQuantity = productQuantity;
         orderProduct.eventId = eventId;
         orderProduct.eventOptionId = eventOptionId;
-        orderProduct.quantity = quantity;
-        orderProduct.unitPrice = unitPrice;
-        orderProduct.totalPrice = unitPrice.multiply(quantity);
         orderProduct.limitScope = limitScope;
         orderProduct.paidFlag = false;
         return orderProduct;
@@ -102,5 +93,12 @@ public class OrderProduct extends BaseEntity {
      */
     public void markAsPaid() {
         this.paidFlag = true;
+    }
+    
+    /**
+     * 총 가격 계산
+     */
+    public BigDecimal getTotalPrice() {
+        return productPrice.multiply(BigDecimal.valueOf(productQuantity));
     }
 }

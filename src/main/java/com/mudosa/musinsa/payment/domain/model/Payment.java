@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.payment.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -32,25 +32,25 @@ public class Payment extends BaseEntity {
     private Integer paymentMethodId;
     
     @Column(name = "payment_status", nullable = false)
-    private Integer paymentStatus; // status_code 참조
+    private Integer paymentStatus; // StatusCode FK
     
     @Column(name = "currency", nullable = false, length = 3)
     private String currency = "KRW";
     
     @Column(name = "amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal amount;
+    private BigDecimal amount; // 결제 금액
     
     @Column(name = "pg_provider", nullable = false, length = 50)
-    private String pgProvider;
+    private String pgProvider; // PG사 (토스, 카카오페이 등)
     
-    @Column(name = "pg_transaction_id", length = 100)
-    private String pgTransactionId;
+    @Column(name = "pg_transaction_id", length = 100, unique = true)
+    private String pgTransactionId; // PG사 거래 ID
     
     @Column(name = "approved_at")
-    private LocalDateTime approvedAt;
+    private LocalDateTime approvedAt; // 승인 일시
     
     @Column(name = "cancelled_at")
-    private LocalDateTime cancelledAt;
+    private LocalDateTime cancelledAt; // 취소 일시
     
     // 결제 로그 (같은 애그리거트)
     @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -62,15 +62,16 @@ public class Payment extends BaseEntity {
     public static Payment create(
         Long orderId,
         Integer paymentMethodId,
+        Integer paymentStatus,
         BigDecimal amount,
         String pgProvider
     ) {
         Payment payment = new Payment();
         payment.orderId = orderId;
         payment.paymentMethodId = paymentMethodId;
+        payment.paymentStatus = paymentStatus;
         payment.amount = amount;
         payment.pgProvider = pgProvider;
-        payment.paymentStatus = 1; // PENDING
         payment.currency = "KRW";
         return payment;
     }
@@ -78,30 +79,32 @@ public class Payment extends BaseEntity {
     /**
      * 결제 승인
      */
-    public void approve(Long userId, String pgTransactionId) {
-        this.paymentStatus = 2; // APPROVED
+    public void approve(String pgTransactionId, Integer approvedStatusId) {
+        this.paymentStatus = approvedStatusId;
         this.pgTransactionId = pgTransactionId;
         this.approvedAt = LocalDateTime.now();
-        
-        this.addLog(userId, "APPROVED", "결제 승인 완료");
     }
     
     /**
      * 결제 취소
      */
-    public void cancel(Long userId, String reason) {
-        this.paymentStatus = 3; // CANCELLED
+    public void cancel(Integer cancelledStatusId) {
+        this.paymentStatus = cancelledStatusId;
         this.cancelledAt = LocalDateTime.now();
-        
-        this.addLog(userId, "CANCELLED", "결제 취소: " + reason);
     }
     
     /**
      * 결제 로그 추가
      */
-    private void addLog(Long userId, String eventStatus, String description) {
-        PaymentLog log = PaymentLog.create(userId, eventStatus, description);
+    public void addLog(PaymentLog log) {
         this.paymentLogs.add(log);
         log.assignPayment(this);
+    }
+    
+    /**
+     * 상태 변경
+     */
+    public void changeStatus(Integer newStatus) {
+        this.paymentStatus = newStatus;
     }
 }
