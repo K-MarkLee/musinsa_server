@@ -33,7 +33,12 @@ public enum ErrorCode {
     
     //inventory
     INVENTORY_NOT_FOUND("50001", "재고 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
-    INSUFFICIENT_STOCK("50002", "재고가 부족합니다", HttpStatus.BAD_REQUEST)
+    INSUFFICIENT_STOCK("50002", "재고가 부족합니다", HttpStatus.BAD_REQUEST),
+    
+    //coupon
+    COUPON_NOT_FOUND("60001", "쿠폰을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+    COUPON_ALREADY_USED("60002", "이미 사용된 쿠폰입니다", HttpStatus.BAD_REQUEST),
+    COUPON_EXPIRED("60003", "만료된 쿠폰입니다", HttpStatus.BAD_REQUEST)
     ;
 
     private final String code;

@@ -5,14 +5,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
-/**
- * MemberCoupon Repository
- */
 @Repository
 public interface MemberCouponRepository extends JpaRepository<MemberCoupon, Long> {
     
     List<MemberCoupon> findByUserId(Long userId);
-    
-    List<MemberCoupon> findByUserIdAndIsUsedFalse(Long userId);
+
+    Optional<MemberCoupon> findByUserIdAndCouponId(Long userId, Long couponId);
 }

@@ -8,10 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
-/**
- * 주문 상품 엔티티
- * Order 애그리거트 내부
- */
 @Entity
 @Table(name = "order_product")
 @Getter
@@ -37,27 +33,24 @@ public class OrderProduct extends BaseEntity {
     private Long productOptionId;
     
     @Column(name = "product_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal productPrice; // 구매 시점 가격 스냅샷
+    private BigDecimal productPrice;
     
     @Column(name = "product_quantity", nullable = false)
     private Integer productQuantity = 1;
     
     @Column(name = "event_id")
-    private Long eventId; // 이벤트를 통한 구매
+    private Long eventId;
     
     @Column(name = "event_option_id")
     private Long eventOptionId;
     
     @Column(name = "paid_flag", nullable = false)
-    private Boolean paidFlag = false; // 결제 완료 여부
+    private Boolean paidFlag = false;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "limit_scope")
     private LimitScope limitScope;
-    
-    /**
-     * 주문 상품 생성
-     */
+
     public static OrderProduct create(
         Long userId,
         Long productId,
@@ -79,26 +72,5 @@ public class OrderProduct extends BaseEntity {
         orderProduct.limitScope = limitScope;
         orderProduct.paidFlag = false;
         return orderProduct;
-    }
-    
-    /**
-     * Order 할당 (Package Private)
-     */
-    void assignOrder(Order order) {
-        this.order = order;
-    }
-    
-    /**
-     * 결제 완료 처리
-     */
-    public void markAsPaid() {
-        this.paidFlag = true;
-    }
-    
-    /**
-     * 총 가격 계산
-     */
-    public BigDecimal getTotalPrice() {
-        return productPrice.multiply(BigDecimal.valueOf(productQuantity));
     }
 }

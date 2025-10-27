@@ -6,10 +6,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 쿠폰 적용 상품 엔티티
- * Coupon 애그리거트 내부
- */
 @Entity
 @Table(name = "coupon_product")
 @Getter
@@ -26,20 +22,13 @@ public class CouponProduct extends BaseEntity {
     private Coupon coupon;
     
     @Column(name = "product_id", nullable = false)
-    private Long productId; // Product 애그리거트 참조 (ID만)
-    
-    /**
-     * 쿠폰 상품 생성
-     */
+    private Long productId;
+
     public static CouponProduct create(Long productId) {
         CouponProduct couponProduct = new CouponProduct();
         couponProduct.productId = productId;
         return couponProduct;
     }
-    
-    /**
-     * Coupon 할당 (Package Private)
-     */
     void assignCoupon(Coupon coupon) {
         this.coupon = coupon;
     }

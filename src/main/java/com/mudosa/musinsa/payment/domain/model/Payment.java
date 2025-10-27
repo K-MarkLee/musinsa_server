@@ -26,9 +26,6 @@ public class Payment extends BaseEntity {
     @Column(name = "order_id", nullable = false, unique = true)
     private Long orderId;
     
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
-    
     @Column(name = "payment_method_id", nullable = false)
     private Integer paymentMethodId;
     
@@ -56,28 +53,8 @@ public class Payment extends BaseEntity {
     @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PaymentLog> paymentLogs = new ArrayList<>();
 
-    public static Payment create(
-        Long orderId,
-        Long userId,
-        Integer paymentMethodId,
-        Integer paymentStatus,
-        BigDecimal amount,
-        String pgProvider
-    ) {
-        Payment payment = new Payment();
-        payment.orderId = orderId;
-        payment.userId = userId;
-        payment.paymentMethodId = paymentMethodId;
-        payment.paymentStatus = paymentStatus;
-        payment.amount = amount;
-        payment.pgProvider = pgProvider;
-        payment.currency = "KRW";
-        return payment;
-    }
 
     public void validatePending() {
-        // TODO: PaymentStatus enum 또는 상수로 관리 필요
-        // 임시로 1 = PENDING, 2 = APPROVED, 3 = FAILED로 가정
         if (this.paymentStatus != 1) {
             throw new IllegalStateException("이미 처리된 결제입니다. 현재 상태: " + this.paymentStatus);
         }
@@ -98,17 +75,28 @@ public class Payment extends BaseEntity {
         this.approvedAt = approvedAt;
     }
 
+
     public void fail(String errorMessage) {
         this.paymentStatus = 3; // FAILED
         
-        // 실패 로그 추가
         PaymentLog log = PaymentLog.create(
             this,
             "PAYMENT_FAILED",
             errorMessage,
-            this.userId
+            null
         );
         this.paymentLogs.add(log);
     }
 
+
+    public void rollback() {
+        this.paymentStatus = 1; // PENDING
+        this.pgTransactionId = null;
+        this.approvedAt = null;
+    }
+
+    public void cancel() {
+        this.paymentStatus = 4; // CANCELLED (필요 시 추가)
+        this.cancelledAt = LocalDateTime.now();
+    }
 }

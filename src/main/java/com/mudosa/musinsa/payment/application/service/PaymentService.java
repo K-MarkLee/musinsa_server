@@ -49,7 +49,9 @@ public class PaymentService {
         }
 
         try {
-            orderService.completeOrder(payment.getOrderId());
+            // 주문 완료 처리 (장바구니 여부 전달)
+            boolean isFromCart = request.getIsFromCart() != null ? request.getIsFromCart() : false;
+            orderService.completeOrder(payment.getOrderId(), isFromCart);
             
             log.info("주문 완료 처리 성공 - orderId: {}", payment.getOrderId());
 
