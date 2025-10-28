@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -23,37 +24,29 @@ public class Inventory extends BaseEntity {
     private ProductOption productOption;
     
     @Column(name = "stock_quantity", nullable = false)
-    private Integer stockQuantity;
+    private StockQuantity stockQuantity;
     
     @Column(name = "is_available", nullable = false)
     private Boolean isAvailable;
-    
-    @Builder
-    public Inventory(ProductOption productOption, Integer stockQuantity, Boolean isAvailable) {
-        this.productOption = productOption;
-        this.stockQuantity = stockQuantity;
-        this.isAvailable = isAvailable != null ? isAvailable : true;
-    }
-    
-    // 도메인 로직: 정보 수정
-    public void modify(Integer stockQuantity, Boolean isAvailable) {
-        if (stockQuantity != null) this.stockQuantity = stockQuantity;
-        if (isAvailable != null) {
-            this.isAvailable = isAvailable;
-        } else {
-            // isAvailable이 null이면 재고 수량에 따라 자동 설정
-            this.isAvailable = this.stockQuantity > 0;
+
+
+    public void decrease(int quantity) {
+        if (this.stockQuantity.getValue() < quantity) {
+            throw new IllegalStateException(
+                    String.format("재고가 부족합니다. 요청: %d, 현재: %d", quantity, this.stockQuantity.getValue()));
+        }
+        this.stockQuantity.decrease(quantity);
+        if (this.stockQuantity.getValue() == 0) {
+            this.isAvailable = false;
         }
     }
-    
-    // 도메인 로직: 재고 있음 여부 확인
-    public boolean isInStock() {
-        return this.stockQuantity > 0;
+
+    public void increase(int quantity) {
+        this.stockQuantity.increase(quantity);
+        if (this.stockQuantity.getValue() > 0) {
+            this.isAvailable = true;
+        }
     }
-    
-    // 도메인 로직: 판매 가능 여부 확인
-    public boolean isAvailable() {
-        return Boolean.TRUE.equals(this.isAvailable);
-    }
+
 
 }

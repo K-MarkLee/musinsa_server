@@ -3,11 +3,7 @@ package com.mudosa.musinsa.payment.controller;
 import com.mudosa.musinsa.common.dto.ApiResponse;
 import com.mudosa.musinsa.payment.application.dto.PaymentConfirmRequest;
 import com.mudosa.musinsa.payment.application.dto.PaymentConfirmResponse;
-import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmRequest;
-import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmResponse;
-import com.mudosa.musinsa.payment.application.service.PaymentProcessor;
-import com.mudosa.musinsa.payment.application.service.PaymentStrategy;
-import com.mudosa.musinsa.payment.application.service.TossPaymentStrategy;
+import com.mudosa.musinsa.payment.application.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
 @Slf4j
 @Tag(name = "Payment", description = "결제 API")
 @RestController
@@ -27,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PaymentController {
 
-	private final PaymentProcessor paymentProcessor;
+	private final PaymentService paymentService;
 
 	@Operation(
 			summary = "결제 승인",
@@ -36,9 +31,10 @@ public class PaymentController {
 	public ResponseEntity<ApiResponse<PaymentConfirmResponse>> confirmPayment(
 			@Valid @RequestBody PaymentConfirmRequest request) {
 
-		log.info("[Payment] 결제 승인 요청 - orderId: {}", request.getOrderId());
+		log.info("[Payment] 결제 승인 요청 - paymentId: {}, orderId: {}", 
+			request.getPaymentId(), request.getOrderId());
 
-		PaymentConfirmResponse response = paymentProcessor.processPayment(request);
+		PaymentConfirmResponse response = paymentService.confirmPaymentAndCompleteOrder(request);
 
 		log.info("[Payment] 결제 승인 완료 - orderId: {}, status: {}", 
 				response.getOrderId(), 

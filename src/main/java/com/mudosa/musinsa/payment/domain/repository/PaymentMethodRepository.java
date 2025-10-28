@@ -7,9 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * PaymentMethod Repository
- */
+
 @Repository
 public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Integer> {
     

@@ -29,9 +29,7 @@ public class ProductOption extends BaseEntity {
     @Embedded
     @AttributeOverride(name = "amount", column = @Column(name = "product_price", nullable = false, precision = 10, scale = 2))
     private Money productPrice;
-    
-    @OneToMany(mappedBy = "productOption", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ProductValueOptionMapping> productValueOptionMappings = new ArrayList<>();
+
     
     @Builder
     public ProductOption(Product product, Money productPrice) {
@@ -58,11 +56,5 @@ public class ProductOption extends BaseEntity {
     public boolean belongsToProduct(Product product) {
         return this.product != null && this.product.equals(product);
     }
-    
-    // 도메인 로직: 옵션 값 매핑 추가
-    public void addValueMapping(ProductValueOptionMapping mapping) {
-        if (mapping != null) {
-            this.productValueOptionMappings.add(mapping);
-        }
-    }
+
 }

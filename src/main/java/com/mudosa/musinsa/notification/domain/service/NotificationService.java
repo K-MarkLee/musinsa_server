@@ -21,15 +21,15 @@ import java.util.List;
 @Transactional
 @RequiredArgsConstructor
 public class NotificationService {
-    private final ModelMapper modelMapper;
+//    private final ModelMapper modelMapper;
     private final NotificationRepository notificationRepository;
 
     public List<NotificationDTO> get(Long userId){
         List<Notification> result = notificationRepository.findByUserId(userId);
         List<NotificationDTO> resultDTO = new ArrayList<>();
-        for (Notification notification : result) {
-            resultDTO.add(modelMapper.map(notification, NotificationDTO.class));
-        }
+//        for (Notification notification : result) {
+////            resultDTO.add(modelMapper.map(notification, NotificationDTO.class));
+//        }
         return resultDTO;
     }
 }

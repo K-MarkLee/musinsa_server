@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  /** 비즈니스 예외 처리 */
+  /* 비즈니스 예외 처리 */
   @ExceptionHandler(BusinessException.class)
   public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
     ErrorCode errorCode = e.getErrorCode();
@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(response, errorCode.getHttpStatus());
   }
 
-  /** 유효성 검사 예외 처리 */
+  /* 유효성 검사 예외 처리 */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidationException(
       MethodArgumentNotValidException e) {
@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(response, errorCode.getHttpStatus());
   }
 
-  /** 예상치 못한 예외 처리 */
+  /* 예상치 못한 예외 처리 */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
     log.error("Unhandled 예외 발생: {}", e.getMessage(), e);

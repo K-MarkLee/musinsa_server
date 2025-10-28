@@ -3,34 +3,28 @@ package com.mudosa.musinsa.payment.application.service;
 import com.mudosa.musinsa.payment.application.dto.PaymentConfirmRequest;
 import com.mudosa.musinsa.payment.application.dto.PaymentConfirmResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentProcessor {
 
     private final PaymentStrategyFactory strategyFactory;
 
-    @Transactional
     public PaymentConfirmResponse processPayment(PaymentConfirmRequest request) {
-        /* 전략 패턴으로 결제 승인 처리 */
+        log.info("PG사 결제 승인 시작 - pgProvider: {}, paymentKey: {}", 
+            request.getPgProvider(), request.getPaymentKey());
+        
         String pgProvider = request.getPgProvider();
-
-        // Factory에서 적절한 전략 선택
         PaymentStrategy strategy = strategyFactory.getStrategy(pgProvider);
-
-        // 선택된 전략으로 결제 처리
+        
         PaymentConfirmResponse response = strategy.confirmPayment(request);
-
-        /* 결제정보 저장 */
-
-        /* 결제로그 저장 */
-
-        /* 주문 상태 변경 */
-
-        /* 재고 차감 */
-
+        
+        log.info("PG사 결제 승인 완료 - pgProvider: {}, paymentKey: {}", 
+            pgProvider, response.getPaymentKey());
+        
         return response;
     }
 }

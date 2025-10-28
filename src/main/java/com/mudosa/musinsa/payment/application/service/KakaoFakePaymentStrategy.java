@@ -15,6 +15,7 @@ public class KakaoFakePaymentStrategy implements PaymentStrategy {
 
 	private static final String PROVIDER_NAME = "KAKAO";
 
+	//TODO: provider에 대한 정보를 이름만 추상메서드로 정의한게 과연 맞을까?
 	@Override
 	public String getProviderName() {
 		return PROVIDER_NAME;
