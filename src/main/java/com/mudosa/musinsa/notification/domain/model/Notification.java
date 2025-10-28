@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.notification.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.*;

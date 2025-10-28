@@ -39,8 +39,6 @@ public class BrandService {
         .logoUrl(logoUrl)
         .commissionRate(request.getCommissionRate())
         .status(BrandStatus.ACTIVE)
-        .createdAt(LocalDateTime.now())
-        .updatedAt(LocalDateTime.now())
         .build();
 
 

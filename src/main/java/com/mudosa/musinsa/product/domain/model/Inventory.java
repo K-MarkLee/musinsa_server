@@ -56,4 +56,14 @@ public class Inventory extends BaseEntity {
         return Boolean.TRUE.equals(this.isAvailable);
     }
 
+    //decrease
+    public void decrease(int quantity){
+        this.stockQuantity -= quantity;
+
+    }
+
+    public void increase(int quantity){
+        this.stockQuantity += quantity;
+    }
+
 }
