@@ -23,7 +23,8 @@ public class Inventory extends BaseEntity {
     @JoinColumn(name = "product_option_id", nullable = false, unique = true)
     private ProductOption productOption;
     
-    @Column(name = "stock_quantity", nullable = false)
+    @Embedded
+    @AttributeOverride(name = "value", column = @Column(name = "stock_quantity"))
     private StockQuantity stockQuantity;
     
     @Column(name = "is_available", nullable = false)

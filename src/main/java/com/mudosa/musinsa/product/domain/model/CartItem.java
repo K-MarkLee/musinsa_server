@@ -46,7 +46,6 @@ public class CartItem extends BaseEntity {
         this.quantity = quantity;
         this.unitPrice = unitPrice;
     }
-
     
     // 도메인 로직: 정보 수정
     public void modify(ProductOption productOption, Image image, Integer quantity, Money unitPrice) {

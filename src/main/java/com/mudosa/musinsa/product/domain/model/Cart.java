@@ -31,7 +31,30 @@ public class Cart extends BaseEntity {
     public Cart(Long userId) {
         this.userId = userId;
     }
-
+    
+    // 도메인 로직: 사용자 변경
+    public void changeUser(Long userId) {
+        if (userId != null) this.userId = userId;
+    }
+    
+    // 도메인 로직: 특정 사용자의 장바구니 여부 확인
+    public boolean belongsToUser(Long userId) {
+        return this.userId != null && this.userId.equals(userId);
+    }
+    
+    // 도메인 로직: 장바구니 상품 추가
+    public void addCartItem(CartItem cartItem) {
+        if (cartItem != null) {
+            this.cartItems.add(cartItem);
+        }
+    }
+    
+    // 도메인 로직: 장바구니 상품 제거
+    public void removeCartItem(CartItem cartItem) {
+        if (cartItem != null) {
+            this.cartItems.remove(cartItem);
+        }
+    }
     
     // 도메인 로직: 장바구니가 비었는지 확인
     public boolean isEmpty() {

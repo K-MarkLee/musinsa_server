@@ -20,14 +20,14 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Brand {
 
-  // 브랜드 멤버 (같은 애그리거트)
-  @OneToMany(mappedBy = "brand", cascade = CascadeType.ALL, orphanRemoval = true)
-  private final List<BrandMember> brandMembers = new ArrayList<>();
-
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "brand_id")
   private Long brandId;
+
+  // 브랜드 멤버 (같은 애그리거트)
+  @OneToMany(mappedBy = "brand", cascade = CascadeType.ALL, orphanRemoval = true)
+  private final List<BrandMember> brandMembers = new ArrayList<>();
 
   @Column(name = "name_ko", nullable = false, length = 100)
   private String nameKo;
