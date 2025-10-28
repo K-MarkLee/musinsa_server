@@ -5,19 +5,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class NotificationDTO {
-    private Long notificationId;
-    private Long userId;
+public class NoteMetaDTO {
     private Long nMetadataId;
     private String notificationTitle;
     private String notificationMessage;
+    private String notificationType;
+    private String notificationCategory;
     private String notificationUrl;
-    private Boolean notificationStatus;
-    private LocalDateTime readAt;
 }

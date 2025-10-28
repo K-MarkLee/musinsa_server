@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.demo.controller;
+package com.mudosa.musinsa.notification.controller;
 
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.Test;
