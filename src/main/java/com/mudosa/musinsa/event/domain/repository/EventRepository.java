@@ -6,18 +6,16 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-// 인터페이스로 만들기, jpa 생성 ?
 
 /**
  * Event Repository
  */
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
-    
-    List<Event> findByIsActiveTrue();
-    
-    List<Event> findByEventStartTimeBeforeAndEventEndTimeAfter(
-        LocalDateTime now1, 
-        LocalDateTime now2
-    );
+
+    List<Event> findByIsPublicTrue();
+
+    List<Event> findByStartedAtBeforeAndEndedAtAfter(LocalDateTime start, LocalDateTime end);
+
+    List<Event> findAllByEventType(Event.EventType eventType);
 }
