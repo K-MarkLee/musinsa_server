@@ -6,13 +6,19 @@ import com.mudosa.musinsa.notification.domain.repository.NotificationMetadataRep
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class NoteMetaService {
     private final NotificationMetadataRepository notificationMetadataRepository;
 
     public NoteMetaDTO get (String category){
-        NotificationMetadata result = notificationMetadataRepository.findByNotificationCategory(category);
+        Optional<NotificationMetadata> optionalResult = notificationMetadataRepository.findByNotificationCategory(category);
+        NotificationMetadata result = optionalResult.orElseThrow(
+                ()->new NoSuchElementException("Category not found" + category)
+        );
         return NoteMetaDTO.builder()
                 .nMetadataId(result.getNMetadataId())
                 .notificationTitle(result.getNotificationTitle())

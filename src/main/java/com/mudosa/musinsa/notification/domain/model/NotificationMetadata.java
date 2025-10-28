@@ -3,10 +3,6 @@ package com.mudosa.musinsa.notification.domain.model;
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-
-import java.time.LocalDateTime;
 
 /**
  * 알림 메타데이터 애그리거트 루트
@@ -29,12 +25,4 @@ public class NotificationMetadata extends BaseEntity {
     private String notificationType;
     private String notificationCategory;
     private String notificationUrl;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 }
