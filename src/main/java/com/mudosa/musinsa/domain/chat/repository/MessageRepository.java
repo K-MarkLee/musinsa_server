@@ -24,20 +24,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
       @Param("chatId") Long chatId,
       Pageable pageable
   );
-
-  /**
-   * 메시지와 첨부파일을 함께 조회 (N+1 방지)
-   */
-  @Query("SELECT m FROM Message m " +
-      "LEFT JOIN FETCH m.children " +
-      "WHERE m.chatRoom.chatId = :chatId " +
-      "AND m.parent IS NULL " +
-      "ORDER BY m.createdAt DESC")
-  Page<Message> findByChatIdWithChildren(
-      @Param("chatId") Long chatId,
-      Pageable pageable
-  );
-
+  
   /**
    * 특정 메시지의 답장(스레드) 조회
    */

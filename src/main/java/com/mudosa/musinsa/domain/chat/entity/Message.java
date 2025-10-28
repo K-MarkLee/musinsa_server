@@ -57,6 +57,7 @@ public class Message {
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
 
+  @Builder.Default
   @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<MessageAttachment> attachments = new ArrayList<>();
 

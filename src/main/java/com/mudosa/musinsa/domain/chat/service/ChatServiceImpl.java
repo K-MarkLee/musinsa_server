@@ -58,11 +58,11 @@ public class ChatServiceImpl implements ChatService {
 
     // 1) 채팅방 & 참여자 존재 여부 확인
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
-            .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
+        .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
 
     ChatPart chatPart = chatPartRepository.findByChatRoomChatIdAndUserId(chatId, userId)
-            .orElseThrow(() -> new EntityNotFoundException(
-                    "ChatPart not found: chatId=" + chatId + ", userId=" + userId));
+        .orElseThrow(() -> new EntityNotFoundException(
+            "ChatPart not found: chatId=" + chatId + ", userId=" + userId));
 
 
     // 2) 메시지 타입 결정
@@ -76,13 +76,13 @@ public class ChatServiceImpl implements ChatService {
 
     // 3) 메시지 저장
     Message message = Message.builder()
-            .chatRoom(chatRoom)
-            .chatPart(chatPart)
-            .content(hasText ? content.trim() : null)
-            .type(type)
+        .chatRoom(chatRoom)
+        .chatPart(chatPart)
+        .content(hasText ? content.trim() : null)
+        .type(type)
 //        .parent(parent)
-            .createdAt(LocalDateTime.now())
-            .build();
+        .createdAt(LocalDateTime.now())
+        .build();
 
     Message createdMessage = messageRepository.save(message);
 
@@ -94,12 +94,12 @@ public class ChatServiceImpl implements ChatService {
 
         try {
           String uploadDir = new ClassPathResource("static/").getFile().getAbsolutePath()
-                  + "/chat/" + chatId + "/message/" + createdMessage.getMessageId();
+              + "/chat/" + chatId + "/message/" + createdMessage.getMessageId();
           Files.createDirectories(Paths.get(uploadDir));
 
           String original = Objects.requireNonNullElse(file.getOriginalFilename(), "unknown");
           String safeName = java.util.UUID.randomUUID() + "_" +
-                  org.springframework.util.StringUtils.cleanPath(original);
+              org.springframework.util.StringUtils.cleanPath(original);
 
           Path targetPath = Paths.get(uploadDir, safeName).toAbsolutePath().normalize();
           file.transferTo(targetPath.toFile());
@@ -108,11 +108,11 @@ public class ChatServiceImpl implements ChatService {
           String storedUrl = "/chat/" + chatId + "/message/" + createdMessage.getMessageId() + "/" + safeName;
 
           MessageAttachment att = MessageAttachment.builder()
-                  .attachmentUrl(storedUrl)
-                  .message(createdMessage)
-                  .mimeType(file.getContentType())
-                  .sizeBytes(file.getSize())
-                  .build();
+              .attachmentUrl(storedUrl)
+              .message(createdMessage)
+              .mimeType(file.getContentType())
+              .sizeBytes(file.getSize())
+              .build();
 
           savedAttachments.add(attachmentRepository.save(att));
           log.info("파일 업로드 성공: {}", targetPath);
@@ -154,38 +154,40 @@ public class ChatServiceImpl implements ChatService {
     Page<Message> messages = messageRepository.findByChatIdOrderByCreatedAtDesc(chatId, pageable);
 
     return messages.map(msg -> MessageResponse.builder()
-            .messageId(msg.getMessageId())
-            .chatId(msg.getChatRoom().getChatId())
-            .chatPartId(msg.getChatPart().getChatPartId())
-            .userId(msg.getChatPart().getUserId())
-            .userName("임시 이름")
-            //user 연결시 수정
+        .messageId(msg.getMessageId())
+        .chatId(msg.getChatRoom().getChatId())
+        .chatPartId(msg.getChatPart().getChatPartId())
+        .userId(msg.getChatPart().getUserId())
+        .userName("임시 이름")
+        //user 연결시 수정
 //          .userName(msg.getChatPart().getUserId())
-            .type(msg.getType())
-            .content(msg.getContent())
-            .attachments(msg.getAttachments().stream()
-                    .map(a -> AttachmentResponse.builder()
-                            .attachmentId(a.getAttachmentId())
-                            .attachmentUrl(a.getAttachmentUrl())
-                            .mimeType(a.getMimeType())
-                            .sizeBytes(a.getSizeBytes())
-                            .build())
-                    .toList())
-            .createdAt(msg.getCreatedAt())
-            .build());
+        .type(msg.getType())
+        .content(msg.getContent())
+        .attachments(msg.getAttachments().stream()
+            .map(a -> AttachmentResponse.builder()
+                .attachmentId(a.getAttachmentId())
+                .attachmentUrl(a.getAttachmentUrl())
+                .mimeType(a.getMimeType())
+                .sizeBytes(a.getSizeBytes())
+                .build())
+            .toList())
+        .createdAt(msg.getCreatedAt())
+        .build());
   }
 
   @Override
   public ChatRoomInfoResponse getChatRoomInfoByChatId(Long chatId) {
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
-            .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
+        .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
 
     return ChatRoomInfoResponse.builder()
-            .chatId(chatRoom.getChatId())
-            .type(chatRoom.getType())
-            .partNum((long) chatRoom.getParts().size())
-            .lastMessageAt(chatRoom.getLastMessageAt())
-            .build();
+        .brandId(chatRoom.getBrand().getBrandId())
+        .brandNameKo(chatRoom.getBrand().getNameKo())
+        .chatId(chatRoom.getChatId())
+        .type(chatRoom.getType())
+        .partNum((long) chatRoom.getParts().size())
+        .lastMessageAt(chatRoom.getLastMessageAt())
+        .build();
   }
 
 
