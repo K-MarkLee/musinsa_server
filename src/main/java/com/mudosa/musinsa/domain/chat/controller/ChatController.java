@@ -44,6 +44,7 @@ public class ChatController {
   public ResponseEntity<MessageResponse> sendMessage(
       @PathVariable Long chatId,
       @RequestParam("userId") Long userId,
+      @RequestParam(value = "parentId", required = false) Long parentId,
       @RequestPart(value = "message", required = false) String message,
       @RequestPart(value = "files", required = false) List<MultipartFile> files
   ) {
@@ -60,7 +61,7 @@ public class ChatController {
     }
 
     //service에서 메시지 전송 로직 구현
-    MessageResponse savedMessage = chatService.saveMessage(chatId, userId, message, files);
+    MessageResponse savedMessage = chatService.saveMessage(chatId, userId, parentId, message, files);
     return ResponseEntity.ok(savedMessage);
   }
 
