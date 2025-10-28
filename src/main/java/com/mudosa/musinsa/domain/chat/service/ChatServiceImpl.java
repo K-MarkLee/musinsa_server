@@ -3,6 +3,7 @@ package com.mudosa.musinsa.domain.chat.service;
 import com.mudosa.musinsa.domain.chat.dto.AttachmentResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
+import com.mudosa.musinsa.domain.chat.dto.ParentMessageResponse;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.entity.Message;
@@ -54,7 +55,7 @@ public class ChatServiceImpl implements ChatService {
    */
   @Override
   @Transactional
-  public MessageResponse saveMessage(Long chatId, Long userId, String content, List<MultipartFile> files) {
+  public MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files) {
 
     // 1) 채팅방 & 참여자 존재 여부 확인
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
@@ -63,6 +64,12 @@ public class ChatServiceImpl implements ChatService {
     ChatPart chatPart = chatPartRepository.findByChatRoomChatIdAndUserId(chatId, userId)
         .orElseThrow(() -> new EntityNotFoundException(
             "ChatPart not found: chatId=" + chatId + ", userId=" + userId));
+
+    Message parent = null;
+    if (parentId != null) {
+      parent = messageRepository.findById(parentId)
+          .orElseThrow(() -> new EntityNotFoundException("Parent message not found: " + parentId));
+    }
 
 
     // 2) 메시지 타입 결정
@@ -80,7 +87,7 @@ public class ChatServiceImpl implements ChatService {
         .chatPart(chatPart)
         .content(hasText ? content.trim() : null)
         .type(type)
-//        .parent(parent)
+        .parent(parent)
         .createdAt(LocalDateTime.now())
         .build();
 
@@ -153,26 +160,60 @@ public class ChatServiceImpl implements ChatService {
     Pageable pageable = PageRequest.of(page, size);
     Page<Message> messages = messageRepository.findByChatIdOrderByCreatedAtDesc(chatId, pageable);
 
-    return messages.map(msg -> MessageResponse.builder()
-        .messageId(msg.getMessageId())
-        .chatId(msg.getChatRoom().getChatId())
-        .chatPartId(msg.getChatPart().getChatPartId())
-        .userId(msg.getChatPart().getUserId())
-        .userName("임시 이름")
-        //user 연결시 수정
-//          .userName(msg.getChatPart().getUserId())
-        .type(msg.getType())
-        .content(msg.getContent())
-        .attachments(msg.getAttachments().stream()
-            .map(a -> AttachmentResponse.builder()
-                .attachmentId(a.getAttachmentId())
-                .attachmentUrl(a.getAttachmentUrl())
-                .mimeType(a.getMimeType())
-                .sizeBytes(a.getSizeBytes())
-                .build())
-            .toList())
-        .createdAt(msg.getCreatedAt())
-        .build());
+    return messages.map(msg -> {
+      var cp = msg.getChatPart();   // 발신자(시스템 메시지면 null)
+      var parent = msg.getParent(); // 답장 원본(없을 수 있음)
+
+      // 현재 메시지 첨부 → DTO 변환
+      List<AttachmentResponse> attachmentDtos =
+          (msg.getAttachments() != null ? msg.getAttachments() : List.<MessageAttachment>of())
+              .stream()
+              .map(a -> AttachmentResponse.builder()
+                  .attachmentId(a.getAttachmentId())
+                  .attachmentUrl(a.getAttachmentUrl())
+                  .mimeType(a.getMimeType())
+                  .sizeBytes(a.getSizeBytes())
+                  .build())
+              .toList();
+
+      // 부모 메시지 DTO (있을 때만)
+      ParentMessageResponse parentDto = null;
+      if (parent != null) {
+        List<AttachmentResponse> parentAttachmentDtos =
+            (parent.getAttachments() != null ? parent.getAttachments() : List.<MessageAttachment>of())
+                .stream()
+                .map(a -> AttachmentResponse.builder()
+                    .attachmentId(a.getAttachmentId())
+                    .attachmentUrl(a.getAttachmentUrl())
+                    .mimeType(a.getMimeType())
+                    .sizeBytes(a.getSizeBytes())
+                    .build())
+                .toList();
+
+        parentDto = ParentMessageResponse.builder()
+            .messageId(parent.getMessageId())
+            .userId(parent.getChatPart() != null ? parent.getChatPart().getUserId() : null)
+            .userName(parent.getChatPart() != null ? "임시 이름" : "시스템") // TODO: User 연동시 교체
+            .content(parent.getContent())
+            .createdAt(parent.getCreatedAt())
+            .attachments(parentAttachmentDtos)
+            .isDeleted(parent.getDeletedAt() != null)
+            .build();
+      }
+
+      return MessageResponse.builder()
+          .messageId(msg.getMessageId())
+          .chatId(msg.getChatRoom().getChatId()) // 식별자만 꺼내기(프록시 안전)
+          .chatPartId(cp != null ? cp.getChatPartId() : null)
+          .userId(cp != null ? cp.getUserId() : null)
+          .userName(cp != null ? "임시 이름" : "시스템")
+          .type(msg.getType())
+          .content(msg.getContent())
+          .attachments(attachmentDtos)           // ✅ 엔티티 컬렉션 노출 금지
+          .createdAt(msg.getCreatedAt())
+          .parent(parentDto)                     // ✅ 엔티티 대신 DTO
+          .build();
+    });
   }
 
   @Override

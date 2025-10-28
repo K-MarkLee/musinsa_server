@@ -21,7 +21,7 @@ public interface ChatService {
    * @param content 메시지 내용
    * @param files   첨부파일들(이미지)
    */
-  MessageResponse saveMessage(Long chatId, Long userId, String content, List<MultipartFile> files);
+  MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files);
 
   /**
    * 특정 채팅방의 메시지 페이지 조회(최신순).
