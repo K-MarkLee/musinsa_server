@@ -23,17 +23,20 @@ public class Notification extends BaseEntity {
     private Long notificationId;
 
     @ManyToOne
-    @JoinColumn(name="user")
+    @JoinColumn(name="user_id")
     private User user;
 
     @ManyToOne
-    @JoinColumn(name="notification_metadata")
+    @JoinColumn(name="n_metadata_id")
     private NotificationMetadata notificationMetadata;
 
     private String notificationTitle;
     private String notificationMessage;
     private String notificationUrl;
-    private Boolean notificationStatus;
+
+    @Builder.Default
+    private Boolean notificationStatus = false;
     private LocalDateTime readAt;
+
 
 }
