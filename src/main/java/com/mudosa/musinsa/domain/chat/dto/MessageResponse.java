@@ -28,29 +28,61 @@ public class MessageResponse {
   private LocalDateTime createdAt;
   private boolean isDeleted;
 
+  private ParentMessageResponse parent;
+
   private boolean isManager;
 //  private ChatPartRole role;
 
   public static MessageResponse from(Message message, List<MessageAttachment> attachments) {
+    // 1) 부모 메시지 취득 (없을 수 있음)
+    Message parent = message.getParent();
+    ParentMessageResponse parentDto = null;
+
+    if (parent != null) {
+      // 부모 첨부 → DTO 변환
+      List<MessageAttachment> parentAtt = parent.getAttachments() != null
+          ? parent.getAttachments()
+          : List.of();
+
+      List<AttachmentResponse> parentAttachmentDtos = parentAtt.stream()
+          .map(AttachmentResponse::from)
+          .toList();
+
+      parentDto = ParentMessageResponse.builder()
+          .messageId(parent.getMessageId())
+          .userId(parent.getChatPart() != null ? parent.getChatPart().getUserId() : null)
+          .userName(parent.getChatPart() != null ? "임시 이름" : "시스템") // TODO: User 연동 시 교체
+          .content(parent.getContent())
+          .createdAt(parent.getCreatedAt())
+          .attachments(parentAttachmentDtos)     // ✅ 엔티티 대신 DTO
+          .isDeleted(parent.getDeletedAt() != null)
+          .build();
+    }
+
+    // 2) 현재 메시지 첨부 → DTO 변환
+    List<AttachmentResponse> attachmentDtos = (attachments != null ? attachments : List.<MessageAttachment>of())
+        .stream()
+        .map(AttachmentResponse::from)
+        .toList();
+
+    // 3) 발신자/식별자 널가드 (프록시 안전: 식별자만 꺼냄)
+    Long chatId = message.getChatRoom() != null ? message.getChatRoom().getChatId() : null;
+    Long chatPartId = message.getChatPart() != null ? message.getChatPart().getChatPartId() : null;
+    Long userId = message.getChatPart() != null ? message.getChatPart().getUserId() : null;
+    String userName = (message.getChatPart() != null) ? "임시 이름" : "시스템"; // TODO: 실제 유저명 매핑
+
     return MessageResponse.builder()
         .messageId(message.getMessageId())
-        .chatId(message.getChatRoom().getChatId())
-        .chatPartId(message.getChatPart().getChatPartId())
-        .userId(message.getChatPart().getUserId())
-        // user entity 구현 후 연결
-//        .userId(message.getChatPart().getUser().getUserId())
-        .userName("임시 이름")
+        .chatId(chatId)                          // ✅ ID만 사용 (프록시 초기화 불필요)
+        .chatPartId(chatPartId)                  // ✅ 널가드
+        .userId(userId)                          // ✅ 널가드
+        .userName(userName)
         .type(message.getType())
         .content(message.getContent())
-        .attachments(
-            attachments != null
-                ? attachments.stream()
-                .map(AttachmentResponse::from)
-                .toList()
-                : List.of()
-        )
+        .attachments(attachmentDtos)             // ✅ 엔티티 → DTO
         .createdAt(message.getCreatedAt())
         .isDeleted(message.getDeletedAt() != null)
+        .parent(parentDto)                       // ✅ 변수명 일치
         .build();
   }
 
