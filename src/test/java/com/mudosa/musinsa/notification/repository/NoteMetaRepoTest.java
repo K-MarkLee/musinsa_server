@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.demo.repository;
+package com.mudosa.musinsa.notification.repository;
 
 import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
 import com.mudosa.musinsa.notification.domain.repository.NotificationMetadataRepository;
@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-public class TestRepository {
+public class NoteMetaRepoTest {
     @Autowired
     NotificationMetadataRepository notificationMetadataRepository;
 
