@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.order.application;
 
-import com.mudosa.musinsa.cart.application.CartService;
 import com.mudosa.musinsa.coupon.domain.model.MemberCoupon;
 import com.mudosa.musinsa.coupon.domain.repository.MemberCouponRepository;
 import com.mudosa.musinsa.exception.BusinessException;
@@ -26,7 +25,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final InventoryService inventoryService;
     private final MemberCouponRepository memberCouponRepository;
-    private final CartService cartService;
+//    private final CartService cartService;
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void completeOrder(Long orderId, boolean isFromCart) {
@@ -59,7 +58,7 @@ public class OrderService {
                 .map(OrderProduct::getProductOptionId)
                 .collect(Collectors.toList());
             
-            cartService.deleteCartItems(order.getUserId(), productOptionIds);
+//            cartService.deleteCartItems(order.getUserId(), productOptionIds);
             
             log.info("장바구니 삭제 완료 - orderId: {}, userId: {}", orderId, order.getUserId());
         }

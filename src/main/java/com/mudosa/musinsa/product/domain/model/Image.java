@@ -27,7 +27,6 @@ public class Image extends BaseEntity {
     @JoinColumn(name = "event_id", foreignKey = @ForeignKey(name = "fk_image_event"))
     private Event event;
     
-    @Embedded
     @AttributeOverride(name = "value", column = @Column(name = "image_url", nullable = false, length = 2048))
     private String imageUrl;
     

@@ -33,7 +33,7 @@ public class Inventory extends BaseEntity {
     public void decrease(int quantity) {
         if (this.stockQuantity.getValue() < quantity) {
             throw new IllegalStateException(
-                    String.format("재고가 부족합니다. 요청: %d, 현재: %d", quantity, this.stockQuantity));
+                    String.format("재고가 부족합니다. 요청: %d, 현재: %d", quantity, this.stockQuantity.getValue()));
         }
         this.stockQuantity.decrease(quantity);
         if (this.stockQuantity.getValue() == 0) {

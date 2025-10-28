@@ -10,22 +10,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-/**
- * Inventory Repository
- */
+
 @Repository
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
-    
-    Optional<Inventory> findByProductOptionId(Long productOptionId);
-    
-    boolean existsByProductOptionId(Long productOptionId);
-    
-    /**
-     * 비관적 락으로 재고 조회
-     * - 동시성 문제 방지
-     * - 재고 차감 시 사용
-     */
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT i FROM Inventory i WHERE i.productOptionId = :productOptionId")
-    Optional<Inventory> findByProductOptionIdWithLock(@Param("product_option_id") Long productOptionId);
+
 }

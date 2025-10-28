@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -34,20 +33,19 @@ public class BrandService {
     // 채팅방 생성
     log.info("request: " + request.toString());
     Brand brand = Brand.builder()
-        .nameKo(request.getNameKo())
-        .nameEn(request.getNameEn())
-        .logoUrl(logoUrl)
-        .commissionRate(request.getCommissionRate())
-        .status(BrandStatus.ACTIVE)
-        .build();
+            .nameKo(request.getNameKo())
+            .nameEn(request.getNameEn())
+            .logoUrl(logoUrl)
+            .commissionRate(request.getCommissionRate())
+            .status(BrandStatus.ACTIVE)
+            .build();
 
 
     brand = brandRepository.save(brand);
 
     ChatRoom chatRoom = ChatRoom.builder()
-        .brand(brand)
-        .type(ChatRoomType.GROUP)
-        .build();
+            .type(ChatRoomType.GROUP)
+            .build();
 
     chatRoomRepository.save(chatRoom);
 
@@ -59,13 +57,13 @@ public class BrandService {
     List<Brand> brands = brandRepository.findAll();
 
     return brands.stream()
-        .map(brand -> convertToBrandResponse(brand))
-        .toList();
+            .map(brand -> convertToBrandResponse(brand))
+            .toList();
   }
 
   public BrandDetailResponseDTO getBrandById(Long brandId) {
     BrandDetailResponseDTO dto = brandRepository.findWithGroupChatId(brandId)
-        .orElseThrow(() -> new EntityNotFoundException("Brand not found: " + brandId));
+            .orElseThrow(() -> new EntityNotFoundException("Brand not found: " + brandId));
 
     return dto;
   }
@@ -75,10 +73,10 @@ public class BrandService {
    */
   private BrandResponseDTO convertToBrandResponse(Brand brand) {
     return BrandResponseDTO.builder()
-        .brandId(brand.getBrandId())
-        .nameKo(brand.getNameKo())
-        .nameEn(brand.getNameEn())
-        .logoURL(brand.getLogoUrl())
-        .build();
+            .brandId(brand.getBrandId())
+            .nameKo(brand.getNameKo())
+            .nameEn(brand.getNameEn())
+            .logoURL(brand.getLogoUrl())
+            .build();
   }
 }
