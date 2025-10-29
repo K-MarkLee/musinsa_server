@@ -50,11 +50,11 @@ public class MessageResponse {
 
       parentDto = ParentMessageResponse.builder()
           .messageId(parent.getMessageId())
-          .userId(parent.getChatPart() != null ? parent.getChatPart().getUserId() : null)
-          .userName(parent.getChatPart() != null ? "임시 이름" : "시스템") // TODO: User 연동 시 교체
+          .userId(parent.getChatPart() != null ? parent.getChatPart().getUser().getId() : null)
+          .userName(parent.getChatPart() != null ? parent.getChatPart().getUser().getUserName() : "Unknown") // TODO: User 연동 시 교체
           .content(parent.getContent())
           .createdAt(parent.getCreatedAt())
-          .attachments(parentAttachmentDtos)     // ✅ 엔티티 대신 DTO
+          .attachments(parentAttachmentDtos)
           .isDeleted(parent.getDeletedAt() != null)
           .build();
     }
@@ -68,21 +68,21 @@ public class MessageResponse {
     // 3) 발신자/식별자 널가드 (프록시 안전: 식별자만 꺼냄)
     Long chatId = message.getChatRoom() != null ? message.getChatRoom().getChatId() : null;
     Long chatPartId = message.getChatPart() != null ? message.getChatPart().getChatPartId() : null;
-    Long userId = message.getChatPart() != null ? message.getChatPart().getUserId() : null;
-    String userName = (message.getChatPart() != null) ? "임시 이름" : "시스템"; // TODO: 실제 유저명 매핑
+    Long userId = message.getChatPart() != null ? message.getChatPart().getUser().getId() : null;
+    String userName = (message.getChatPart() != null) ? message.getChatPart().getUser().getUserName() : "Unknown"; // TODO: 실제 유저명 매핑
 
     return MessageResponse.builder()
         .messageId(message.getMessageId())
-        .chatId(chatId)                          // ✅ ID만 사용 (프록시 초기화 불필요)
-        .chatPartId(chatPartId)                  // ✅ 널가드
-        .userId(userId)                          // ✅ 널가드
+        .chatId(chatId)
+        .chatPartId(chatPartId)
+        .userId(userId)
         .userName(userName)
         .type(message.getType())
         .content(message.getContent())
-        .attachments(attachmentDtos)             // ✅ 엔티티 → DTO
+        .attachments(attachmentDtos)
         .createdAt(message.getCreatedAt())
         .isDeleted(message.getDeletedAt() != null)
-        .parent(parentDto)                       // ✅ 변수명 일치
+        .parent(parentDto)
         .build();
   }
 
