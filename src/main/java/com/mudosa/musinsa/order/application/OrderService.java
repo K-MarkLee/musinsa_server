@@ -92,7 +92,7 @@ public class OrderService {
         List<OrderProduct> orderProducts = order.getOrderProducts();
         
         for (OrderProduct orderProduct : orderProducts) {
-            Long productOptionId = orderProduct.getProductOptionId();
+            Long productOptionId = orderProduct.getProductOption().getProductOptionId();
             Integer quantity = orderProduct.getProductQuantity();
             
             inventoryService.restore(productOptionId, quantity);

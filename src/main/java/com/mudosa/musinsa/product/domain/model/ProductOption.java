@@ -11,8 +11,10 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
+import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
+
 @Getter
+@Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "product_option")
 public class ProductOption extends BaseEntity {
@@ -59,5 +61,7 @@ public class ProductOption extends BaseEntity {
     void setProduct(Product product) {
         this.product = product;
     }
+
+
 
 }

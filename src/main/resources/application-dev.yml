@@ -49,7 +49,7 @@ spring:
   # DevTools 설정
   devtools:
     restart:
-      enabled: true
+      enabled: true #원래 true
     livereload:
       enabled: true
 

@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.event.domain.repository;
+package com.mudosa.musinsa.event.repository;
 
-import com.mudosa.musinsa.event.domain.model.Event;
+import com.mudosa.musinsa.event.model.Event;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,5 +12,11 @@ import java.util.List;
  */
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
-    
+
+    List<Event> findByIsActiveTrue();
+
+    List<Event> findByEventStartTimeBeforeAndEventEndTimeAfter(
+        LocalDateTime now1,
+        LocalDateTime now2
+    );
 }

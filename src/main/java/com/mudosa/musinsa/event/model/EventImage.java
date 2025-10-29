@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.event.domain.model;
+package com.mudosa.musinsa.event.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
@@ -14,7 +14,8 @@ import lombok.NoArgsConstructor;
 @Table(
         name = "event_image",
         indexes = {
-                @Index(name = "idx_evtimg_event", columnList = "event_id")
+                @Index(name = "idx_evtimg_event", columnList = "event_id"),
+                @Index(name = "idx_evtimg_is_thumbnail", columnList = "is_thumbnail") // 썸네일 여부 인덱스 추가
         }
 )
 @Getter
@@ -33,13 +34,14 @@ public class EventImage extends BaseEntity {
     @Column(name = "image_url", nullable = false, length = 2048)
     private String imageUrl;
 
-    @Column(name = "display_order", nullable = false)
-    private Integer displayOrder = 0;
+    @Column(name = "is_thumbnail", nullable = false)
+    private Boolean isThumbnail = false;  // 썸네일 여부를 나타내는 필드
 
-    public static EventImage create(String imageUrl, int displayOrder) {
+
+    public static EventImage create(String imageUrl, Boolean isThumbnail) {
         EventImage image = new EventImage();
         image.imageUrl = imageUrl;
-        image.displayOrder = displayOrder;
+        image.isThumbnail = isThumbnail;
         return image;
     }
 
