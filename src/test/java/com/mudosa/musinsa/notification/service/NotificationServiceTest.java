@@ -17,7 +17,7 @@ public class NotificationServiceTest {
 
     @Test
     public void notificationReadTest(){
-        List<NotificationDTO> listDto = notificationService.get(1L);
+        List<NotificationDTO> listDto = notificationService.readNotification(1L);
         for(NotificationDTO dto : listDto){
             log.info(dto.toString());
         }
