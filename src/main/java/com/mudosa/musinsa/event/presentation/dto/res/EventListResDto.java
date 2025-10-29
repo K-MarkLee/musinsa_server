@@ -2,15 +2,19 @@ package com.mudosa.musinsa.event.presentation.dto.res;
 
 
 import com.mudosa.musinsa.event.model.Event;
+import com.mudosa.musinsa.event.model.EventOption;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
+@Builder
 
 public class EventListResDto {
     /*
@@ -32,20 +36,30 @@ public class EventListResDto {
     private LocalDateTime startedAt;  //이벤트 시작 시간
     private LocalDateTime endedAt;  //이벤트 종료 시간
 
+    private String thumbnailUrl;
+    private List<EventOptionResDto> options;
+
     // 정적 팩토리 메소드, 클래스 내부에 있어야 한다 !!
     // 추후에 service,controller 안에서 (EventListResDto::from)의 형태로 사용가능하다.
-    public static EventListResDto from(Event event) {
+    public static EventListResDto from(
+            Event event,
+            List<EventOptionResDto> optionDtos,
+            String thumbnailUrl,
+            Event.EventStatus status
+    ) {
         return new EventListResDto(
                 event.getId(),
                 event.getTitle(),
                 event.getDescription(),
                 event.getEventType(),
-                event.getStatus(),
+                status,
                 event.getIsPublic(),
                 event.getLimitPerUser(),
                 event.getLimitScope(),
                 event.getStartedAt(),
-                event.getEndedAt()
+                event.getEndedAt(),
+                thumbnailUrl,
+                optionDtos
         );
     }
 }
