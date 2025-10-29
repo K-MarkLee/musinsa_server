@@ -25,8 +25,6 @@ public class NoteMetaRepoTest {
                 .notificationCategory("RESTOCK")
                 .notificationUrl("ghfhgfhgf")
                 .build();
-//                .createdAt(LocalDateTime.now())
-//                .updatedAt(LocalDateTime.now()).build();
         notificationMetadataRepository.save(notificationMetadata);
     }
 
