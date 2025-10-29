@@ -23,14 +23,14 @@ public class OptionName extends BaseEntity {
     
     @Builder
     public OptionName(String optionName) {
+        // 엔티티 기본 무결성 검증
+        if (optionName == null || optionName.trim().isEmpty()) {
+            throw new IllegalArgumentException("옵션명은 필수입니다.");
+        }
+        
         this.optionName = optionName;
     }
-    
-    // 도메인 로직: 정보 수정
-    public void modify(String optionName) {
-        if (optionName != null) this.optionName = optionName;
-    }
-    
+
     // 도메인 로직: 옵션 이름 유효성 확인
     public boolean isValid() {
         return this.optionName != null && !this.optionName.trim().isEmpty();

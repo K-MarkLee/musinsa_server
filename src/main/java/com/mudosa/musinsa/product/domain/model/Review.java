@@ -39,54 +39,24 @@ public class Review extends BaseEntity {
     
     @Builder
     public Review(OrderProduct orderProduct, Long userId, String content, Integer rating) {
+        // 엔티티 기본 무결성 검증
+        if (orderProduct == null) {
+            throw new IllegalArgumentException("주문 상품은 리뷰에 필수입니다.");
+        }
+        if (userId == null) {
+            throw new IllegalArgumentException("사용자 ID는 리뷰에 필수입니다.");
+        }
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("리뷰 내용은 필수입니다.");
+        }
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new IllegalArgumentException("평점은 1-5 사이여야 합니다.");
+        }
+        
         this.orderProduct = orderProduct;
         this.userId = userId;
         this.content = content;
         this.rating = rating;
-    }
-    
-    // 도메인 로직: 정보 수정
-    public void modify(String content, Integer rating) {
-        if (content != null) this.content = content;
-        if (rating != null) this.rating = rating;
-    }
-    
-    // 도메인 로직: 주문 상품 변경
-    public void changeOrderProduct(OrderProduct orderProduct) {
-        if (orderProduct != null) this.orderProduct = orderProduct;
-    }
-    
-    // 도메인 로직: 사용자 변경
-    public void changeUser(Long userId) {
-        if (userId != null) this.userId = userId;
-    }
-    
-
-    
-    // 도메인 로직: 특정 주문 상품의 리뷰 여부 확인
-    public boolean belongsToOrderProduct(OrderProduct orderProduct) {
-        return this.orderProduct != null && this.orderProduct.equals(orderProduct);
-    }
-    
-    // 도메인 로직: 특정 사용자의 리뷰 여부 확인
-    public boolean belongsToUser(Long userId) {
-        return this.userId != null && this.userId.equals(userId);
-    }
-    
-
-    
-    // 도메인 로직: 리뷰 이미지 추가
-    public void addReviewImage(ReviewImage reviewImage) {
-        if (reviewImage != null) {
-            this.reviewImages.add(reviewImage);
-        }
-    }
-    
-    // 도메인 로직: 리뷰 이미지 제거
-    public void removeReviewImage(ReviewImage reviewImage) {
-        if (reviewImage != null) {
-            this.reviewImages.remove(reviewImage);
-        }
     }
 
 }

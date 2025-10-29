@@ -27,37 +27,21 @@ public class ProductCategory {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+
     
     @Builder
     public ProductCategory(Product product, Category category) {
+        // 엔티티 기본 무결성 검증
+        if (product == null) {
+            throw new IllegalArgumentException("상품은 필수입니다.");
+        }
+        if (category == null) {
+            throw new IllegalArgumentException("카테고리는 필수입니다.");
+        }
+        
         this.product = product;
         this.category = category;
-        this.id = new ProductCategoryId(
-            product.getProductId(),
-            category.getCategoryId()
-        );
-    }
-    
-    // 도메인 로직: 상품-카테고리 매핑 정보 수정
-    public void modify(Product product, Category category) {
-        if (product != null) {
-            this.product = product;
-            this.id.productId = product.getProductId();
-        }
-        if (category != null) {
-            this.category = category;
-            this.id.categoryId = category.getCategoryId();
-        }
-    }
-    
-    // 도메인 로직: 특정 상품의 카테고리 여부 확인
-    public boolean belongsToProduct(Product product) {
-        return this.product != null && this.product.equals(product);
-    }
-    
-    // 도메인 로직: 특정 카테고리의 상품 여부 확인
-    public boolean belongsToCategory(Category category) {
-        return this.category != null && this.category.equals(category);
+        this.id = new ProductCategoryId(product.getProductId(), category.getCategoryId());
     }
     
     @Embeddable

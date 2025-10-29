@@ -27,27 +27,16 @@ public class ReviewImage extends BaseEntity {
     
     @Builder
     public ReviewImage(Review review, String imageUrl) {
+        // 엔티티 기본 무결성 검증
+        if (review == null) {
+            throw new IllegalArgumentException("리뷰는 필수입니다.");
+        }
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            throw new IllegalArgumentException("이미지 URL은 필수입니다.");
+        }
+        
         this.review = review;
         this.imageUrl = imageUrl;
     }
-    
-    // 도메인 로직: 리뷰 변경
-    public void changeReview(Review review) {
-        if (review != null) this.review = review;
-    }
-    
-    // 도메인 로직: 이미지 URL 변경
-    public void changeImageUrl(String imageUrl) {
-        if (imageUrl != null) this.imageUrl = imageUrl;
-    }
-    
-    // 도메인 로직: 특정 리뷰 소속 여부 확인
-    public boolean belongsToReview(Review review) {
-        return this.review != null && this.review.equals(review);
-    }
-    
-    // 도메인 로직: 이미지 URL 존재 여부 확인
-    public boolean hasImageUrl() {
-        return this.imageUrl != null && !this.imageUrl.trim().isEmpty();
-    }
+
 }
