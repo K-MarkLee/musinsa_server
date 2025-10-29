@@ -19,16 +19,25 @@ public class Inventory extends BaseEntity {
     @Column(name = "inventory_id")
     private Long inventoryId;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_option_id", nullable = false, unique = true)
-    private ProductOption productOption;
-    
-    @Column(name = "stock_quantity", nullable = false)
+    @Embedded
+    @AttributeOverride(name = "value", column = @Column(name = "stock_quantity"))
     private StockQuantity stockQuantity;
     
     @Column(name = "is_available", nullable = false)
     private Boolean isAvailable;
 
+    @Builder
+    public Inventory(StockQuantity stockQuantity, Boolean isAvailable) {
+        // 엔티티 기본 무결성 검증
+        if (stockQuantity == null) {
+            throw new IllegalArgumentException("재고 수량은 필수입니다.");
+        }
+        
+        this.stockQuantity = stockQuantity;
+        // 재고가 0이면 무조건 unavailable, 재고가 있으면 지정된 값 또는 true
+        this.isAvailable = stockQuantity.getValue() > 0 ? 
+            Boolean.TRUE.equals(isAvailable) : false;
+    }
 
     public void decrease(int quantity) {
         if (this.stockQuantity.getValue() < quantity) {

@@ -27,13 +27,16 @@ public class OptionValue extends BaseEntity {
     
     @Builder
     public OptionValue(OptionName optionName, String optionValue) {
+        // 엔티티 기본 무결성 검증
+        if (optionName == null) {
+            throw new IllegalArgumentException("옵션명은 필수입니다.");
+        }
+        if (optionValue == null || optionValue.trim().isEmpty()) {
+            throw new IllegalArgumentException("옵션 값은 필수입니다.");
+        }
+        
         this.optionName = optionName;
         this.optionValue = optionValue;
-    }
-    
-    // 도메인 로직: 정보 수정
-    public void modify(String optionValue) {
-        if (optionValue != null) this.optionValue = optionValue;
     }
     
     // 도메인 로직: 옵션 값 유효성 확인
