@@ -2,6 +2,7 @@ package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.order.domain.model.OrderProduct;
+import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -19,12 +20,13 @@ public class Review extends BaseEntity {
     @Column(name = "review_id")
     private Long reviewId;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "order_product_id", nullable = false)
     private OrderProduct orderProduct;
     
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;    
     
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
@@ -38,12 +40,12 @@ public class Review extends BaseEntity {
     private java.util.List<ReviewImage> reviewImages = new java.util.ArrayList<>();
     
     @Builder
-    public Review(OrderProduct orderProduct, Long userId, String content, Integer rating) {
+    public Review(OrderProduct orderProduct, User user, String content, Integer rating) {
         // 엔티티 기본 무결성 검증
         if (orderProduct == null) {
             throw new IllegalArgumentException("주문 상품은 리뷰에 필수입니다.");
         }
-        if (userId == null) {
+        if (user == null) {
             throw new IllegalArgumentException("사용자 ID는 리뷰에 필수입니다.");
         }
         if (content == null || content.trim().isEmpty()) {
@@ -54,7 +56,7 @@ public class Review extends BaseEntity {
         }
         
         this.orderProduct = orderProduct;
-        this.userId = userId;
+        this.user = user;
         this.content = content;
         this.rating = rating;
     }

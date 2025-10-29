@@ -39,9 +39,9 @@ public class ProductCategory {
             throw new IllegalArgumentException("카테고리는 필수입니다.");
         }
         
-        this.product = product;
-        this.category = category;
-        this.id = new ProductCategoryId(product.getProductId(), category.getCategoryId());
+    this.product = product;
+    this.category = category;
+    refreshIdentifiers();
     }
     
     @Embeddable
@@ -73,5 +73,22 @@ public class ProductCategory {
         public int hashCode() {
             return Objects.hash(productId, categoryId);
         }
+    }
+
+    // 서비스에서 연관을 붙일 때 식별자 동기화를 보장하기 위한 헬퍼
+    void assignProduct(Product product) {
+        this.product = product;
+        refreshIdentifiers();
+    }
+
+    void assignCategory(Category category) {
+        this.category = category;
+        refreshIdentifiers();
+    }
+
+    void refreshIdentifiers() {
+        Long productId = this.product != null ? this.product.getProductId() : null;
+        Long categoryId = this.category != null ? this.category.getCategoryId() : null;
+        this.id = new ProductCategoryId(productId, categoryId);
     }
 }

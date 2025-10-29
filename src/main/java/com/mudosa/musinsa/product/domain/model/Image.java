@@ -21,7 +21,7 @@ public class Image extends BaseEntity {
     private Long imageId;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id")
     private Product product;
     
     @ManyToOne(fetch = FetchType.LAZY)
@@ -37,11 +37,13 @@ public class Image extends BaseEntity {
     @Builder
     public Image(Product product, Event event, String imageUrl, Boolean isThumbnail) {
         // 엔티티 기본 무결성 검증
-        if (product == null) {
-            throw new IllegalArgumentException("상품은 이미지에 필수입니다.");
-        }
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             throw new IllegalArgumentException("이미지 URL은 필수입니다.");
+        }
+        
+        // 최소한 하나의 참조는 필수
+        if (product == null && event == null) {
+            throw new IllegalArgumentException("상품 또는 이벤트 중 하나는 필수입니다.");
         }
         
         this.product = product;

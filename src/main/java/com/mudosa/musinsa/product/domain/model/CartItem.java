@@ -20,7 +20,7 @@ public class CartItem extends BaseEntity {
     @Column(name = "cart_item_id")
     private Long cartItemId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
@@ -56,6 +56,13 @@ public class CartItem extends BaseEntity {
         this.productOption = productOption;
         this.quantity = quantity;
         this.unitPrice = unitPrice;
+    }
+
+    public void changeQuantity(int quantity) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("수량은 1개 이상이어야 합니다.");
+        }
+        this.quantity = quantity;
     }
 
 }

@@ -34,9 +34,12 @@ public class Inventory extends BaseEntity {
         }
         
         this.stockQuantity = stockQuantity;
-        // 재고가 0이면 무조건 unavailable, 재고가 있으면 지정된 값 또는 true
-        this.isAvailable = stockQuantity.getValue() > 0 ? 
-            Boolean.TRUE.equals(isAvailable) : false;
+        // 재고가 존재하면 기본적으로 판매 가능, 0이면 자동으로 false
+        if (stockQuantity.getValue() > 0) {
+            this.isAvailable = isAvailable != null ? isAvailable : true;
+        } else {
+            this.isAvailable = false;
+        }
     }
 
     public void decrease(int quantity) {

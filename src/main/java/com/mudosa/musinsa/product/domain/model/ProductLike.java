@@ -43,4 +43,9 @@ public class ProductLike extends BaseEntity {
     public boolean belongsToProduct(Product product) {
         return this.product != null && this.product.equals(product);
     }
+
+    // 이미 생성된 좋아요 엔티티를 상품 애그리거트에 연결할 때 사용
+    void assignProduct(Product product) {
+        this.product = product;
+    }
 }

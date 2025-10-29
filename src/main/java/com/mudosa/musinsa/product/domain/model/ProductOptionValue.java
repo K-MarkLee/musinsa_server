@@ -84,7 +84,18 @@ public class ProductOptionValue {
         
         this.productOption = productOption;
         this.optionValue = optionValue;
-        this.id = new ProductOptionValueId(productOption.getProductOptionId(), optionValue.getOptionValueId());
+        refreshIdentifiers();
     }
 
+    // ProductOption에 늦게 연결될 수 있으므로 식별자 갱신 메서드 분리
+    void attachTo(ProductOption productOption) {
+        this.productOption = productOption;
+        refreshIdentifiers();
+    }
+
+    void refreshIdentifiers() {
+        Long productOptionId = this.productOption != null ? this.productOption.getProductOptionId() : null;
+        Long optionValueId = this.optionValue != null ? this.optionValue.getOptionValueId() : null;
+        this.id = new ProductOptionValueId(productOptionId, optionValueId);
+    }
 }

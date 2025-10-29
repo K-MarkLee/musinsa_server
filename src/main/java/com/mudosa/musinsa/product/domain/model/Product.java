@@ -27,14 +27,22 @@ public class Product extends BaseEntity {
     @JoinColumn(name = "brand_id", nullable = false)
     private Brand brand;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // 이미지·옵션은 상품 생명주기와 동일하게 관리하기 위해 orphanRemoval 적용
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private java.util.List<Image> images = new java.util.ArrayList<>();
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private java.util.List<ProductOption> productOptions = new java.util.ArrayList<>();
 
-    // CartItem과 ProductLike는 연결하지 않음 (성능 및 독립성 고려)
-    // Review는 나중에 구현 예정 (현재 제거)
+    // 카테고리 조인 테이블(`product_category`)과 좋아요(`product_like`) 대응
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<ProductCategory> productCategories = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+    private java.util.List<ProductLike> productLikes = new java.util.ArrayList<>();
+
+    // CartItem은 직접 연결하지 않음 (성능 및 독립성 고려)
+    // Review는 나중에 구현 예정
 
     @Column(name = "product_name", nullable = false, length = 100)
     private String productName;
@@ -79,6 +87,12 @@ public class Product extends BaseEntity {
         if (productGenderType == null) {
             throw new IllegalArgumentException("상품 성별 타입은 필수입니다.");
         }
+        if (brandName == null || brandName.trim().isEmpty()) {
+            throw new IllegalArgumentException("브랜드명은 필수입니다.");
+        }
+        if (categoryPath == null || categoryPath.trim().isEmpty()) {
+            throw new IllegalArgumentException("카테고리 경로는 필수입니다.");
+        }
         
         this.brand = brand;
         this.productName = productName;
@@ -87,19 +101,79 @@ public class Product extends BaseEntity {
         this.brandName = brandName;
         this.categoryPath = categoryPath;
         this.isAvailable = isAvailable != null ? isAvailable : true;
-        
-        // 이미지 관계 설정
-        this.images = images != null ? images : new java.util.ArrayList<>();
+
         if (images != null) {
-            // 각 이미지에 상품 참조 설정
-            images.forEach(image -> image.setProduct(this));
+            validateThumbnailConstraint(images);
+            images.forEach(this::addImage);
         }
-        
-        // 옵션 관계 설정
-        this.productOptions = productOptions != null ? productOptions : new java.util.ArrayList<>();
+
         if (productOptions != null) {
-            // 각 옵션에 상품 참조 설정
-            productOptions.forEach(option -> option.setProduct(this));
+            productOptions.forEach(this::addProductOption);
+        }
+    }
+
+    // 썸네일은 하나만 허용되므로 서비스에서 검증 없이 호출 가능하도록 보호
+    public void addImage(Image image) {
+        if (image == null) {
+            return;
+        }
+        if (Boolean.TRUE.equals(image.getIsThumbnail()) && hasThumbnail()) {
+            throw new IllegalStateException("상품 썸네일은 하나만 설정할 수 있습니다.");
+        }
+        image.setProduct(this);
+        this.images.add(image);
+    }
+
+    public void addProductOption(ProductOption productOption) {
+        if (productOption == null) {
+            return;
+        }
+        productOption.setProduct(this);
+        this.productOptions.add(productOption);
+    }
+
+    // 카테고리 서비스에서 내려준 엔티티를 그대로 연결
+    public void addCategory(Category category) {
+        if (category == null) {
+            return;
+        }
+        ProductCategory mapping = ProductCategory.builder()
+            .product(this)
+            .category(category)
+            .build();
+        this.productCategories.add(mapping);
+    }
+
+    // 이미 생성된 매핑을 재활용할 때 사용 (예: bulk load)
+    public void addProductCategory(ProductCategory productCategory) {
+        if (productCategory == null) {
+            return;
+        }
+        productCategory.assignProduct(this);
+        this.productCategories.add(productCategory);
+    }
+
+    public void addProductLike(ProductLike productLike) {
+        if (productLike == null) {
+            return;
+        }
+        productLike.assignProduct(this);
+        this.productLikes.add(productLike);
+    }
+
+    public boolean hasThumbnail() {
+        return this.images.stream().anyMatch(image -> Boolean.TRUE.equals(image.getIsThumbnail()));
+    }
+
+    private void validateThumbnailConstraint(java.util.List<Image> images) {
+        long thumbnailCount = images.stream()
+            .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
+            .count();
+        if (thumbnailCount == 0) {
+            throw new IllegalArgumentException("상품 썸네일은 최소 1개 이상이어야 합니다.");
+        }
+        if (thumbnailCount > 1) {
+            throw new IllegalArgumentException("상품 썸네일은 하나만 등록할 수 있습니다.");
         }
     }
 }
