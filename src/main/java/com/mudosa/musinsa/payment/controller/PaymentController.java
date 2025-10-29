@@ -29,14 +29,13 @@ public class PaymentController {
 			description = "결제 승인을 요청합니다. 결제창에서 결제 인증 완료 후 호출해야 합니다.")
 	@PostMapping("/confirm")
 	public ResponseEntity<ApiResponse<PaymentConfirmResponse>> confirmPayment(
-			@Valid @RequestBody PaymentConfirmRequest request) {
+			 @Valid @RequestBody PaymentConfirmRequest request) {
 
 		log.info("[Payment] 결제 승인 요청 - paymentId: {}, orderId: {}", 
 			request.getPaymentId(), request.getOrderId());
 
 		PaymentConfirmResponse response = paymentService.confirmPaymentAndCompleteOrder(request);
-
-		log.info("[Payment] 결제 승인 완료 - orderId: {}, status: {}", 
+		log.info("[Payment] 결제 승인 완료 - orderId: {}, status: {}",
 				response.getOrderId(), 
 				response.getStatus());
 

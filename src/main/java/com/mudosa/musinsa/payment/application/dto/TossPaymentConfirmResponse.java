@@ -14,7 +14,7 @@ public class TossPaymentConfirmResponse{
 	private String paymentKey;
 	private String status;
 	private String lastTransactionKey;
-	private String orderId;
+	private Long orderId;
 	private LocalDateTime approvedAt;
 	private String method;
 	private Long totalAmount;

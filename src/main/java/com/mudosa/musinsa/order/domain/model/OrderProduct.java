@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.order.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.product.domain.model.ProductOption;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -28,9 +29,11 @@ public class OrderProduct extends BaseEntity {
     
     @Column(name = "product_id", nullable = false)
     private Long productId;
-    
-    @Column(name = "product_option_id", nullable = false)
-    private Long productOptionId;
+
+    //재고 차감을 위해 필요함
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_option_id", nullable = false)
+    private ProductOption productOption;
     
     @Column(name = "product_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal productPrice;
@@ -52,19 +55,19 @@ public class OrderProduct extends BaseEntity {
     private LimitScope limitScope;
 
     public static OrderProduct create(
-        Long userId,
-        Long productId,
-        Long productOptionId,
-        BigDecimal productPrice,
-        Integer productQuantity,
-        Long eventId,
-        Long eventOptionId,
-        LimitScope limitScope
-    ) {
+            Long userId,
+            Long productId,
+            ProductOption productOption,
+            BigDecimal productPrice,
+            Integer productQuantity,
+            Long eventId,
+            Long eventOptionId,
+            LimitScope limitScope) {
+
         OrderProduct orderProduct = new OrderProduct();
         orderProduct.userId = userId;
         orderProduct.productId = productId;
-        orderProduct.productOptionId = productOptionId;
+        orderProduct.productOption = productOption;
         orderProduct.productPrice = productPrice;
         orderProduct.productQuantity = productQuantity;
         orderProduct.eventId = eventId;
@@ -72,5 +75,20 @@ public class OrderProduct extends BaseEntity {
         orderProduct.limitScope = limitScope;
         orderProduct.paidFlag = false;
         return orderProduct;
+    }
+
+    /* 재고 차감 */
+    public void decreaseStock() {
+        this.productOption.decreaseStock(this.productQuantity);
+    }
+
+    /* 재고 복구 */
+    public void restoreStock() {
+        this.productOption.restoreStock(this.productQuantity);
+    }
+
+    /* 상품 옵션 검증 */
+    public void validateProductOption() {
+        this.productOption.validateAvailable();
     }
 }

@@ -25,11 +25,16 @@ public enum ErrorCode {
     PAYMENT_NOT_FOUND("30003", "존재하지 않는 결제입니다", HttpStatus.NOT_FOUND),
     PAYMENT_ALREADY_APPROVED("30004", "이미 승인된 결제입니다", HttpStatus.CONFLICT),
     PAYMENT_AMOUNT_MISMATCH("30005", "결제 금액이 일치하지 않습니다", HttpStatus.BAD_REQUEST),
+    INVALID_PAYMENT_STATUS("30006", "결제 상태가 유효하지 않습니다", HttpStatus.BAD_REQUEST ),
+    INVALID_PG_TRANSACTION_ID("30007","결제 PG 트랜잭션 ID가 유효하지 않습니다", HttpStatus.BAD_REQUEST ),
+    INVALID_PAYMENT_METHOD("30008", "결제수단이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
     
     //order
     ORDER_NOT_FOUND("40001", "존재하지 않는 주문입니다", HttpStatus.NOT_FOUND),
     ORDER_ALREADY_COMPLETED("40002", "이미 완료된 주문입니다", HttpStatus.CONFLICT),
     ORDER_ITEM_NOT_FOUND("40003", "주문 상품을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+    INVALID_ORDER_STATUS("40004","유효하지 않은 주문 상태 입니다.", HttpStatus.NOT_FOUND ),
+    INVALID_ORDER_STATUS_TRANSITION("40005","허용되지 않는 주문 상태입니다.", HttpStatus.BAD_REQUEST ),
     
     //inventory
     INVENTORY_NOT_FOUND("50001", "재고 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
@@ -41,7 +46,13 @@ public enum ErrorCode {
     COUPON_EXPIRED("60003", "만료된 쿠폰입니다", HttpStatus.BAD_REQUEST),
 
     //brand
-    BRAND_NOT_FOUND("70001", "브랜드를 찾을 수 없습니다", HttpStatus.NOT_FOUND);
+    BRAND_NOT_FOUND("70001", "브랜드를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+
+    //product
+    PRODUCT_OPTION_NOT_AVAILABLE("80001","상품 옵션이 유효하지 않습니다",HttpStatus.BAD_REQUEST ),
+    
+    //inventory
+    INVENTORY_NOT_AVAILABLE("90001", "재고가 유효하지 않습니다.", HttpStatus.BAD_REQUEST );
 
     private final String code;
     private final String message;

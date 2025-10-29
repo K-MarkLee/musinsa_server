@@ -1,6 +1,8 @@
 package com.mudosa.musinsa.order.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -11,8 +13,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/* Order가 Order 도메인의 Aggregate Root이다.
+* 앞으로 OrderProduct랑 대화는 Order에서 한다. */
 @Entity
-@Table(name = "`order`")
+@Table(name = "order")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order extends BaseEntity {
@@ -30,9 +34,13 @@ public class Order extends BaseEntity {
     
     @Column(name = "brand_id", nullable = false)
     private Long brandId;
-    
-    @Column(name = "order_status", nullable = false)
-    private Integer orderStatus;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderProduct> orderProducts = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "order_status", nullable = false, length = 50)
+    private OrderStatus status;
     
     @Column(name = "order_no", nullable = false, length = 50, unique = true)
     private String orderNo;
@@ -52,24 +60,57 @@ public class Order extends BaseEntity {
     @Column(name = "settled_at")
     private LocalDateTime settledAt;
     
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderProduct> orderProducts = new ArrayList<>();
-    
-
     public void validatePending() {
-        if (this.orderStatus != 1) {
-            throw new IllegalStateException("이미 처리된 주문입니다. 현재 상태: " + this.orderStatus);
+        if (!this.status.isPending()) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_ORDER_STATUS,
+                    String.format("주문 상태가 PENDING이 아닙니다. 현재: %s", this.status)
+            );
         }
     }
 
+    /* 주문 상품 검증 */
+    public void validateOrderProducts() {
+        if (this.orderProducts.isEmpty()) {
+            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND);
+        }
+
+        // 각 주문 상품의 상품 옵션 검증
+        for (OrderProduct orderProduct : this.orderProducts) {
+            orderProduct.validateProductOption();
+        }
+    }
+
+
     public void complete() {
-        this.orderStatus = 2; // COMPLETED
-        this.isSettleable = true; // 정산 가능하도록 설정
+        this.status = this.status.transitionTo(OrderStatus.COMPLETED);
+        this.isSettleable = true;
     }
 
     public void rollback() {
-        this.orderStatus = 1; // PENDING
-        this.isSettleable = false;
+        if (this.status.isCompleted()) {
+            this.status = OrderStatus.COMPLETED;
+            this.isSettleable = false;
+        }
+    }
+
+    /* 재고 차감 */
+    public void decreaseStock() {
+        for (OrderProduct orderProduct : this.orderProducts) {
+            orderProduct.decreaseStock();
+        }
+    }
+
+    /* 쿠폰 사용 여부 확인 */
+    public boolean hasCoupon() {
+        return this.couponId != null;
+    }
+
+    /* 재고 복구 */
+    public void restoreStock() {
+        for (OrderProduct orderProduct : this.orderProducts) {
+            orderProduct.restoreStock();
+        }
     }
 
 }

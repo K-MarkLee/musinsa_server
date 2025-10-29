@@ -30,24 +30,5 @@ public class ProductLike extends BaseEntity {
         this.product = product;
         this.userId = userId;
     }
-    
-    // 도메인 로직: 상품 변경
-    public void changeProduct(Product product) {
-        if (product != null) this.product = product;
-    }
-    
-    // 도메인 로직: 사용자 변경
-    public void changeUser(Long userId) {
-        if (userId != null) this.userId = userId;
-    }
-    
-    // 도메인 로직: 특정 상품의 좋아요 여부 확인
-    public boolean belongsToProduct(Product product) {
-        return this.product != null && this.product.equals(product);
-    }
-    
-    // 도메인 로직: 특정 사용자의 좋아요 여부 확인
-    public boolean belongsToUser(Long userId) {
-        return this.userId != null && this.userId.equals(userId);
-    }
+
 }

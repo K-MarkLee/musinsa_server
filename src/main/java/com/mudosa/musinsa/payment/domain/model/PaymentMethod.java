@@ -6,10 +6,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 결제 수단 테이블
- * - 공통 참조 데이터
- */
+
 @Entity
 @Table(name = "payment_method")
 @Getter
@@ -22,32 +19,24 @@ public class PaymentMethod extends BaseEntity {
     private Integer id;
     
     @Column(name = "payment_name", nullable = false, length = 50, unique = true)
-    private String paymentName; // 결제 수단명 (카드, 계좌이체 등)
+    private String paymentName;
     
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
-    
-    /**
-     * 결제 수단 생성
-     */
+
     public static PaymentMethod create(String paymentName) {
         PaymentMethod paymentMethod = new PaymentMethod();
         paymentMethod.paymentName = paymentName;
         paymentMethod.isActive = true;
         return paymentMethod;
     }
-    
-    /**
-     * 활성화
-     */
-    public void activate() {
-        this.isActive = true;
-    }
-    
-    /**
-     * 비활성화
-     */
-    public void deactivate() {
-        this.isActive = false;
+
+    /* 유효한 결제수단인지 확인 */
+    public void validateActive() {
+        if (!this.isActive) {
+            throw new IllegalStateException(
+                    String.format("사용 불가능한 결제 수단입니다: %s", this.paymentName)
+            );
+        }
     }
 }
