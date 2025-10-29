@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.domain.chat.service;
 
+import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
 import org.springframework.data.domain.Page;
@@ -35,37 +36,7 @@ public interface ChatService {
    */
   Page<MessageResponse> getChatMessages(Long chatId, Long userId, int page, int size);
 
-  ChatRoomInfoResponse getChatRoomInfoByChatId(Long chatId);
-//  /**
-//   * 채팅방 생성 및 참여자 등록.
-//   *
-//   * @param brandId 브랜드 ID
-//   * @param type    채팅방 타입 문자열 (e.g. "GROUP", "DM")
-//   * @param userIds 초기 참여자 사용자 ID 목록
-//   * @return 생성된 채팅방 정보
-//   * @throws IllegalArgumentException 타입 미스매치 등 유효성 오류
-//   */
-//  ChatRoomResponse createChatRoom(Long brandId, String type, List<Long> userIds);
-//
-//
+  ChatRoomInfoResponse getChatRoomInfoByChatId(Long chatId, Long userId);
 
-
-//
-//  /**
-//   * 사용자가 참여 중인 채팅방 목록 조회.
-//   *
-//   * @param userId 사용자 ID
-//   * @return 채팅방 응답 목록
-//   */
-//  List<ChatRoomResponse> getUserChatRooms(Long userId);
-//
-//  /**
-//   * 메시지 소프트 삭제.
-//   *
-//   * @param messageId 메시지 ID
-//   * @param userId    삭제 수행 사용자 ID(본인 메시지 검증)
-//   * @throws RuntimeException 권한 미일치/미존재 등
-//   */
-//  void deleteMessage(Long messageId, Long userId);
-//
+  ChatPartResponse addParticipant(Long chatId, Long userId);
 }
