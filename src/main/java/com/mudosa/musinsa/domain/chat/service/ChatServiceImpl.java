@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.domain.chat.service;
 
+import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.domain.chat.dto.*;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
@@ -50,6 +51,7 @@ public class ChatServiceImpl implements ChatService {
   private final MessageAttachmentRepository attachmentRepository;
   private final ApplicationEventPublisher eventPublisher;
   private final UserRepository userRepository;
+  private final BrandMemberRepository brandMemberRepository;
 
   /**
    * 메시지 저장
@@ -197,7 +199,8 @@ public class ChatServiceImpl implements ChatService {
             .isDeleted(parent.getDeletedAt() != null)
             .build();
       }
-
+      boolean isManager = brandMemberRepository.existsByBrand_BrandIdAndUserId(msg.getChatRoom().getBrand().getBrandId(), msg.getChatPart().getUser().getId());
+      log.info("확인" + msg.getChatRoom().getBrand().getBrandId() + ":" + userId + "->" + isManager);
       return MessageResponse.builder()
           .messageId(msg.getMessageId())
           .chatId(msg.getChatRoom().getChatId()) // 식별자만 꺼내기(프록시 안전)
@@ -206,9 +209,10 @@ public class ChatServiceImpl implements ChatService {
           .userName(cp != null ? cp.getUser().getUserName() : "Unknown")
           .type(msg.getType())
           .content(msg.getContent())
-          .attachments(attachmentDtos)           // ✅ 엔티티 컬렉션 노출 금지
+          .attachments(attachmentDtos)           // 엔티티 컬렉션 노출 금지
           .createdAt(msg.getCreatedAt())
-          .parent(parentDto)                     // ✅ 엔티티 대신 DTO
+          .parent(parentDto)                     // 엔티티 대신 DTO
+          .isManager(isManager)
           .build();
     });
   }
@@ -223,6 +227,7 @@ public class ChatServiceImpl implements ChatService {
         .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
 
     boolean isParticipate = chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndLeftAtIsNull(chatId, userId);
+
     return ChatRoomInfoResponse.builder()
         .brandId(chatRoom.getBrand().getBrandId())
         .brandNameKo(chatRoom.getBrand().getNameKo())
