@@ -24,9 +24,9 @@ public class FcmController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/message/fcm/token")
-    public ResponseEntity sendMessageToken(@RequestBody MessageRequestDTO requestDTO) throws FirebaseMessagingException {
-        fcmService.sendMessageByToken(requestDTO.getTitle(),requestDTO.getBody(),requestDTO.getTargetToken());
-        return ResponseEntity.ok().build();
-    }
+//    @PostMapping("/message/fcm/token")
+//    public ResponseEntity sendMessageToken(@RequestBody MessageRequestDTO requestDTO) throws FirebaseMessagingException {
+//        fcmService.sendMessageByToken(requestDTO.getTitle(),requestDTO.getBody(),requestDTO.getTargetToken());
+//        return ResponseEntity.ok().build();
+//    }
 }

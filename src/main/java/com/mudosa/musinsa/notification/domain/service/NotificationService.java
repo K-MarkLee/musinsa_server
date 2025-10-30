@@ -1,5 +1,7 @@
 package com.mudosa.musinsa.notification.domain.service;
 
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.mudosa.musinsa.fbtoken.service.FirebaseTokenService;
 import com.mudosa.musinsa.notification.domain.dto.NotificationDTO;
 import com.mudosa.musinsa.notification.domain.model.Notification;
 import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
@@ -13,7 +15,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 /**
  * 필요한 기능
@@ -27,6 +28,8 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final NotificationMetadataRepository notificationMetadataRepository;
+    private final FcmService fcmService;
+    private final FirebaseTokenService firebaseTokenService;
 
     public List<NotificationDTO> readNotification(Long userId){
         List<Notification> listResult = notificationRepository.findByUserId(userId);
@@ -47,15 +50,13 @@ public class NotificationService {
         return result;
     }
 
-    public void createNotification(Long userId,String notificationCategory){
+    public void createNotification(Long userId,String notificationCategory) throws FirebaseMessagingException {
 
-        Optional<User> optionalUser = userRepository.findById(userId);
-        User resultUser = optionalUser.orElseThrow(
+        User resultUser = userRepository.findById(userId).orElseThrow(
                 ()->new NoSuchElementException("User not found")
         );
 
-        Optional<NotificationMetadata> optionalNotificationMetadata = notificationMetadataRepository.findByNotificationCategory(notificationCategory);
-        NotificationMetadata resultNotificationMetadata = optionalNotificationMetadata.orElseThrow(
+        NotificationMetadata resultNotificationMetadata = notificationMetadataRepository.findByNotificationCategory(notificationCategory).orElseThrow(
                 ()->new NoSuchElementException("Notification Metadata not found")
         );
 
@@ -67,6 +68,8 @@ public class NotificationService {
                 .notificationUrl(resultNotificationMetadata.getNotificationUrl())
                 .build();
         notificationRepository.save(notification);
+        //푸시 알림 보내기
+        fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
     }
 
     public int updateNotificationState(Long notificationId){
