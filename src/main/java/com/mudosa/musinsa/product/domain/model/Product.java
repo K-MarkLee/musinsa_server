@@ -17,12 +17,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "product")
 public class Product extends BaseEntity {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "product_id")
     private Long productId;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id", nullable = false)
     private Brand brand;
@@ -38,30 +38,30 @@ public class Product extends BaseEntity {
 
     @Column(name = "product_name", nullable = false, length = 100)
     private String productName;
-    
+
     @Column(name = "product_info", nullable = false, columnDefinition = "TEXT")
     private String productInfo;
-    
+
     @Column(name = "is_available", nullable = false)
     private Boolean isAvailable;
-    
+
     @Embedded
     @AttributeOverride(name = "value", column = @Column(name = "product_gender_type", nullable = false))
     private ProductGenderType productGenderType;
 
     // 역정규화 브랜드이름 (조회)
     @Column(name = "brand_name", nullable = false, length = 100)
-    private String brandName; 
+    private String brandName;
 
     // 역정규화: "상의/티셔츠"
     @Column(name = "category_path", nullable = false, length = 255)
     private String categoryPath;
 
-    
+
     /**
      * 상품 생성 (Builder 패턴)
      */
-   @Builder
+    @Builder
     public Product(Brand brand, String productName, String productInfo,
                    ProductGenderType productGenderType, String brandName, String categoryPath, Boolean isAvailable,
                    java.util.List<Image> images,
@@ -79,7 +79,7 @@ public class Product extends BaseEntity {
         if (productGenderType == null) {
             throw new IllegalArgumentException("상품 성별 타입은 필수입니다.");
         }
-        
+
         this.brand = brand;
         this.productName = productName;
         this.productInfo = productInfo;
@@ -87,14 +87,14 @@ public class Product extends BaseEntity {
         this.brandName = brandName;
         this.categoryPath = categoryPath;
         this.isAvailable = isAvailable != null ? isAvailable : true;
-        
+
         // 이미지 관계 설정
         this.images = images != null ? images : new java.util.ArrayList<>();
         if (images != null) {
             // 각 이미지에 상품 참조 설정
             images.forEach(image -> image.setProduct(this));
         }
-        
+
         // 옵션 관계 설정
         this.productOptions = productOptions != null ? productOptions : new java.util.ArrayList<>();
         if (productOptions != null) {

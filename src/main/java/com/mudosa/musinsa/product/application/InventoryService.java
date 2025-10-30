@@ -1,8 +1,5 @@
 package com.mudosa.musinsa.product.application;
 
-import com.mudosa.musinsa.exception.BusinessException;
-import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,13 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 재고 서비스
- * 
- * 책임:
- * - 재고 차감
- * - 재고 복구
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -55,7 +46,7 @@ public class InventoryService {
             productOptionId, quantity);
 
 //        // 재고 조회
-////        Inventory inventory = inventoryRepository.findByProductOptionId(productOptionId)
+//        Inventory inventory = inventoryRepository.findByProductOptionId(productOptionId)
 //            .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
 //
 //        // 재고 복구
