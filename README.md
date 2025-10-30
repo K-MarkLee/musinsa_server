@@ -72,7 +72,7 @@ server/
 │   ├── main/
 │   │   ├── java/com/mudosa/musinsa/
 │   │   │   ├── domain/              # 도메인 모델
-│   │   │   │   ├── order/           # 주문 도메인
+│   │   │   │   ├── orders/           # 주문 도메인
 │   │   │   │   ├── payment/         # 결제 도메인
 │   │   │   │   ├── user/            # 회원 도메인
 │   │   │   │   ├── product/         # 상품 도메인

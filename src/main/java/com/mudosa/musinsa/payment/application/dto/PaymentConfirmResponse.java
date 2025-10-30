@@ -13,9 +13,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PaymentConfirmResponse {
     private String paymentKey;
-    private Long orderId;
+    private String orderId;
     private String status;
     private Long amount;
     private String pgProvider;
+    private String method;
     private LocalDateTime approvedAt;
 }

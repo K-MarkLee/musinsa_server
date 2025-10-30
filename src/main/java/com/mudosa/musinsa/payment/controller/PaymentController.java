@@ -31,8 +31,8 @@ public class PaymentController {
 	public ResponseEntity<ApiResponse<PaymentConfirmResponse>> confirmPayment(
 			 @Valid @RequestBody PaymentConfirmRequest request) {
 
-		log.info("[Payment] 결제 승인 요청 - paymentId: {}, orderId: {}", 
-			request.getPaymentId(), request.getOrderId());
+		log.info("[Payment] 결제 승인 요청, orderId: {}",
+			request.getOrderNo());
 
 		PaymentConfirmResponse response = paymentService.confirmPaymentAndCompleteOrder(request);
 		log.info("[Payment] 결제 승인 완료 - orderId: {}, status: {}",

@@ -16,10 +16,10 @@ import java.util.List;
 /* Order가 Order 도메인의 Aggregate Root이다.
 * 앞으로 OrderProduct랑 대화는 Order에서 한다. */
 @Entity
-@Table(name = "order")
+@Table(name = "orders")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Order extends BaseEntity {
+public class Orders extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,7 +35,7 @@ public class Order extends BaseEntity {
     @Column(name = "brand_id", nullable = false)
     private Long brandId;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "orders", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderProduct> orderProducts = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
@@ -89,7 +89,7 @@ public class Order extends BaseEntity {
 
     public void rollback() {
         if (this.status.isCompleted()) {
-            this.status = OrderStatus.COMPLETED;
+            this.status = OrderStatus.PENDING;
             this.isSettleable = false;
         }
     }
@@ -111,6 +111,21 @@ public class Order extends BaseEntity {
         for (OrderProduct orderProduct : this.orderProducts) {
             orderProduct.restoreStock();
         }
+    }
+
+    /* 할인 적용 */
+    public void applyDiscount(BigDecimal discount) {
+        if (discount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException(ErrorCode.INVALID_DISCOUNT_AMOUNT,"할인 금액은 음수일 수 없습니다");
+        }
+
+        if (discount.compareTo(this.totalPrice) > 0) {
+            throw new BusinessException(ErrorCode.INVALID_DISCOUNT_AMOUNT,
+                    "할인 금액이 총 금액보다 클 수 없습니다");
+        }
+
+        this.totalDiscount = discount;
+        this.finalPaymentAmount = this.totalPrice.subtract(discount);
     }
 
 }

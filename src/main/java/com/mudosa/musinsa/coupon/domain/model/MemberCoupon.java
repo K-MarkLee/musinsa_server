@@ -1,6 +1,8 @@
 package com.mudosa.musinsa.coupon.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -21,10 +23,11 @@ public class MemberCoupon extends BaseEntity {
     
     @Column(name = "user_id", nullable = false)
     private Long userId;
-    
-    @Column(name = "coupon_id", nullable = false)
-    private Long couponId;
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id", nullable = false)
+    private Coupon coupon;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "coupon_status", nullable = false)
     private CouponStatus couponStatus = CouponStatus.AVAILABLE;
@@ -39,17 +42,22 @@ public class MemberCoupon extends BaseEntity {
     private LocalDateTime expiredAt;
 
     public void validateUsable() {
-        if (this.couponStatus == CouponStatus.USED) {
-            throw new IllegalStateException("이미 사용된 쿠폰입니다.");
+        // 1. 상태 검증
+        if (this.couponStatus != CouponStatus.AVAILABLE) {
+            throw new BusinessException(
+                    ErrorCode.COUPON_APLIED_FALIED,
+                    "이미 사용되었거나 만료된 쿠폰입니다"
+            );
         }
-        if (this.couponStatus == CouponStatus.EXPIRED) {
-            throw new IllegalStateException("만료된 쿠폰입니다.");
-        }
-        if (this.expiredAt != null && LocalDateTime.now().isAfter(this.expiredAt)) {
-            throw new IllegalStateException("만료된 쿠폰입니다.");
+
+        // 2. 만료일 검증
+        if (isExpired()) {
+            throw new BusinessException(
+                    ErrorCode.COUPON_EXPIRED,
+                    "쿠폰 유효기간이 만료되었습니다"
+            );
         }
     }
-    
 
     public void use(Long orderId) {
         validateUsable();
@@ -58,19 +66,24 @@ public class MemberCoupon extends BaseEntity {
         this.usedOrderId = orderId;
         this.usedAt = LocalDateTime.now();
     }
-    
 
-    public void expire() {
-        if (this.couponStatus == CouponStatus.USED) {
-            throw new IllegalStateException("이미 사용된 쿠폰은 만료 처리할 수 없습니다.");
-        }
-        this.couponStatus = CouponStatus.EXPIRED;
+
+    public boolean isExpired() {
+        return this.expiredAt != null && LocalDateTime.now().isAfter(this.expiredAt);
     }
-    
 
-    public boolean canUse() {
-        return couponStatus == CouponStatus.AVAILABLE && 
-               (expiredAt == null || LocalDateTime.now().isBefore(expiredAt));
+    public void rollbackUsage() {
+        if (this.couponStatus != CouponStatus.USED) {
+            throw new BusinessException(
+                    ErrorCode.COUPON_NOT_USED,
+                    "사용되지 않은 쿠폰은 롤백할 수 없습니다"
+            );
+        }
+
+        // 상태 복구
+        this.couponStatus = CouponStatus.AVAILABLE;
+        this.usedAt = null;
+        this.usedOrderId = null;
     }
 }
 

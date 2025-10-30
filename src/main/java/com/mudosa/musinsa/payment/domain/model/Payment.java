@@ -29,10 +29,6 @@ public class Payment extends BaseEntity{
     
     @Column(name = "order_id", nullable = false, unique = true)
     private Long orderId;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payment_method_id", nullable = false)
-    private PaymentMethod paymentMethod;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false, length = 50)
@@ -40,6 +36,9 @@ public class Payment extends BaseEntity{
 
     @Column(name = "currency", nullable = false, length = 3)
     private String currency = "KRW";
+
+    @Column(name = "method", length = 50)
+    private String method;  // "카드", "계좌이체", "간편결제" 등
     
     @Column(name = "amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
@@ -61,32 +60,24 @@ public class Payment extends BaseEntity{
 
     public static Payment create(
             Long orderId,
-            PaymentMethod paymentMethod,
             BigDecimal amount,
-            String pgProvider) {
+            String pgProvider,
+            Long userId) {
 
         // 검증
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 
-        if (paymentMethod == null) {
-            throw new BusinessException(ErrorCode.INVALID_PAYMENT_METHOD);
-        }
-
-        // 결제 수단 활성화 확인
-        paymentMethod.validateActive();
-
         Payment payment = new Payment();
         payment.orderId = orderId;
-        payment.paymentMethod = paymentMethod;
         payment.amount = amount;
         payment.pgProvider = pgProvider;
         payment.status = PaymentStatus.PENDING;
         payment.currency = "KRW";
 
         // 로그 추가
-        payment.addLog(PaymentEventType.CREATED, "결제 생성", null);
+        payment.addLog(PaymentEventType.CREATED, "결제 생성", userId);
 
         return payment;
     }
@@ -112,7 +103,7 @@ public class Payment extends BaseEntity{
     }
 
     private void addLog(PaymentEventType eventType, String message, Long userId) {
-        PaymentLog log = PaymentLog.create(this, eventType, message, userId); //PaymentLog에 payment를 꼭 저장해야 null로 저장되지 않는다.
+        PaymentLog log = PaymentLog.create(this, eventType, message, userId);
         this.paymentLogs.add(log);
     }
 

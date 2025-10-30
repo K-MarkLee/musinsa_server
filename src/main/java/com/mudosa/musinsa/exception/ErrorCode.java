@@ -35,6 +35,7 @@ public enum ErrorCode {
     ORDER_ITEM_NOT_FOUND("40003", "주문 상품을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     INVALID_ORDER_STATUS("40004","유효하지 않은 주문 상태 입니다.", HttpStatus.NOT_FOUND ),
     INVALID_ORDER_STATUS_TRANSITION("40005","허용되지 않는 주문 상태입니다.", HttpStatus.BAD_REQUEST ),
+    INVALID_DISCOUNT_AMOUNT("40006","할인 적용이 유효하지 않습니다",HttpStatus.BAD_REQUEST ),
     
     //inventory
     INVENTORY_NOT_FOUND("50001", "재고 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
@@ -44,6 +45,10 @@ public enum ErrorCode {
     COUPON_NOT_FOUND("60001", "쿠폰을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     COUPON_ALREADY_USED("60002", "이미 사용된 쿠폰입니다", HttpStatus.BAD_REQUEST),
     COUPON_EXPIRED("60003", "만료된 쿠폰입니다", HttpStatus.BAD_REQUEST),
+    COUPON_APLIED_FALIED("60004", "쿠폰 적용에 실패했습니다", HttpStatus.BAD_REQUEST),
+    INVALID_COUPON_TYPE("60005","지원하지 않은 쿠폰 타입입니다",HttpStatus.BAD_REQUEST ),
+    COUPON_NOT_USED("60006","사용되지 않은 쿠폰은 복구할 수 없습니다", HttpStatus.BAD_REQUEST ),
+    COUPON_ROLLBACK_INVALID("60007","쿠폰이 다른 주무에서 사용되어 복구할 수 없습니다",HttpStatus.BAD_REQUEST ),
 
     //brand
     BRAND_NOT_FOUND("70001", "브랜드를 찾을 수 없습니다", HttpStatus.NOT_FOUND),

@@ -1,7 +1,5 @@
 package com.mudosa.musinsa.product.application;
 
-import com.mudosa.musinsa.order.domain.model.Order;
-import com.mudosa.musinsa.product.domain.model.CartItem;
 import com.mudosa.musinsa.product.domain.repository.CartItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
