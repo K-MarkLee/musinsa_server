@@ -14,9 +14,11 @@ public class WeeklyAggregationDto {
 
     private Long brandId;
     private Integer year;
-    private Integer week;
+    private Integer month;
+    private Integer weekOfMonth;
     private LocalDate weekStartDate;
     private LocalDate weekEndDate;
+    private String settlementTimezone;
     private Long totalOrderCount;
     private Money totalSalesAmount;
     private Money totalCommissionAmount;
@@ -26,9 +28,11 @@ public class WeeklyAggregationDto {
     public WeeklyAggregationDto(
         Long brandId,
         Integer year,
-        Integer week,
+        Integer month,
+        Integer weekOfMonth,
         LocalDate weekStartDate,
         LocalDate weekEndDate,
+        String settlementTimezone,
         Long totalOrderCount,
         BigDecimal totalSalesAmount,
         BigDecimal totalCommissionAmount,
@@ -37,9 +41,11 @@ public class WeeklyAggregationDto {
     ) {
         this.brandId = brandId;
         this.year = year;
-        this.week = week;
+        this.month = month;
+        this.weekOfMonth = weekOfMonth;
         this.weekStartDate = weekStartDate;
         this.weekEndDate = weekEndDate;
+        this.settlementTimezone = settlementTimezone;
         this.totalOrderCount = totalOrderCount;
         this.totalSalesAmount = new Money(totalSalesAmount);
         this.totalCommissionAmount = new Money(totalCommissionAmount);

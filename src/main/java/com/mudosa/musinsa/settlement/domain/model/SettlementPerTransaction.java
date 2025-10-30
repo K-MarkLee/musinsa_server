@@ -27,7 +27,7 @@ public class SettlementPerTransaction extends CreatedOnlyEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "transaction_id")
+    @Column(name = "settlement_transaction_id")
     private Long id;
 
     @Column(name = "brand_id", nullable = false)
@@ -35,6 +35,9 @@ public class SettlementPerTransaction extends CreatedOnlyEntity {
 
     @Column(name = "payment_id", nullable = false)
     private Long paymentId;
+
+    @Column(name = "pg_transaction_id", length = 100)
+    private String pgTransactionId;
 
     @Column(name = "transaction_date", nullable = false)
     private LocalDateTime transactionDate;
@@ -76,6 +79,7 @@ public class SettlementPerTransaction extends CreatedOnlyEntity {
     public static SettlementPerTransaction create(
         Long brandId,
         Long paymentId,
+        String pgTransactionId,
         Money transactionAmount,
         BigDecimal commissionRate,
         Money pgFeeAmount,
@@ -85,6 +89,7 @@ public class SettlementPerTransaction extends CreatedOnlyEntity {
         SettlementPerTransaction settlement = new SettlementPerTransaction();
         settlement.brandId = brandId;
         settlement.paymentId = paymentId;
+        settlement.pgTransactionId = pgTransactionId;
         settlement.transactionAmount = transactionAmount;
         settlement.commissionRate = commissionRate;
         settlement.pgFeeAmount = pgFeeAmount;

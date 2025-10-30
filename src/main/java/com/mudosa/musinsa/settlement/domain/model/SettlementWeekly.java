@@ -9,22 +9,18 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.DateTimeException;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.temporal.IsoFields;
 
 @Entity
 @Table(
     name = "settlements_weekly",
     uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"settlement_number"}),
-        @UniqueConstraint(columnNames = {"brand_id", "settlement_year_week"})
+        @UniqueConstraint(columnNames = {"settlement_number"})
     },
     indexes = {
-        @Index(name = "idx_settlement_year_week", columnList = "settlement_year_week"),
-        @Index(name = "idx_brand_id", columnList = "brand_id"),
+        @Index(name = "idx_brand_year_month_week", columnList = "brand_id, settlement_year, settlement_month, week_of_month"),
         @Index(name = "idx_settlement_status", columnList = "settlement_status")
     }
 )
@@ -44,8 +40,17 @@ public class SettlementWeekly extends BaseEntity {
     @Column(name = "brand_id", nullable = false)
     private Long brandId;
 
-    @Column(name = "settlement_year_week", nullable = false, length = 10)
-    private String settlementYearWeek;
+    @Column(name = "settlement_year", nullable = false)
+    private Integer settlementYear;
+
+    @Column(name = "settlement_month", nullable = false)
+    private Integer settlementMonth;
+
+    @Column(name = "week_of_month", nullable = false)
+    private Integer weekOfMonth;
+
+    @Column(name = "settlement_timezone", nullable = false, length = 50)
+    private String settlementTimezone;
 
     @Column(name = "week_start_date", nullable = false)
     private LocalDate weekStartDate;
@@ -53,8 +58,8 @@ public class SettlementWeekly extends BaseEntity {
     @Column(name = "week_end_date", nullable = false)
     private LocalDate weekEndDate;
 
-    @Column(name = "settlement_timezone", nullable = false, length = 50)
-    private String settlementTimezone;
+    @Column(name = "week_day_count", nullable = false)
+    private Integer weekDayCount;
 
     @Column(name = "total_order_count", nullable = false)
     private Integer totalOrderCount = 0;
@@ -94,15 +99,24 @@ public class SettlementWeekly extends BaseEntity {
      */
     public static SettlementWeekly create(
         Long brandId,
-        int year,
-        int week,
+        LocalDate weekStartDate,
+        LocalDate weekEndDate,
         String settlementNumber,
         String timezone
     ) {
         SettlementWeekly settlement = new SettlementWeekly();
         settlement.brandId = brandId;
-        settlement.settlementYearWeek = String.format("%d-W%02d", year, week);
         settlement.settlementNumber = settlementNumber;
+        settlement.weekStartDate = weekStartDate;
+        settlement.weekEndDate = weekEndDate;
+
+        // 연도, 월, 주차 계산 (시작일 기준)
+        settlement.settlementYear = weekStartDate.getYear();
+        settlement.settlementMonth = weekStartDate.getMonthValue();
+        settlement.weekOfMonth = calculateWeekOfMonth(weekStartDate);
+
+        // 실제 일수 계산
+        settlement.weekDayCount = (int) java.time.temporal.ChronoUnit.DAYS.between(weekStartDate, weekEndDate) + 1;
 
         // Timezone 검증
         try {
@@ -113,13 +127,19 @@ public class SettlementWeekly extends BaseEntity {
             settlement.settlementTimezone = "UTC";
         }
 
-        // ISO 8601 표준에 따라 주의 시작일(월요일)과 종료일(일요일) 계산
-        settlement.weekStartDate = LocalDate.of(year, 1, 1)
-            .with(IsoFields.WEEK_OF_WEEK_BASED_YEAR, week)
-            .with(DayOfWeek.MONDAY);
-        settlement.weekEndDate = settlement.weekStartDate.plusDays(6); // Sunday
-
         return settlement;
+    }
+
+    /**
+     * 해당 월의 몇 번째 주인지 계산 (1-6)
+     */
+    private static int calculateWeekOfMonth(LocalDate date) {
+        LocalDate firstDayOfMonth = date.withDayOfMonth(1);
+        int dayOfMonth = date.getDayOfMonth();
+        int firstDayOfWeekValue = firstDayOfMonth.getDayOfWeek().getValue(); // 1(월)~7(일)
+
+        // 첫 주는 월초부터 첫 일요일까지
+        return ((dayOfMonth + firstDayOfWeekValue - 2) / 7) + 1;
     }
 
     /**
@@ -165,5 +185,15 @@ public class SettlementWeekly extends BaseEntity {
      */
     public void fail() {
         this.settlementStatus = SettlementStatus.FAILED;
+    }
+
+    /**
+     * 일평균 매출 계산 (짧은 주 보정)
+     */
+    public Money getAverageDailySales() {
+        if (weekDayCount == null || weekDayCount == 0) {
+            return Money.ZERO;
+        }
+        return totalSalesAmount.divide(java.math.BigDecimal.valueOf(weekDayCount));
     }
 }

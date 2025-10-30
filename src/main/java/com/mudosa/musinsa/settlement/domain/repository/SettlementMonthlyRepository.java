@@ -34,5 +34,9 @@ public interface SettlementMonthlyRepository
     /**
      * 브랜드 + 연도-월로 조회
      */
-    SettlementMonthly findByBrandIdAndSettlementYearMonth(Long brandId, String settlementYearMonth);
+    SettlementMonthly findByBrandIdAndSettlementYearAndSettlementMonth(
+        Long brandId,
+        Integer settlementYear,
+        Integer settlementMonth
+    );
 }

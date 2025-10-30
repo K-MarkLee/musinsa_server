@@ -14,6 +14,7 @@ public class MonthlyAggregationDto {
     private Long brandId;
     private Integer year;
     private Integer month;
+    private String settlementTimezone;
     private Long totalOrderCount;
     private Money totalSalesAmount;
     private Money totalCommissionAmount;
@@ -24,6 +25,7 @@ public class MonthlyAggregationDto {
         Long brandId,
         Integer year,
         Integer month,
+        String settlementTimezone,
         Long totalOrderCount,
         BigDecimal totalSalesAmount,
         BigDecimal totalCommissionAmount,
@@ -33,6 +35,7 @@ public class MonthlyAggregationDto {
         this.brandId = brandId;
         this.year = year;
         this.month = month;
+        this.settlementTimezone = settlementTimezone;
         this.totalOrderCount = totalOrderCount;
         this.totalSalesAmount = new Money(totalSalesAmount);
         this.totalCommissionAmount = new Money(totalCommissionAmount);

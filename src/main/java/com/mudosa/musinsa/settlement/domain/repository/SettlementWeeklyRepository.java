@@ -30,7 +30,12 @@ public interface SettlementWeeklyRepository extends JpaRepository<SettlementWeek
     );
 
     /**
-     * 브랜드 + 연도-주차로 조회
+     * 브랜드 + 연도-월-주차로 조회
      */
-    SettlementWeekly findByBrandIdAndSettlementYearWeek(Long brandId, String settlementYearWeek);
+    SettlementWeekly findByBrandIdAndSettlementYearAndSettlementMonthAndWeekOfMonth(
+        Long brandId,
+        Integer settlementYear,
+        Integer settlementMonth,
+        Integer weekOfMonth
+    );
 }
