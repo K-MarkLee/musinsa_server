@@ -7,12 +7,14 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import com.mudosa.musinsa.fbtoken.dto.FBTokenDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.util.List;
 
 @Service
 public class FcmService {
@@ -47,13 +49,15 @@ public class FcmService {
             .build());
     }
 
-    public void sendMessageByToken(String title, String body, String token) throws FirebaseMessagingException {
-        FirebaseMessaging.getInstance().send(Message.builder()
-                        .setNotification(Notification.builder()
-                                .setTitle(title)
-                                .setBody(body)
-                                .build())
-                        .setToken(token)
-                .build());
+    public void sendMessageByToken(String title, String body, List<FBTokenDTO> tokenList) throws FirebaseMessagingException {
+        for(FBTokenDTO token : tokenList) {
+            FirebaseMessaging.getInstance().send(Message.builder()
+                    .setNotification(Notification.builder()
+                            .setTitle(title)
+                            .setBody(body)
+                            .build())
+                    .setToken(token.getFirebaseTokenKey())
+                    .build());
+        }
     }
 }
