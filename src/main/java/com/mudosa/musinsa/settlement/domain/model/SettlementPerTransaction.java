@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.settlement.domain.model;
 
-import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.CreatedOnlyEntity;
 import com.mudosa.musinsa.common.vo.Money;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -23,7 +23,7 @@ import java.time.ZonedDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Slf4j
-public class SettlementPerTransaction extends BaseEntity {
+public class SettlementPerTransaction extends CreatedOnlyEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

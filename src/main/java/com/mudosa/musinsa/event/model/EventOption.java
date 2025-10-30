@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.event.domain.model;
+package com.mudosa.musinsa.event.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.product.domain.model.ProductOption;

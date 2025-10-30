@@ -48,7 +48,7 @@ spring:
   # DevTools 설정
   devtools:
     restart:
-      enabled: true
+      enabled: true #원래 true
     livereload:
       enabled: true
 
@@ -138,3 +138,11 @@ springdoc:
 #  endpoint:
 #    health:
 #      show-details: always
+
+# ========================================
+# FCM 환경변수 설정
+# ========================================
+fcm:
+  service-acount-file: key/fdbdproject.json
+  topic-name: fdbdMessage
+  project-id: fdbdproject

@@ -10,10 +10,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 거래별 정산 리포지토리
+ * 거래별 정산 데이터 조회
  */
 @Repository
-public interface SettlementPerTransactionRepository extends JpaRepository<SettlementPerTransaction, Long> {
+public interface SettlementPerTransactionRepository
+    extends JpaRepository<SettlementPerTransaction, Long>,
+            SettlementPerTransactionAggregationRepository {
 
     /**
      * OOM 방지를 위해 페이징 사용

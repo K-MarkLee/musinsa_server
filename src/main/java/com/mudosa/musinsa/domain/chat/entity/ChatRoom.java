@@ -40,7 +40,7 @@ public class ChatRoom {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "brand_id", nullable = false)
-  private Brand brandId;
+  private Brand brand;
 
   // ==== 연관관계 ====
   @OneToMany(mappedBy = "chatRoom", orphanRemoval = false)

@@ -2,6 +2,12 @@ package com.mudosa.musinsa.order.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.event.model.Event;
+import com.mudosa.musinsa.event.model.EventOption;
+import com.mudosa.musinsa.product.domain.model.Product;
+import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.user.domain.model.User;
+
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -23,10 +29,10 @@ public class OrderProduct extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     private Orders orders;
-    
+
     @Column(name = "user_id", nullable = false)
     private Long userId;
-    
+
     @Column(name = "product_id", nullable = false)
     private Long productId;
 
@@ -40,13 +46,15 @@ public class OrderProduct extends BaseEntity {
     
     @Column(name = "product_quantity", nullable = false)
     private Integer productQuantity = 1;
-    
-    @Column(name = "event_id")
-    private Long eventId;
-    
-    @Column(name = "event_option_id")
-    private Long eventOptionId;
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id")
+    private Event event;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_option_id")
+    private EventOption eventOption;
+
     @Column(name = "paid_flag", nullable = false)
     private Boolean paidFlag = false;
     
@@ -54,14 +62,20 @@ public class OrderProduct extends BaseEntity {
     @Column(name = "limit_scope")
     private LimitScope limitScope;
 
+    // getProductOptionId 메서드 추가
+    public Long getProductOptionId() {
+        return productOption.getProductOptionId();  // productOption 객체의 ID 반환
+    }
+
+    // OrderProduct 객체를 생성하는 정적 팩토리 메서드
     public static OrderProduct create(
             Long userId,
             Long productId,
             ProductOption productOption,
             BigDecimal productPrice,
             Integer productQuantity,
-            Long eventId,
-            Long eventOptionId,
+            Event event,
+            EventOption eventOption,
             LimitScope limitScope) {
 
         OrderProduct orderProduct = new OrderProduct();
@@ -70,9 +84,9 @@ public class OrderProduct extends BaseEntity {
         orderProduct.productOption = productOption;
         orderProduct.productPrice = productPrice;
         orderProduct.productQuantity = productQuantity;
-        orderProduct.eventId = eventId;
-        orderProduct.eventOptionId = eventOptionId;
-        orderProduct.limitScope = limitScope;
+        orderProduct.event = event;  // Event 객체
+        orderProduct.eventOption = eventOption;  // EventOption 객체
+        orderProduct.limitScope = limitScope;  // LimitScope enum
         orderProduct.paidFlag = false;
         return orderProduct;
     }

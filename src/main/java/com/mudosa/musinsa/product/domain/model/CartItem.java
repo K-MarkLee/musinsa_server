@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "cart_item")
 public class CartItem extends BaseEntity {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "cart_item_id")
@@ -23,19 +23,19 @@ public class CartItem extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_option_id", nullable = false)
     private ProductOption productOption;
-
+    
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
-
+    
 
     @Embedded
     @AttributeOverride(name = "amount", column = @Column(name = "unit_price", nullable = false, precision = 10, scale = 2))
     private Money unitPrice;
-
+    
     @Builder
     public CartItem(User user, ProductOption productOption, Integer quantity, Money unitPrice) {
         // 엔티티 기본 무결성 검증
@@ -51,7 +51,7 @@ public class CartItem extends BaseEntity {
         if (unitPrice == null || unitPrice.isLessThanOrEqual(Money.ZERO)) {
             throw new IllegalArgumentException("단가는 0원보다 커야 합니다.");
         }
-
+        
         this.user = user;
         this.productOption = productOption;
         this.quantity = quantity;

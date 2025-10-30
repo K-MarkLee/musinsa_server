@@ -12,22 +12,22 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "option_name")
 public class OptionName extends BaseEntity {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "option_name_id")
     private Long optionNameId;
-
+    
     @Column(name = "option_name", nullable = false, length = 50)
     private String optionName;
-
+    
     @Builder
     public OptionName(String optionName) {
         // 엔티티 기본 무결성 검증
         if (optionName == null || optionName.trim().isEmpty()) {
             throw new IllegalArgumentException("옵션명은 필수입니다.");
         }
-
+        
         this.optionName = optionName;
     }
 

@@ -1,27 +1,31 @@
 package com.mudosa.musinsa.brand.domain.model;
 
-import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.transaction.Transactional;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 브랜드 애그리거트 루트
+ */
 @Entity
 @Table(name = "brand")
 @Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Brand extends BaseEntity {
+public class Brand {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "brand_id")
   private Long brandId;
 
+  // 브랜드 멤버 (같은 애그리거트)
   @OneToMany(mappedBy = "brand", cascade = CascadeType.ALL, orphanRemoval = true)
   private final List<BrandMember> brandMembers = new ArrayList<>();
 
@@ -40,6 +44,12 @@ public class Brand extends BaseEntity {
 
   @Column(name = "logo_url")
   private String logoUrl;
+
+  @Column(name = "created_at")
+  private LocalDateTime createdAt;
+
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 
   /**
    * 브랜드 생성

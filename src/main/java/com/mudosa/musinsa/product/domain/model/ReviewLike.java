@@ -32,25 +32,4 @@ public class ReviewLike extends BaseEntity {
         this.review = review;
         this.user = user;
     }
-    
-    // 도메인 로직: 리뷰 변경
-    public void changeReview(Review review) {
-        if (review != null) this.review = review;
-    }
-    
-    // 도메인 로직: 사용자 변경
-    public void changeUser(User user) {
-        if (user != null) this.user = user;
-    }
-    
-    // 도메인 로직: 특정 리뷰의 좋아요 여부 확인
-    public boolean belongsToReview(Review review) {
-        return this.review != null && this.review.equals(review);
-    }
-    
-    // 도메인 로직: 특정 사용자의 좋아요 여부 확인
-    public boolean belongsToUser(User user) {
-        return this.user != null && this.user.equals(user);
-    }
-
 }

@@ -22,4 +22,6 @@ public class ChatRoomInfoResponse {
   private ChatRoomType type;
   private Long partNum;
   private LocalDateTime lastMessageAt;
+
+  private boolean isParticipate;
 }

@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.event.domain.model;
+package com.mudosa.musinsa.event.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
@@ -63,7 +63,7 @@ public class Event extends BaseEntity {
     // DDL: started_at / ended_at NOT NULL
     // 이벤트 시작시간 , 종료 시간
     @Column(name = "started_at", nullable = false)
-    private LocalDateTime startedAt;
+    private LocalDateTime startedAt; // 로컬 데이트타임 내장 메서드 이용가능
 
     @Column(name = "ended_at", nullable = false)
     private LocalDateTime endedAt;

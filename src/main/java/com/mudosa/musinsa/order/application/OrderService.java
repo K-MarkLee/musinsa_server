@@ -7,7 +7,6 @@ import com.mudosa.musinsa.order.domain.model.Orders;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
 import com.mudosa.musinsa.payment.application.dto.OrderValidationResult;
 import com.mudosa.musinsa.product.application.CartService;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

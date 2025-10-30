@@ -2,10 +2,7 @@ package com.mudosa.musinsa.notification.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * 알림 메타데이터 애그리거트 루트
@@ -16,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Builder
 @AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(access= AccessLevel.PROTECTED)
 public class NotificationMetadata extends BaseEntity {
     
     @Id
@@ -28,5 +25,4 @@ public class NotificationMetadata extends BaseEntity {
     private String notificationType;
     private String notificationCategory;
     private String notificationUrl;
-
 }
