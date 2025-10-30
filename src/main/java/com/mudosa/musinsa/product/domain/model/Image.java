@@ -34,9 +34,10 @@ public class Image extends BaseEntity {
     @Column(name = "is_thumbnail", nullable = false)
     private Boolean isThumbnail;
     
+    // 이미지를 생성하며 필수 정보를 검증한다.
     @Builder
     public Image(Product product, Event event, String imageUrl, Boolean isThumbnail) {
-        // 엔티티 기본 무결성 검증
+        // 필수 파라미터를 확인해 무결성을 보장한다.
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             throw new IllegalArgumentException("이미지 URL은 필수입니다.");
         }
@@ -52,7 +53,7 @@ public class Image extends BaseEntity {
         this.isThumbnail = isThumbnail != null ? isThumbnail : false;
     }
 
-    // 패키지 private: 상품 참조 설정 (Product 애그리거트에서만 사용)
+    // 상품 애그리거트에서만 호출해 양방향 연관을 설정한다.
     void setProduct(Product product) {
         this.product = product;
     }

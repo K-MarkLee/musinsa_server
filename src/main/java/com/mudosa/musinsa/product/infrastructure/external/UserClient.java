@@ -7,10 +7,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
-/**
- * 사용자 도메인 연동 Client
- * User 도메인 API를 호출하여 사용자 정보 조회
- */
+// 사용자 도메인 API와 통신해 사용자 정보를 제공하는 클라이언트이다.
 @Component
 @RequiredArgsConstructor
 public class UserClient {
@@ -20,11 +17,7 @@ public class UserClient {
     @Value("${user.service.url:http://localhost:8082}")
     private String userServiceUrl;
     
-    /**
-     * 사용자 ID로 사용자 정보 조회
-     * @param userId 사용자 ID
-     * @return 사용자 응답 정보
-     */
+    // 단일 사용자 ID로 외부 서비스를 호출해 정보를 조회한다.
     public UserResponse findById(Long userId) {
         String url = userServiceUrl + "/api/users/" + userId;
         try {
@@ -34,11 +27,7 @@ public class UserClient {
         }
     }
     
-    /**
-     * 여러 사용자 ID로 한번에 조회
-     * @param userIds 사용자 ID 목록
-     * @return 사용자 응답 정보 목록
-     */
+    // 사용자 ID 목록을 전달해 외부 서비스에서 일괄 조회한다.
     public UserListResponse findByIds(List<Long> userIds) {
         String url = userServiceUrl + "/api/users/batch";
         try {
@@ -48,11 +37,7 @@ public class UserClient {
         }
     }
     
-    /**
-     * 사용자 ID 목록 유효성 검증
-     * @param userIds 사용자 ID 목록
-     * @return 유효한 사용자 수
-     */
+    // 사용자 ID 목록의 유효성을 외부 서비스에 위임해 검증한다.
     public Boolean validateUsers(List<Long> userIds) {
         String url = userServiceUrl + "/api/users/validate";
         try {
@@ -62,9 +47,7 @@ public class UserClient {
         }
     }
     
-    /**
-     * 사용자 응답 DTO
-     */
+    // 외부 사용자 서비스의 응답을 담는 DTO이다.
     public static class UserResponse {
         private Long userId;
         private String username;
@@ -84,9 +67,7 @@ public class UserClient {
         public void setStatus(String status) { this.status = status; }
     }
     
-    /**
-     * 사용자 목록 응답 DTO
-     */
+    // 사용자 응답 DTO 목록을 표현하는 헬퍼 클래스이다.
     public static class UserListResponse extends java.util.ArrayList<UserResponse> {
         public UserListResponse() { super(); }
     }

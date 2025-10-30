@@ -9,9 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 상품 애그리거트 루트
- */
+// 상품 애그리거트 루트 엔티티로 연관된 하위 요소를 함께 관리한다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -66,15 +64,13 @@ public class Product extends BaseEntity {
     private String categoryPath;
 
     
-    /**
-     * 상품 생성 (Builder 패턴)
-     */
+        // 필수 값 검증 후 상품과 연관 컬렉션을 초기화하는 빌더 생성자이다.
    @Builder
     public Product(Brand brand, String productName, String productInfo,
                    ProductGenderType productGenderType, String brandName, String categoryPath, Boolean isAvailable,
                    java.util.List<Image> images,
                    java.util.List<ProductOption> productOptions) {
-        // 엔티티 기본 무결성 검증
+        // 필수 파라미터를 점검해 무결성을 보장한다.
         if (brand == null) {
             throw new IllegalArgumentException("브랜드는 필수입니다.");
         }
@@ -112,7 +108,7 @@ public class Product extends BaseEntity {
         }
     }
 
-    // 썸네일은 하나만 허용되므로 서비스에서 검증 없이 호출 가능하도록 보호
+    // 단일 이미지를 추가하면서 썸네일 중복 여부를 검증한다.
     public void addImage(Image image) {
         if (image == null) {
             return;
@@ -124,6 +120,7 @@ public class Product extends BaseEntity {
         this.images.add(image);
     }
 
+    // 옵션 엔티티를 상품과 연결하고 컬렉션에 추가한다.
     public void addProductOption(ProductOption productOption) {
         if (productOption == null) {
             return;
@@ -132,9 +129,7 @@ public class Product extends BaseEntity {
         this.productOptions.add(productOption);
     }
 
-    /**
-     * 상품 이미지를 한 번에 등록하며 썸네일 제약을 검증한다.
-     */
+    // 이미지 리스트를 교체 등록하고 썸네일 조건을 확인한다.
     public void registerImages(java.util.List<ImageRegistration> imageRegistrations) {
         if (imageRegistrations == null || imageRegistrations.isEmpty()) {
             throw new IllegalArgumentException("상품 이미지는 최소 1장 이상 등록해야 합니다.");
@@ -154,7 +149,7 @@ public class Product extends BaseEntity {
         newImages.forEach(this::addImage);
     }
 
-    // 카테고리 서비스에서 내려준 엔티티를 그대로 연결
+    // 전달받은 카테고리와 상품의 매핑을 생성해 추가한다.
     public void addCategory(Category category) {
         if (category == null) {
             return;
@@ -166,7 +161,7 @@ public class Product extends BaseEntity {
         this.productCategories.add(mapping);
     }
 
-    // 이미 생성된 매핑을 재활용할 때 사용 (예: bulk load)
+    // 이미 생성된 카테고리 매핑을 재연결할 때 사용한다.
     public void addProductCategory(ProductCategory productCategory) {
         if (productCategory == null) {
             return;
@@ -175,6 +170,7 @@ public class Product extends BaseEntity {
         this.productCategories.add(productCategory);
     }
 
+    // 외부에서 생성된 좋아요 엔티티를 상품에 연결한다.
     public void addProductLike(ProductLike productLike) {
         if (productLike == null) {
             return;
@@ -183,10 +179,46 @@ public class Product extends BaseEntity {
         this.productLikes.add(productLike);
     }
 
+    // 상품 판매 가능 여부를 직접 전환한다.
+    public void changeAvailability(boolean available) {
+        this.isAvailable = available;
+    }
+
+    // 상품 기본 정보를 갱신한다. 필수 값 검증은 기존 생성 규칙을 따른다.
+    public void updateBasicInfo(String productName,
+                                String productInfo,
+                                ProductGenderType productGenderType,
+                                String brandName,
+                                String categoryPath) {
+        if (productName == null || productName.trim().isEmpty()) {
+            throw new IllegalArgumentException("상품명은 필수입니다.");
+        }
+        if (productInfo == null || productInfo.trim().isEmpty()) {
+            throw new IllegalArgumentException("상품 정보는 필수입니다.");
+        }
+        if (productGenderType == null || productGenderType.getValue() == null) {
+            throw new IllegalArgumentException("상품 성별 타입은 필수입니다.");
+        }
+        if (brandName == null || brandName.trim().isEmpty()) {
+            throw new IllegalArgumentException("브랜드명은 필수입니다.");
+        }
+        if (categoryPath == null || categoryPath.trim().isEmpty()) {
+            throw new IllegalArgumentException("카테고리 경로는 필수입니다.");
+        }
+
+        this.productName = productName;
+        this.productInfo = productInfo;
+        this.productGenderType = productGenderType;
+        this.brandName = brandName;
+        this.categoryPath = categoryPath;
+    }
+
+    // 현재 이미지 중 썸네일이 존재하는지 확인한다.
     public boolean hasThumbnail() {
         return this.images.stream().anyMatch(image -> Boolean.TRUE.equals(image.getIsThumbnail()));
     }
 
+    // 이미지 목록에서 썸네일 개수를 검증한다.
     private void validateThumbnailConstraint(java.util.List<Image> images) {
         long thumbnailCount = images.stream()
             .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))

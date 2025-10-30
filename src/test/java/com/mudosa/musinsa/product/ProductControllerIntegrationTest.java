@@ -77,6 +77,86 @@ class ProductControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("상품 검색 API가 페이징 정보를 포함해 반환된다")
+    void searchProducts_returnsPagedResponse() throws Exception {
+        Brand brand = brandRepository.save(Brand.create("무도사", "MUDOSA", new BigDecimal("10.00")));
+        Category category = categoryRepository.save(Category.builder()
+            .categoryName("셔츠")
+            .parent(null)
+            .imageUrl(null)
+            .build());
+        OptionValue optionValue = createOptionValue("사이즈", "FREE");
+
+        ProductCreateRequest requestA = ProductCreateRequest.builder()
+            .brandId(brand.getBrandId())
+            .productName("검색 상품 A")
+            .productInfo("검색용 상품 A")
+            .productGenderType(ProductGenderType.Type.ALL.name())
+            .brandName(brand.getNameKo())
+            .categoryPath(category.buildPath())
+            .isAvailable(true)
+            .categoryId(category.getCategoryId())
+            .images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+                .imageUrl("https://cdn.musinsa.com/product/search-a.jpg")
+                .isThumbnail(true)
+                .build()))
+            .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
+                .productPrice(new BigDecimal("9900"))
+                .stockQuantity(5)
+                .inventoryAvailable(true)
+                .optionValueIds(List.of(optionValue.getOptionValueId()))
+                .build()))
+            .build();
+
+        ProductCreateRequest requestB = ProductCreateRequest.builder()
+            .brandId(brand.getBrandId())
+            .productName("검색 상품 B")
+            .productInfo("검색용 상품 B")
+            .productGenderType(ProductGenderType.Type.ALL.name())
+            .brandName(brand.getNameKo())
+            .categoryPath(category.buildPath())
+            .isAvailable(true)
+            .categoryId(category.getCategoryId())
+            .images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+                .imageUrl("https://cdn.musinsa.com/product/search-b.jpg")
+                .isThumbnail(true)
+                .build()))
+            .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
+                .productPrice(new BigDecimal("19900"))
+                .stockQuantity(8)
+                .inventoryAvailable(true)
+                .optionValueIds(List.of(optionValue.getOptionValueId()))
+                .build()))
+            .build();
+
+        mockMvc.perform(post("/api/products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestA)))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestB)))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/products")
+                .param("keyword", "검색 상품")
+                .param("priceSort", "HIGHEST")
+                .param("page", "0")
+                .param("size", "10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.totalPages").value(1))
+            .andExpect(jsonPath("$.page").value(0))
+            .andExpect(jsonPath("$.size").value(10))
+            .andExpect(jsonPath("$.products", Matchers.hasSize(2)))
+            .andExpect(jsonPath("$.products[0].productName").value("검색 상품 B"))
+            .andExpect(jsonPath("$.products[0].lowestPrice").value(19900))
+            .andExpect(jsonPath("$.products[0].hasStock").value(true))
+            .andExpect(jsonPath("$.products[0].thumbnailUrl").value("https://cdn.musinsa.com/product/search-b.jpg"));
+    }
+
+    @Test
     @DisplayName("상품 생성과 상세 조회가 성공한다")
     void createProduct_thenGetDetail_success() throws Exception {
         Brand brand = brandRepository.save(Brand.create("무도사", "MUDOSA", new BigDecimal("10.00")));

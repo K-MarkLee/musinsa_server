@@ -10,9 +10,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 상품 상세 조회 응답 DTO.
- */
+// 상품 상세 정보를 담아 프레젠테이션 계층에 전달하는 응답 DTO이다.
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -32,14 +30,17 @@ public class ProductDetailResponse {
     private List<ImageResponse> images;
     private List<OptionDetail> options;
 
+    // 카테고리 요약 정보를 널 안전하게 반환한다.
     public List<CategorySummary> getCategories() {
         return categories != null ? categories : Collections.emptyList();
     }
 
+    // 이미지 응답 목록을 널 안전하게 반환한다.
     public List<ImageResponse> getImages() {
         return images != null ? images : Collections.emptyList();
     }
 
+    // 옵션 상세 정보 목록을 널 안전하게 반환한다.
     public List<OptionDetail> getOptions() {
         return options != null ? options : Collections.emptyList();
     }
@@ -74,6 +75,7 @@ public class ProductDetailResponse {
         private Boolean inventoryAvailable;
         private List<OptionValueDetail> optionValues;
 
+        // 옵션 값 상세 목록을 NULL 안전하게 반환한다.
         public List<OptionValueDetail> getOptionValues() {
             return optionValues != null ? optionValues : Collections.emptyList();
         }

@@ -9,18 +9,8 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.util.Objects;
 
-/**
- * 상품 옵션-옵션값 매핑 엔티티
- * 
- * 개선된 구조:
- * - ProductOption과 OptionValue만 직접 연결
- * - OptionName은 OptionValue를 통해 자연스럽게 접근
- * - 복합 키가 2개 컬럼으로 단순화
- * 
- * 상품 내 동일 옵션명 중복 방지:
- * - OptionValue가 이미 특정 OptionName에 종속되어 있음
- * - 따라서 ProductOption-OptionValue 조합만으로도 옵션명+값의 유니크성 보장
- */
+// 상품 옵션과 옵션 값을 매핑해 유니크한 조합을 보장하는 엔티티이다.
+// OptionValue를 통해 OptionName에 접근하므로 조인 구조가 단순해진다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -52,11 +42,13 @@ public class ProductOptionValue {
         @Column(name = "option_value_id")
         private Long optionValueId;
         
+        // 복합 키를 구성하는 생성자이다.
         public ProductOptionValueId(Long productOptionId, Long optionValueId) {
             this.productOptionId = productOptionId;
             this.optionValueId = optionValueId;
         }
         
+        // 동일 조합 여부를 비교한다.
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -66,15 +58,17 @@ public class ProductOptionValue {
                    Objects.equals(optionValueId, that.optionValueId);
         }
         
+        // 복합 키 해시 값을 계산한다.
         @Override
         public int hashCode() {
             return Objects.hash(productOptionId, optionValueId);
         }
     }
 
+    // 옵션과 옵션 값을 연결하며 식별자를 초기화한다.
     @Builder
     public ProductOptionValue(ProductOption productOption, OptionValue optionValue) {
-        // 엔티티 기본 무결성 검증
+        // 필수 파라미터를 확인해 무결성을 보장한다.
         if (productOption == null) {
             throw new IllegalArgumentException("상품 옵션은 필수입니다.");
         }
@@ -87,12 +81,13 @@ public class ProductOptionValue {
         refreshIdentifiers();
     }
 
-    // ProductOption에 늦게 연결될 수 있으므로 식별자 갱신 메서드 분리
+    // ProductOption이 나중에 연결될 때 식별자를 갱신한다.
     void attachTo(ProductOption productOption) {
         this.productOption = productOption;
         refreshIdentifiers();
     }
 
+    // 현재 연관 상태에 맞춰 복합 키를 재구성한다.
     void refreshIdentifiers() {
         Long productOptionId = this.productOption != null ? this.productOption.getProductOptionId() : null;
         Long optionValueId = this.optionValue != null ? this.optionValue.getOptionValueId() : null;

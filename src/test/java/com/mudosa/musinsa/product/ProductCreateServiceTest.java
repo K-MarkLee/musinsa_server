@@ -5,8 +5,8 @@ import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
 import com.mudosa.musinsa.product.application.ProductService;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
+import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.domain.model.Category;
-import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.OptionName;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
@@ -19,13 +19,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -265,10 +267,82 @@ class ProductCreateServiceTest {
             .pageable(PageRequest.of(0, 20))
             .build();
 
-        Page<Product> page = productService.searchProducts(condition);
+    ProductSearchResponse response = productService.searchProducts(condition);
 
-        assertThat(page.getContent()).isEmpty();
-        assertThat(page.getTotalElements()).isZero();
+    assertThat(response.getProducts()).isEmpty();
+    assertThat(response.getTotalElements()).isZero();
+    }
+
+    @Test
+    @DisplayName("카테고리, 성별, 가격 정렬 조건으로 상품을 검색한다")
+    void searchProducts_filtersAndSorts() {
+        Brand brand = prepareBrand();
+        Category top = prepareCategory("상의");
+
+        List<Category> subCategories = IntStream.range(0, 10)
+            .mapToObj(i -> prepareCategory("티셔츠" + i, top))
+            .collect(Collectors.toList());
+
+        IntStream.range(0, 10).forEach(i -> {
+            Category current = subCategories.get(i);
+            OptionValue optionValue = prepareOptionValue("사이즈", "M" + i);
+            ProductGenderType.Type gender = (i % 2 == 0) ? ProductGenderType.Type.MEN : ProductGenderType.Type.WOMEN;
+            BigDecimal price = BigDecimal.valueOf(8000L + (long) i * 500L);
+            String productName = "티셔츠 상품 " + i;
+            String description = "티셔츠 상세 설명 " + i;
+            createProduct(brand, current, optionValue, productName, gender, price, description);
+        });
+
+        ProductService.ProductSearchCondition condition = ProductService.ProductSearchCondition.builder()
+            .categoryIds(List.of(top.getCategoryId()))
+            .gender(ProductGenderType.Type.MEN)
+            .priceSort(ProductService.ProductSearchCondition.PriceSort.LOWEST)
+            .pageable(PageRequest.of(0, 10))
+            .build();
+
+    ProductSearchResponse response = productService.searchProducts(condition);
+
+        List<String> expectedNames = IntStream.range(0, 10)
+            .filter(i -> i % 2 == 0)
+            .mapToObj(i -> "티셔츠 상품 " + i)
+            .collect(Collectors.toList());
+
+        assertThat(response.getTotalElements()).isEqualTo(expectedNames.size());
+        assertThat(response.getProducts())
+            .extracting(ProductSearchResponse.ProductSummary::getProductName)
+            .containsExactlyElementsOf(expectedNames);
+    }
+
+    @Test
+    @DisplayName("키워드가 상품명, 설명, 브랜드명, 카테고리 경로에서 동작한다")
+    void searchProducts_keywordMatchesIndexedColumns() {
+        Brand brand = prepareBrand();
+        List<String> expectedNames = new ArrayList<>();
+
+        IntStream.range(0, 10).forEach(i -> {
+            String categoryName = (i == 8) ? "후드전용카테고리" : "의류카테고리" + i;
+            Category category = prepareCategory(categoryName);
+            OptionValue optionValue = prepareOptionValue("사이즈", "L" + i);
+            String productName = (i == 3) ? "테스트 후드 상품" : "일반 의류 " + i;
+            String productInfo = (i == 6) ? "후드 디테일 설명 " + i : "기본 설명 " + i;
+            if (productName.contains("후드") || productInfo.contains("후드") || category.buildPath().contains("후드")) {
+                expectedNames.add(productName);
+            }
+            createProduct(brand, category, optionValue, productName, ProductGenderType.Type.ALL,
+                BigDecimal.valueOf(15000L + (long) i * 700L), productInfo);
+        });
+
+        ProductService.ProductSearchCondition condition = ProductService.ProductSearchCondition.builder()
+            .keyword("후드")
+            .pageable(PageRequest.of(0, 10))
+            .build();
+
+        ProductSearchResponse response = productService.searchProducts(condition);
+
+        assertThat(response.getTotalElements()).isEqualTo(expectedNames.size());
+        assertThat(response.getProducts())
+            .extracting(ProductSearchResponse.ProductSummary::getProductName)
+            .containsExactlyInAnyOrderElementsOf(expectedNames);
     }
 
     @Test
@@ -305,28 +379,8 @@ class ProductCreateServiceTest {
         Category category = prepareCategory("패딩");
         OptionValue optionValue = prepareOptionValue("사이즈", "FREE");
 
-        ProductCreateRequest request = ProductCreateRequest.builder()
-            .brandId(brand.getBrandId())
-            .productName("샘플 상품")
-            .productInfo("테스트용")
-            .productGenderType(ProductGenderType.Type.ALL.name())
-            .brandName(brand.getNameKo())
-            .categoryPath(category.buildPath())
-            .isAvailable(true)
-            .categoryId(category.getCategoryId())
-            .images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
-                .imageUrl("https://cdn.musinsa.com/product/sample.jpg")
-                .isThumbnail(true)
-                .build()))
-            .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
-                .productPrice(new BigDecimal("9900"))
-                .stockQuantity(20)
-                .inventoryAvailable(true)
-                .optionValueIds(List.of(optionValue.getOptionValueId()))
-                .build()))
-            .build();
-
-    return productService.createProduct(request, brand, category);
+        return createProduct(brand, category, optionValue, "샘플 상품", ProductGenderType.Type.ALL,
+            new BigDecimal("9900"), "테스트용");
     }
 
     private Brand prepareBrand() {
@@ -334,11 +388,46 @@ class ProductCreateServiceTest {
     }
 
     private Category prepareCategory(String name) {
+        return prepareCategory(name, null);
+    }
+
+    private Category prepareCategory(String name, Category parent) {
         return categoryRepository.save(Category.builder()
             .categoryName(name)
-            .parent(null)
+            .parent(parent)
             .imageUrl(null)
             .build());
+    }
+
+    private Long createProduct(Brand brand,
+                               Category category,
+                               OptionValue optionValue,
+                               String productName,
+                               ProductGenderType.Type gender,
+                               BigDecimal price,
+                               String productInfo) {
+        ProductCreateRequest request = ProductCreateRequest.builder()
+            .brandId(brand.getBrandId())
+            .productName(productName)
+            .productInfo(productInfo)
+            .productGenderType(gender.name())
+            .brandName(brand.getNameKo())
+            .categoryPath(category.buildPath())
+            .isAvailable(true)
+            .categoryId(category.getCategoryId())
+            .images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+                .imageUrl("https://cdn.musinsa.com/product/" + productName + ".jpg")
+                .isThumbnail(true)
+                .build()))
+            .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
+                .productPrice(price)
+                .stockQuantity(10)
+                .inventoryAvailable(true)
+                .optionValueIds(List.of(optionValue.getOptionValueId()))
+                .build()))
+            .build();
+
+        return productService.createProduct(request, brand, category);
     }
 
     private OptionValue prepareOptionValue(String optionNameLabel, String optionValueLabel) {

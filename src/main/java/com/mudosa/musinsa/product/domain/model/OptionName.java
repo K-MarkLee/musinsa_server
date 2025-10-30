@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+// 옵션 이름을 관리하는 엔티티이다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -21,9 +22,10 @@ public class OptionName extends BaseEntity {
     @Column(name = "option_name", nullable = false, length = 50)
     private String optionName;
     
+    // 옵션명을 생성하며 공백 여부를 검증한다.
     @Builder
     public OptionName(String optionName) {
-        // 엔티티 기본 무결성 검증
+        // 필수 파라미터를 확인해 무결성을 보장한다.
         if (optionName == null || optionName.trim().isEmpty()) {
             throw new IllegalArgumentException("옵션명은 필수입니다.");
         }
@@ -31,7 +33,7 @@ public class OptionName extends BaseEntity {
         this.optionName = optionName;
     }
 
-    // 도메인 로직: 옵션 이름 유효성 확인
+    // 현재 옵션명이 비어 있지 않은지 확인한다.
     public boolean isValid() {
         return this.optionName != null && !this.optionName.trim().isEmpty();
     }

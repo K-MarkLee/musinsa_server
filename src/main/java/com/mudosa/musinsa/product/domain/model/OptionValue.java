@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+// 옵션 값을 관리하며 옵션명과의 관계를 유지하는 엔티티이다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,9 +26,10 @@ public class OptionValue extends BaseEntity {
     @Column(name = "option_value", nullable = false, length = 50)
     private String optionValue;
     
+    // 옵션 값을 생성하며 필수 요소를 검증한다.
     @Builder
     public OptionValue(OptionName optionName, String optionValue) {
-        // 엔티티 기본 무결성 검증
+        // 필수 파라미터를 확인해 무결성을 보장한다.
         if (optionName == null) {
             throw new IllegalArgumentException("옵션명은 필수입니다.");
         }
@@ -39,12 +41,12 @@ public class OptionValue extends BaseEntity {
         this.optionValue = optionValue;
     }
     
-    // 도메인 로직: 옵션 값 유효성 확인
+    // 현재 옵션 값이 비어 있지 않은지 확인한다.
     public boolean isValid() {
         return this.optionValue != null && !this.optionValue.trim().isEmpty();
     }
     
-    // 도메인 로직: 옵션 이름과 연관된 값인지 확인
+    // 지정된 옵션명과 연관되어 있는지 확인한다.
     public boolean belongsTo(OptionName optionName) {
         return this.optionName != null && this.optionName.equals(optionName);
     }

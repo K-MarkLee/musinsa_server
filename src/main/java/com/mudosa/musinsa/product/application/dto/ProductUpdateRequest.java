@@ -1,9 +1,8 @@
 package com.mudosa.musinsa.product.application.dto;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -14,15 +13,15 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.List;
 
-// 상품 등록 요청 정보를 담아 서비스 계층으로 전달하는 DTO이다.
+/**
+ * 상품 정보를 수정하기 위한 요청 DTO.
+ * 추후 정책 확정 시 필드 제약을 조정할 수 있도록 기본 구조만 정의한다.
+ */
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
-public class ProductCreateRequest {
-
-    @NotNull(message = "브랜드 ID는 필수입니다.")
-    private Long brandId;
+public class ProductUpdateRequest {
 
     @NotBlank(message = "상품명은 필수입니다.")
     private String productName;
@@ -30,57 +29,54 @@ public class ProductCreateRequest {
     @NotBlank(message = "상품 정보는 필수입니다.")
     private String productInfo;
 
-    @NotNull(message = "상품 성별 타입은 필수입니다.")
+    @NotBlank(message = "상품 성별 타입은 필수입니다.")
     private String productGenderType;
-
-    @NotBlank(message = "브랜드명은 필수입니다.")
-    private String brandName;
 
     @NotBlank(message = "카테고리 경로는 필수입니다.")
     private String categoryPath;
 
     private Boolean isAvailable;
 
-    @NotNull(message = "카테고리 ID는 필수입니다.")
-    private Long categoryId;
+    private String brandName;
 
-    @Size(min = 1, message = "상품 이미지는 최소 1장 이상 등록해야 합니다.")
+    @Size(min = 1, message = "상품 이미지는 최소 1장 이상이어야 합니다.")
     @Valid
-    private List<ImageCreateRequest> images;
+    private List<ImageUpdateRequest> images;
 
-    @Size(min = 1, message = "상품 옵션은 최소 1개 이상 등록해야 합니다.")
+    // 옵션 수정 정책은 추후 확정. 구조만 마련해둔다.
     @Valid
-    private List<OptionCreateRequest> options;
+    private List<OptionUpdateRequest> options;
 
-    // 상품 이미지 등록에 필요한 데이터를 담는 내부 DTO이다.
     @Getter
     @Builder
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     @AllArgsConstructor(access = AccessLevel.PROTECTED)
-    public static class ImageCreateRequest {
-
+    public static class ImageUpdateRequest {
         @NotBlank(message = "이미지 URL은 필수입니다.")
         private String imageUrl;
-
         private Boolean isThumbnail;
     }
 
-    // 상품 옵션 가격과 재고, 옵션 값을 전달하는 내부 DTO이다.
     @Getter
     @Builder
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     @AllArgsConstructor(access = AccessLevel.PROTECTED)
-    public static class OptionCreateRequest {
-
-        @NotNull(message = "옵션 가격은 필수입니다.")
+    public static class OptionUpdateRequest {
+        private Long productOptionId;
         private BigDecimal productPrice;
-
-        @NotNull(message = "재고 수량은 필수입니다.")
         private Integer stockQuantity;
-
         private Boolean inventoryAvailable;
-
-        @NotEmpty(message = "옵션 값 ID는 최소 1개 이상이어야 합니다.")
         private List<Long> optionValueIds;
+    }
+
+    @AssertTrue(message = "상품 이미지는 썸네일 1개를 포함해야 합니다.")
+    public boolean isValidThumbnailConfiguration() {
+        if (images == null || images.isEmpty()) {
+            return false;
+        }
+        long thumbnailCount = images.stream()
+            .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
+            .count();
+        return thumbnailCount == 1;
     }
 }

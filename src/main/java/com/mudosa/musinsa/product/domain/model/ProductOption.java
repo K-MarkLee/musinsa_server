@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
+// 상품 옵션과 가격, 재고를 관리하는 엔티티이다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -38,10 +39,11 @@ public class ProductOption extends BaseEntity {
     @OneToMany(mappedBy = "productOption", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ProductOptionValue> productOptionValues = new ArrayList<>();
     
+    // 옵션 생성 시 필수 값 검증 후 연관 엔티티를 초기화한다.
     @Builder
     public ProductOption(Product product, Money productPrice, Inventory inventory,
                          List<ProductOptionValue> productOptionValues) {
-        // 엔티티 기본 무결성 검증
+        // 필수 파라미터를 확인해 무결성을 보장한다.
         if (product == null) {
             throw new IllegalArgumentException("상품은 옵션에 필수입니다.");
         }
@@ -60,13 +62,13 @@ public class ProductOption extends BaseEntity {
         }
     }
     
-    // 패키지 private: 상품 참조 설정 (Product 애그리거트에서만 사용)
+    // 상품 애그리거트에서만 호출해 양방향 연관을 설정한다.
     void setProduct(Product product) {
         this.product = product;
         this.productOptionValues.forEach(value -> value.attachTo(this));
     }
 
-    // 서비스에서 옵션값을 순차적으로 붙이는 용도
+    // 옵션 값 매핑을 추가하고 현재 옵션과 연결한다.
     public void addOptionValue(ProductOptionValue optionValue) {
         if (optionValue == null) {
             return;

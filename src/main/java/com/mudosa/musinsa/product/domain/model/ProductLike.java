@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+// 상품에 대한 좋아요를 저장하는 엔티티이다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,9 +26,10 @@ public class ProductLike extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
     
+    // 좋아요 엔티티를 생성하면서 필수 값을 검증한다.
     @Builder
     public ProductLike(Product product, Long userId) {
-        // 엔티티 기본 무결성 검증
+        // 필수 파라미터를 확인해 무결성을 보장한다.
         if (product == null) {
             throw new IllegalArgumentException("상품은 필수입니다.");
         }
@@ -39,12 +41,12 @@ public class ProductLike extends BaseEntity {
         this.userId = userId;
     }
     
-    // 도메인 로직: 특정 상품의 좋아요 여부 확인
+    // 해당 좋아요가 전달된 상품에 속하는지 판별한다.
     public boolean belongsToProduct(Product product) {
         return this.product != null && this.product.equals(product);
     }
 
-    // 이미 생성된 좋아요 엔티티를 상품 애그리거트에 연결할 때 사용
+    // 상품 애그리거트에 이미 생성된 좋아요를 재연결한다.
     void assignProduct(Product product) {
         this.product = product;
     }

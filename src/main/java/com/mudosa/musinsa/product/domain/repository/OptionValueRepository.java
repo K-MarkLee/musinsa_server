@@ -6,11 +6,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * 옵션 값 조회용 리포지토리.
- */
 @Repository
 public interface OptionValueRepository extends JpaRepository<OptionValue, Long> {
 
+    // 옵션 값 ID 목록으로 옵션 값을 일괄 조회.
     List<OptionValue> findAllByOptionValueIdIn(List<Long> optionValueIds);
 }
