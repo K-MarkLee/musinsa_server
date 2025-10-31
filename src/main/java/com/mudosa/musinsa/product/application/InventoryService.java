@@ -1,5 +1,8 @@
 package com.mudosa.musinsa.product.application;
 
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
+import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +25,20 @@ public class InventoryService {
         log.info("재고 차감 시작 - productOptionId: {}, quantity: {}",
             productOptionId, quantity);
 
-        // TODO 주문/결제 흐름 확정 시 차감 로직을 재활성화한다.
+        validateQuantity(quantity);
+
+        Inventory inventory = loadInventoryWithLock(productOptionId);
+
+        try {
+            inventory.decrease(quantity);
+        } catch (IllegalStateException e) {
+            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK, e.getMessage());
+        }
+
+        inventoryRepository.save(inventory);
+
+        log.info("재고 차감 완료 - productOptionId: {}, 차감 수량: {}, 현재 재고: {}",
+            productOptionId, quantity, inventory.getStockQuantity());
     }
 
     // 지정된 수량만큼 옵션 재고를 복구한다. (결제 취소 및 주문 취소) - 환불은 없음
@@ -31,7 +47,15 @@ public class InventoryService {
         log.info("재고 복구 시작 - productOptionId: {}, quantity: {}",
             productOptionId, quantity);
 
-        // TODO 주문/결제 취소 연동 시 복구 로직을 재활성화한다.
+        validateQuantity(quantity);
+
+        Inventory inventory = loadInventoryWithLock(productOptionId);
+
+        inventory.increase(quantity);
+        inventoryRepository.save(inventory);
+
+        log.info("재고 복구 완료 - productOptionId: {}, 복구 수량: {}, 현재 재고: {}",
+            productOptionId, quantity, inventory.getStockQuantity());
     }
 
     // 지정된 수량만큼 옵션 재고를 추가한다 (입고/재입고).
@@ -59,7 +83,6 @@ public class InventoryService {
         log.info("재고 수량 덮어쓰기 - productOptionId: {}, quantity: {}",
             productOptionId, quantity);
 
-<<<<<<< feature/product
         if (quantity == null || quantity < 0) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR);
         }
@@ -105,17 +128,11 @@ public class InventoryService {
     private Inventory loadInventoryWithLock(Long productOptionId) {
         return inventoryRepository.findByProductOptionIdWithLock(productOptionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
-=======
-//        // 재고 조회
-//        Inventory inventory = inventoryRepository.findByProductOptionId(productOptionId)
-//            .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
-//
-//        // 재고 복구
-//        inventory.increase(quantity);
-//        inventoryRepository.save(inventory);
-//
-//        log.info("재고 복구 완료 - productOptionId: {}, 복구 수량: {}, 복구 후 재고: {}",
-//            productOptionId, quantity, inventory.getStockQuantity());
->>>>>>> develop
+    }
+
+    private void validateQuantity(Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
     }
 }
