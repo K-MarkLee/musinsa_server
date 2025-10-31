@@ -2,6 +2,7 @@ package com.mudosa.musinsa.product.application;
 
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
+import com.mudosa.musinsa.notification.domain.service.NotificationService;
 import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
+    private final NotificationService notificationService;
 
     // 지정된 수량만큼 옵션 재고를 차감한다.
     @Transactional(propagation = Propagation.MANDATORY)
@@ -33,6 +35,10 @@ public class InventoryService {
             inventory.decrease(quantity);
         } catch (IllegalStateException e) {
             throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK, e.getMessage());
+        }
+
+        if(inventory.getStockQuantity().getValue() < 10){
+            notificationService.createOutOfStockNote(inventory);
         }
 
         inventoryRepository.save(inventory);

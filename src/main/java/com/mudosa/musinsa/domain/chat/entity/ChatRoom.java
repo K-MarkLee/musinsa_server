@@ -4,6 +4,7 @@ import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.domain.chat.enums.ChatRoomType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,6 +47,7 @@ public class ChatRoom {
   // ==== 연관관계 ====
   @OneToMany(mappedBy = "chatRoom", orphanRemoval = false)
   @Builder.Default
+  @Where(clause = "left_at IS NULL")
   private List<ChatPart> parts = new ArrayList<>();
 
   @OneToMany(mappedBy = "chatRoom", orphanRemoval = false)
