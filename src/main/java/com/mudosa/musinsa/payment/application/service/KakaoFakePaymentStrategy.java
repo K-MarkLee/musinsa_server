@@ -23,12 +23,12 @@ public class KakaoFakePaymentStrategy implements PaymentStrategy {
 
 	@Override
 	public PaymentConfirmResponse confirmPayment(PaymentConfirmRequest request) {
-		log.info("[KAKAO FAKE] 결제 승인 요청 - orderId: {}", request.getOrderId());
+		log.info("[KAKAO FAKE] 결제 승인 요청 - orderId: {}", request.getOrderNo());
 
 		// Fake 응답 반환 (실제 API 호출 없음)
 		return PaymentConfirmResponse.builder()
 				.paymentKey(request.getPaymentKey())
-				.orderId(request.getOrderId())
+				.orderId(request.getOrderNo())
 				.status("DONE")
 				.pgProvider(PROVIDER_NAME)
 				.build();

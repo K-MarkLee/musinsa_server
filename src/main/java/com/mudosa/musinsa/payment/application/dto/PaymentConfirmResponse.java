@@ -17,5 +17,6 @@ public class PaymentConfirmResponse {
     private String status;
     private Long amount;
     private String pgProvider;
+    private String method;
     private LocalDateTime approvedAt;
 }

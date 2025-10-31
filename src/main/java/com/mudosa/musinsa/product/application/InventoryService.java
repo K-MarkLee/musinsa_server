@@ -1,8 +1,5 @@
 package com.mudosa.musinsa.product.application;
 
-import com.mudosa.musinsa.exception.BusinessException;
-import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +59,7 @@ public class InventoryService {
         log.info("재고 수량 덮어쓰기 - productOptionId: {}, quantity: {}",
             productOptionId, quantity);
 
+<<<<<<< feature/product
         if (quantity == null || quantity < 0) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR);
         }
@@ -107,5 +105,17 @@ public class InventoryService {
     private Inventory loadInventoryWithLock(Long productOptionId) {
         return inventoryRepository.findByProductOptionIdWithLock(productOptionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+=======
+//        // 재고 조회
+//        Inventory inventory = inventoryRepository.findByProductOptionId(productOptionId)
+//            .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+//
+//        // 재고 복구
+//        inventory.increase(quantity);
+//        inventoryRepository.save(inventory);
+//
+//        log.info("재고 복구 완료 - productOptionId: {}, 복구 수량: {}, 복구 후 재고: {}",
+//            productOptionId, quantity, inventory.getStockQuantity());
+>>>>>>> develop
     }
 }

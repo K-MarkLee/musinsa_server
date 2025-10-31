@@ -15,12 +15,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "product")
 public class Product extends BaseEntity {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "product_id")
     private Long productId;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id", nullable = false)
     private Brand brand;
@@ -44,20 +44,20 @@ public class Product extends BaseEntity {
 
     @Column(name = "product_name", nullable = false, length = 100)
     private String productName;
-    
+
     @Column(name = "product_info", nullable = false, columnDefinition = "TEXT")
     private String productInfo;
-    
+
     @Column(name = "is_available", nullable = false)
     private Boolean isAvailable;
-    
+
     @Embedded
     @AttributeOverride(name = "value", column = @Column(name = "product_gender_type", nullable = false))
     private ProductGenderType productGenderType;
 
     // 역정규화 브랜드이름 (조회)
     @Column(name = "brand_name", nullable = false, length = 100)
-    private String brandName; 
+    private String brandName;
 
     // 역정규화: "상의/티셔츠"
     @Column(name = "category_path", nullable = false, length = 255)

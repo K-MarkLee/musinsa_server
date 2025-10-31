@@ -1,18 +1,20 @@
 package com.mudosa.musinsa.domain.chat.service;
 
-import com.mudosa.musinsa.domain.chat.dto.AttachmentResponse;
-import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
-import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
+import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
+import com.mudosa.musinsa.domain.chat.dto.*;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.entity.Message;
 import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
+import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
 import com.mudosa.musinsa.domain.chat.enums.MessageType;
 import com.mudosa.musinsa.domain.chat.event.MessageCreatedEvent;
 import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
+import com.mudosa.musinsa.user.domain.model.User;
+import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,21 +50,49 @@ public class ChatServiceImpl implements ChatService {
   private final MessageRepository messageRepository;
   private final MessageAttachmentRepository attachmentRepository;
   private final ApplicationEventPublisher eventPublisher;
+  private final UserRepository userRepository;
+  private final BrandMemberRepository brandMemberRepository;
+
+
+  @Override
+  public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
+    List<ChatRoom> chatRooms = chatRoomRepository.findDistinctByParts_User_IdAndParts_LeftAtIsNull(userId);
+
+    return chatRooms.stream()
+        .map(room -> ChatRoomInfoResponse.builder()
+            .chatId(room.getChatId())
+            .brandId(room.getBrand().getBrandId())
+            .brandNameKo(room.getBrand().getNameKo())
+            .type(room.getType())
+            .lastMessageAt(room.getLastMessageAt())
+            .partNum((long) room.getParts().size())
+            .isParticipate(true)
+            .logoUrl(room.getBrand().getLogoUrl())
+            .build())
+        .toList();
+  }
+
 
   /**
    * 메시지 저장
    */
   @Override
   @Transactional
-  public MessageResponse saveMessage(Long chatId, Long userId, String content, List<MultipartFile> files) {
+  public MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files) {
 
     // 1) 채팅방 & 참여자 존재 여부 확인
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
         .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
 
-    ChatPart chatPart = chatPartRepository.findByChatRoomChatIdAndUserId(chatId, userId)
+    ChatPart chatPart = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndLeftAtIsNull(chatId, userId)
         .orElseThrow(() -> new EntityNotFoundException(
             "ChatPart not found: chatId=" + chatId + ", userId=" + userId));
+
+    Message parent = null;
+    if (parentId != null) {
+      parent = messageRepository.findById(parentId)
+          .orElseThrow(() -> new EntityNotFoundException("Parent message not found: " + parentId));
+    }
 
 
     // 2) 메시지 타입 결정
@@ -80,12 +110,14 @@ public class ChatServiceImpl implements ChatService {
         .chatPart(chatPart)
         .content(hasText ? content.trim() : null)
         .type(type)
-//        .parent(parent)
+        .parent(parent)
         .createdAt(LocalDateTime.now())
         .build();
 
     Message createdMessage = messageRepository.save(message);
 
+    chatRoom.setLastMessageAt(LocalDateTime.now());
+    
     // 4) 첨부 저장
     List<MessageAttachment> savedAttachments = new ArrayList<>();
     if (hasFiles) {
@@ -144,41 +176,79 @@ public class ChatServiceImpl implements ChatService {
   /**
    * 채팅방 메시지 목록 조회 (페이징)
    */
+  @Override
   public Page<MessageResponse> getChatMessages(Long chatId, Long userId, int page, int size) {
-    // 권한 검증
-    if (!chatPartRepository.existsActiveMember(chatId, userId)) {
-      throw new RuntimeException("채팅방에 참여하지 않은 사용자입니다.");
-    }
-
     Pageable pageable = PageRequest.of(page, size);
     Page<Message> messages = messageRepository.findByChatIdOrderByCreatedAtDesc(chatId, pageable);
 
-    return messages.map(msg -> MessageResponse.builder()
-        .messageId(msg.getMessageId())
-        .chatId(msg.getChatRoom().getChatId())
-        .chatPartId(msg.getChatPart().getChatPartId())
-        .userId(msg.getChatPart().getUserId())
-        .userName("임시 이름")
-        //user 연결시 수정
-//          .userName(msg.getChatPart().getUserId())
-        .type(msg.getType())
-        .content(msg.getContent())
-        .attachments(msg.getAttachments().stream()
-            .map(a -> AttachmentResponse.builder()
-                .attachmentId(a.getAttachmentId())
-                .attachmentUrl(a.getAttachmentUrl())
-                .mimeType(a.getMimeType())
-                .sizeBytes(a.getSizeBytes())
-                .build())
-            .toList())
-        .createdAt(msg.getCreatedAt())
-        .build());
+    return messages.map(msg -> {
+      var cp = msg.getChatPart();   // 발신자(시스템 메시지면 null)
+      var parent = msg.getParent(); // 답장 원본(없을 수 있음)
+
+      // 현재 메시지 첨부 → DTO 변환
+      List<AttachmentResponse> attachmentDtos =
+          (msg.getAttachments() != null ? msg.getAttachments() : List.<MessageAttachment>of())
+              .stream()
+              .map(a -> AttachmentResponse.builder()
+                  .attachmentId(a.getAttachmentId())
+                  .attachmentUrl(a.getAttachmentUrl())
+                  .mimeType(a.getMimeType())
+                  .sizeBytes(a.getSizeBytes())
+                  .build())
+              .toList();
+
+      // 부모 메시지 DTO (있을 때만)
+      ParentMessageResponse parentDto = null;
+      if (parent != null) {
+        List<AttachmentResponse> parentAttachmentDtos =
+            (parent.getAttachments() != null ? parent.getAttachments() : List.<MessageAttachment>of())
+                .stream()
+                .map(a -> AttachmentResponse.builder()
+                    .attachmentId(a.getAttachmentId())
+                    .attachmentUrl(a.getAttachmentUrl())
+                    .mimeType(a.getMimeType())
+                    .sizeBytes(a.getSizeBytes())
+                    .build())
+                .toList();
+
+        parentDto = ParentMessageResponse.builder()
+            .messageId(parent.getMessageId())
+            .userId(parent.getChatPart() != null ? parent.getChatPart().getUser().getId() : null)
+            .userName(parent.getChatPart() != null ? parent.getChatPart().getUser().getUserName() : "Unknown") // TODO: User 연동시 교체
+            .content(parent.getContent())
+            .createdAt(parent.getCreatedAt())
+            .attachments(parentAttachmentDtos)
+            .isDeleted(parent.getDeletedAt() != null)
+            .build();
+      }
+      boolean isManager = brandMemberRepository.existsByBrand_BrandIdAndUserId(msg.getChatRoom().getBrand().getBrandId(), msg.getChatPart().getUser().getId());
+
+      return MessageResponse.builder()
+          .messageId(msg.getMessageId())
+          .chatId(msg.getChatRoom().getChatId()) // 식별자만 꺼내기(프록시 안전)
+          .chatPartId(cp != null ? cp.getChatPartId() : null)
+          .userId(cp != null ? cp.getUser().getId() : null)
+          .userName(cp != null ? cp.getUser().getUserName() : "Unknown")
+          .type(msg.getType())
+          .content(msg.getContent())
+          .attachments(attachmentDtos)           // 엔티티 컬렉션 노출 금지
+          .createdAt(msg.getCreatedAt())
+          .parent(parentDto)                     // 엔티티 대신 DTO
+          .isManager(isManager)
+          .build();
+    });
   }
 
+
+  /**
+   * 채팅방 정보 조회
+   */
   @Override
-  public ChatRoomInfoResponse getChatRoomInfoByChatId(Long chatId) {
+  public ChatRoomInfoResponse getChatRoomInfoByChatId(Long chatId, Long userId) {
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
         .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
+
+    boolean isParticipate = chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndLeftAtIsNull(chatId, userId);
 
     return ChatRoomInfoResponse.builder()
         .brandId(chatRoom.getBrand().getBrandId())
@@ -187,102 +257,53 @@ public class ChatServiceImpl implements ChatService {
         .type(chatRoom.getType())
         .partNum((long) chatRoom.getParts().size())
         .lastMessageAt(chatRoom.getLastMessageAt())
+        .isParticipate(isParticipate)
         .build();
   }
 
+  /**
+   * 채팅방 참여
+   */
+  @Override
+  @Transactional
+  public ChatPartResponse addParticipant(Long chatId, Long userId) {
+    // 1️⃣ 채팅방 존재 확인
+    ChatRoom chatRoom = chatRoomRepository.findById(chatId)
+        .orElseThrow(() -> new EntityNotFoundException("ChatRoom nosaveMessaget found: " + chatId));
 
-//
-//  /**
-//   * 사용자가 참여 중인 채팅방 목록 조회
-//   */
-//  public List<ChatRoomResponse> getUserChatRooms(Long userId) {
-//    List<ChatPart> parts = chatPartRepository.findActiveByUserId(userId);
-//
-//    return parts.stream()
-//        .map(part -> convertToChatRoomResponse(part.getChatRoom()))
-//        .collect(Collectors.toList());
-//  }
-//
-//  /**
-//   * 메시지 삭제 (소프트 삭제)
-//   */
-//  @Transactional
-//  public void deleteMessage(Long messageId, Long userId) {
-//    Message message = messageRepository.findById(messageId)
-//        .orElseThrow(() -> new RuntimeException("메시지를 찾을 수 없습니다."));
-//
-//    // 권한 검증 (본인만 삭제 가능)
-//    if (message.getChatPart() != null &&
-//        !message.getChatPart().getUserId().equals(userId)) {
-//      throw new RuntimeException("메시지를 삭제할 권한이 없습니다.");
-//    }
-//
-//    messageRepository.delete(message); // @SQLDelete로 소프트 삭제
-//  }
-//
-//  /**
-//   * Entity -> DTO 변환
-//   */
-//  private MessageResponse convertToMessageResponse(Message message, Long userId) {
-//    List<AttachmentResponse> attachments = attachmentRepository
-//        .findByMessage_MessageId(message.getMessageId())
-//        .stream()
-//        .map(att -> AttachmentResponse.builder()
-//            .attachmentId(att.getAttachmentId())
-//            .attachmentUrl(att.getAttachmentUrl())
-//            .mimeType(att.getMimeType())
-//            .sizeBytes(att.getSizeBytes())
-//            .build())
-//        .collect(Collectors.toList());
-//
-//    return MessageResponse.builder()
-//        .messageId(message.getMessageId())
-//        .chatId(message.getChatRoom().getChatId())
-//        .chatPartId(message.getChatPart() != null ?
-//            message.getChatPart().getChatPartId() : null)
-//        .userId(userId)
-//        .userName("User" + userId) // 실제로는 User 엔티티에서 조회
-//        .type(message.getType())
-//        .content(message.getContent())
-//        //답장 기능 구현시
-////        .parentId(message.getParent() != null ?
-////            message.getParent().getMessageId() : null)
-//        .attachments(attachments)
-//        .createdAt(message.getCreatedAt())
-//        .isDeleted(message.getDeletedAt() != null)
-//        .build();
-//  }
-//
-//  private ChatRoomResponse convertToChatRoomResponse(ChatRoom chatRoom) {
-//    List<ChatPartResponse> participants = chatPartRepository
-//        .findByChatRoom_ChatId(chatRoom.getChatId())
-//        .stream()
-//        .map(part -> ChatPartResponse.builder()
-//            .chatPartId(part.getChatPartId())
-//            .userId(part.getUserId())
-//            .userName("User" + part.getUserId())
-//            .role(part.getRole().name())
-//            .joinedAt(part.getJoinedAt())
-//            .leftAt(part.getLeftAt())
-//            .build())
-//        .collect(Collectors.toList());
-//
-//    // 마지막 메시지 조회
-//    MessageResponse lastMessage = messageRepository
-//        .findFirstByChatRoom_ChatIdOrderByCreatedAtDesc(chatRoom.getChatId())
-//        .map(msg -> convertToMessageResponse(msg,
-//            msg.getChatPart() != null ? msg.getChatPart().getUserId() : null))
-//        .orElse(null);
-//
-//    return ChatRoomResponse.builder()
-//        .chatId(chatRoom.getChatId())
-//        .brandId(chatRoom.getBrandId())
-//        .type(chatRoom.getType().name())
-//        .lastMessageAt(chatRoom.getLastMessageAt())
-//        .participants(participants)
-//        .lastMessage(lastMessage)
-//        .build();
-//  }
+    // 2️⃣ 이미 참여 중인지 확인 (중복 방지)
+    if (chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndLeftAtIsNull(chatId, userId)) {
+      throw new IllegalStateException("User already joined this chat room.");
+    }
+    User user = userRepository.getById(userId);
+    // 3️⃣ 참여자 생성
+    ChatPart chatPart = ChatPart.builder()
+        .chatRoom(chatRoom)
+        .user(user)
+        .role(ChatPartRole.USER)
+        .build();
 
+    chatPart = chatPartRepository.save(chatPart);
+
+    // 4️⃣ DTO 변환
+    return ChatPartResponse.builder()
+        .chatPartId(chatPart.getChatPartId())
+        .userId(chatPart.getUser().getId())
+        .userName(chatPart.getUser().getUserName())
+        .joinedAt(chatPart.getJoinedAt())
+        .build();
+  }
+
+  @Transactional
+  @Override
+  public void leaveChat(Long chatId, Long userId) {
+    // 활성 상태의 참여 기록 조회
+    ChatPart chatPart = chatPartRepository
+        .findByChatRoom_ChatIdAndUserIdAndLeftAtIsNull(chatId, userId)
+        .orElseThrow(() -> new IllegalStateException("참여 중인 채팅방이 존재하지 않습니다."));
+
+    // 이미 나갔는지 확인할 필요 없음 (조건상 leftAt IS NULL 보장됨)
+    chatPart.setLeftAt(LocalDateTime.now());
+  }
 
 }

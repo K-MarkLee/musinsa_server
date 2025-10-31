@@ -2,6 +2,8 @@ package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.common.vo.Money;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -14,15 +16,17 @@ import java.util.List;
 // 상품 옵션과 가격, 재고를 관리하는 엔티티이다.
 @Entity
 @Getter
+@Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "product_option")
 public class ProductOption extends BaseEntity {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "product_option_id")
     private Long productOptionId;
-    
+
+    //TODO: ProductOption에서 Product를 바라봐야 하는 이유
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
@@ -30,7 +34,7 @@ public class ProductOption extends BaseEntity {
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "inventory_id", nullable = false, unique = true)
     private Inventory inventory;
-    
+
     @Embedded
     @AttributeOverride(name = "amount", column = @Column(name = "product_price", nullable = false, precision = 10, scale = 2))
     private Money productPrice;
@@ -53,7 +57,7 @@ public class ProductOption extends BaseEntity {
         if (inventory == null) {
             throw new IllegalArgumentException("재고 정보는 옵션에 필수입니다.");
         }
-        
+
         this.product = product;
         this.productPrice = productPrice;
         this.inventory = inventory;
@@ -77,4 +81,31 @@ public class ProductOption extends BaseEntity {
         this.productOptionValues.add(optionValue);
     }
 
+    /* 재고 차감 */
+    public void decreaseStock(Integer quantity) {
+        if (this.inventory == null) {
+            throw new BusinessException(ErrorCode.INVENTORY_NOT_FOUND);
+        }
+
+        this.inventory.decrease(quantity);
+    }
+
+    /* 재고 복구 */
+    public void restoreStock(Integer quantity) {
+        if (this.inventory == null) {
+            throw new BusinessException(ErrorCode.INVENTORY_NOT_FOUND);
+        }
+
+        this.inventory.increase(quantity);
+    }
+
+    public void validateAvailable() {
+        if (!this.isAvailable) {
+            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE);
+        }
+
+        if (this.inventory == null || !this.inventory.getIsAvailable()) {
+            throw new BusinessException(ErrorCode.INVENTORY_NOT_AVAILABLE);
+        }
+    }
 }
