@@ -5,6 +5,7 @@ import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.OrderService;
 import com.mudosa.musinsa.order.application.dto.OrderCreateRequest;
 import com.mudosa.musinsa.order.application.dto.OrderCreateResponse;
+import com.mudosa.musinsa.order.application.dto.PendingOrderResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -12,15 +13,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/api/orders")
 @Tag(name="Order", description = "주문 API")
 public class OrderController {
     private final OrderService orderService;
@@ -54,6 +52,22 @@ public class OrderController {
 
         log.info("[Order] 주문 생성 완료, orderId: {}, orderNo: {}", 
                 response.getOrderId(), response.getOrderNo());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(
+            summary = "주문 조회",
+            description = "생성한 주문을 조회합니다. "
+    )
+    @GetMapping("/pending")
+    public ResponseEntity<ApiResponse<PendingOrderResponse>> fetchOrder(
+            @RequestParam(value="orderNo") String orderNo
+    ){
+        log.info("[Order] 주문 조회 요청, orderNo: {}",
+                orderNo);
+
+        PendingOrderResponse response = orderService.fetchPendingOrder(orderNo);
+
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

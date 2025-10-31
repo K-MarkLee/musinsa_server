@@ -3,10 +3,7 @@ package com.mudosa.musinsa.order.application;
 import com.mudosa.musinsa.coupon.domain.service.MemberCouponService;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.order.application.dto.InsufficientStockItem;
-import com.mudosa.musinsa.order.application.dto.OrderCreateItem;
-import com.mudosa.musinsa.order.application.dto.OrderCreateRequest;
-import com.mudosa.musinsa.order.application.dto.OrderCreateResponse;
+import com.mudosa.musinsa.order.application.dto.*;
 import com.mudosa.musinsa.order.domain.model.OrderProduct;
 import com.mudosa.musinsa.order.domain.model.Orders;
 import com.mudosa.musinsa.order.domain.model.StockValidationResult;
@@ -15,7 +12,10 @@ import com.mudosa.musinsa.order.domain.service.StockValidator;
 import com.mudosa.musinsa.payment.application.dto.OrderValidationResult;
 import com.mudosa.musinsa.product.application.CartService;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
+import com.mudosa.musinsa.user.domain.model.User;
+import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -36,6 +37,7 @@ public class OrderService {
     private final MemberCouponService memberCouponService;
     private final ProductOptionRepository productOptionRepository;
     private final StockValidator stockValidator;
+    private final UserRepository userRepository;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void completeOrder(Long orderId) {
@@ -67,7 +69,7 @@ public class OrderService {
         /* 주문 제품에 대한 장바구니 제품 삭제 */
         deleteCartItems(orders);
 
-        log.info("장바구니 삭제 완료 - orderId: {}, userId: {}", orderId, orders.getUserId());
+        log.info("장바구니 삭제 완료 - orderId: {}, userId: {}", orderId, orders.getUser().getId());
 
         /* 쿠폰을 사용한 주문이라면 MemberCoupon 사용 처리 */
         useCouponIfExists(orders);
@@ -80,7 +82,7 @@ public class OrderService {
                 .map(op -> op.getProductOption().getProductOptionId())
                 .toList();
 
-        cartService.deleteCartItemsByProductOptions(order.getUserId(), productOptionIds);
+        cartService.deleteCartItemsByProductOptions(order.getUser().getId(), productOptionIds);
 
         log.info("장바구니 삭제 완료 - orderId: {}, count: {}",
                 order.getId(), productOptionIds.size());
@@ -93,7 +95,7 @@ public class OrderService {
 
         try {
             memberCouponService.useMemberCoupon(
-                    order.getUserId(),
+                    order.getUser().getId(),
                     order.getCouponId(),
                     order.getId()
             );
@@ -147,7 +149,7 @@ public class OrderService {
                         "주문을 찾을 수 없습니다: " + orderNo));
 
         // 2. 사용자 권한 검증
-        if (!order.getUserId().equals(userId)) {
+        if (!order.getUser().getId().equals(userId)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED_USER,
                     "본인의 주문만 결제할 수 있습니다");
         }
@@ -181,7 +183,7 @@ public class OrderService {
 
         return OrderValidationResult.success(
                 order.getId(),
-                order.getUserId(),
+                order.getUser().getId(),
                 finalAmount,
                 discount
         );
@@ -221,7 +223,7 @@ public class OrderService {
 
         try {
             memberCouponService.rollbackMemberCoupon(
-                    order.getUserId(),
+                    order.getUser().getId(),
                     order.getCouponId(),
                     order.getId()
             );
@@ -246,7 +248,11 @@ public class OrderService {
         log.info("주문 생성 시작 - userId: {}, itemCount: {}",
                 request.getUserId(), request.getItems().size());
 
-        /* 1. 상품 옵션 조회 */
+        /* 1. 사용자 조회 */
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        /* 2. 상품 옵션 조회 */
         List<Long> productOptionIds = request.getItems().stream()
                 .map(OrderCreateItem::getProductOptionId)
                 .toList();
@@ -267,18 +273,18 @@ public class OrderService {
                     "존재하지 않는 상품 옵션: " + notFoundIds);
         }
 
-        /* 2. 총 금액 계산 */
+        /* 3. 총 금액 계산 */
         BigDecimal totalPrice = calculateTotalPrice(request.getItems(), productOptions);
         log.info("총 금액 계산 완료 - totalPrice: {}", totalPrice);
 
-        /* 3. 주문 생성 (status: PENDING) */
+        /* 4. 주문 생성 (status: PENDING) */
         Orders order = Orders.create(
                 totalPrice,
-                request.getUserId(),
+                user,  // User 엔티티 전달
                 request.getCouponId()
         );
 
-        /* 4. 주문 아이템 생성 */
+        /* 5. 주문 아이템 생성 */
         List<OrderProduct> orderProducts = createOrderProducts(
                 request.getItems(),
                 productOptions,
@@ -287,14 +293,14 @@ public class OrderService {
 
         order.addOrderProducts(orderProducts);
 
-        /* 5. 재고 확인 (StockValidator 재사용) */
+        /* 6. 재고 확인 (StockValidator 재사용) */
         StockValidationResult stockValidation = stockValidator.validateStockForOrder(order);
         if (stockValidation.hasInsufficientStock()) {
             log.warn("재고 부족 - 부족한 상품 수: {}", stockValidation.getInsufficientItems().size());
             return OrderCreateResponse.insufficientStock(stockValidation.getInsufficientItems());
         }
 
-        /* 6. 주문 저장 */
+        /* 7. 주문 저장 */
         Orders savedOrder = orderRepository.save(order);
         log.info("주문 생성 완료 - orderId: {}, orderNo: {}, totalPrice: {}",
                 savedOrder.getId(), savedOrder.getOrderNo(), savedOrder.getTotalPrice());
@@ -349,5 +355,87 @@ public class OrderService {
         }
 
         return orderProducts;
+    }
+
+    @Transactional(readOnly = true)
+    public PendingOrderResponse fetchPendingOrder(String orderNo) {
+        log.info("[Order] 주문서 조회 시작 - orderNo: {}", orderNo);
+
+        Orders orders = orderRepository.findByOrderNoWithUserAndProducts(orderNo)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        /* 주문 상태 확인 */
+        orders.validatePending();
+
+        User orderUser = orders.getUser();
+        log.info("[Order] 사용자 정보 조회 완료 - userId: {}, userName: {}", 
+                orderUser.getId(), orderUser.getUserName());
+
+        List<Long> productOptionIds = orders.getOrderProducts()
+                .stream()
+                .map(op -> op.getProductOption().getProductOptionId())
+                .toList();
+
+        orderRepository.findProductOptionsWithValues(productOptionIds);
+        
+        log.info("[Order] ProductOption 옵션 값 조회 완료 - productOptionIds: {}", productOptionIds);
+
+        List<PendingOrderItem> orderProducts = orders.getOrderProducts()
+                .stream()
+                .map(op -> {
+                    ProductOption productOption = op.getProductOption();
+                    List<ProductOptionValue> optionValues = productOption.getProductOptionValues();
+
+                    // SIZE 옵션 추출
+                    String sizeValue = optionValues.stream()
+                            .filter(pov -> "SIZE".equals(pov.getOptionValue().getOptionName().getOptionName()))
+                            .map(pov -> pov.getOptionValue().getOptionValue())
+                            .findFirst()
+                            .orElse("");
+
+                    // COLOR 옵션 추출
+                    String colorValue = optionValues.stream()
+                            .filter(pov -> "COLOR".equals(pov.getOptionValue().getOptionName().getOptionName()))
+                            .map(pov -> pov.getOptionValue().getOptionValue())
+                            .findFirst()
+                            .orElse("");
+
+                    //imageUrl
+                    String imageUrl = op.getProductOption().getProduct().getImages().stream()
+                            .filter(image -> image.getIsThumbnail()).map(i-> i.getImageUrl()).findFirst().orElse("");
+
+                    return PendingOrderItem.builder()
+                            .productOptionId(op.getProductOptionId())
+                            .productOptionName(productOption.getProduct().getProductName())
+                            .amount(op.getProductPrice())
+                            .quantity(op.getProductQuantity())
+                            .brandName(productOption.getProduct().getBrandName())
+                            .size(sizeValue)
+                            .imageUrl(imageUrl)
+                            .color(colorValue)
+                            .build();
+                })
+                .toList();
+
+        log.info("[Order] 주문 상품 변환 완료 - 상품 수: {}", orderProducts.size());
+
+        /* [4단계] 쿠폰 조회 */
+        List<OrderMemberCoupon> coupons = memberCouponService.findMemberCoupons(orderUser.getId());
+        log.info("[Order] 쿠폰 조회 완료 - 쿠폰 수: {}", coupons.size());
+
+        /* [5단계] 응답 생성 */
+        PendingOrderResponse response = PendingOrderResponse.builder()
+                .orderNo(orderNo)
+                .userContactNumber(orderUser.getContactNumber())
+                .userName(orderUser.getUserName())
+                .userAddress(orderUser.getCurrentAddress())
+                .orderProducts(orderProducts)
+                .coupons(coupons)
+                .build();
+
+        log.info("[Order] 주문서 조회 완료 - orderNo: {}, 상품 수: {}, 쿠폰 수: {}", 
+                orderNo, orderProducts.size(), coupons.size());
+
+        return response;
     }
 }

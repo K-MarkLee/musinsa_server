@@ -5,6 +5,7 @@ import com.mudosa.musinsa.coupon.domain.model.MemberCoupon;
 import com.mudosa.musinsa.coupon.domain.repository.MemberCouponRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
+import com.mudosa.musinsa.order.application.dto.OrderMemberCoupon;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RequiredArgsConstructor
 @Service
@@ -66,6 +68,7 @@ public class MemberCouponService {
                 ));
     }
 
+
     @Transactional(propagation = Propagation.MANDATORY)
     public void rollbackMemberCoupon(Long userId, Long couponId, Long orderId) {
         //회원 쿠폰 조회
@@ -84,5 +87,18 @@ public class MemberCouponService {
         memberCouponRepository.save(memberCoupon);
 
         log.info("쿠폰 롤백 완료 - userId: {}, couponId: {}", userId, couponId);
+    }
+
+    public List<OrderMemberCoupon> findMemberCoupons(Long userId) {
+        return memberCouponRepository.findAllByUserId(userId).stream()
+                .map(mc -> {
+                    Coupon coupon = mc.getCoupon();
+                    return new OrderMemberCoupon(
+                            coupon.getId(),
+                            coupon.getCouponName(),
+                            coupon.getDiscountType().name(),
+                            coupon.getDiscountValue()
+                    );
+                }).toList();
     }
 }

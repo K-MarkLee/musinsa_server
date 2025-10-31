@@ -18,7 +18,7 @@ public enum ErrorCode {
     UNSUPPORTED_JWT("10006", "지원하지 않는 JWT 토큰입니다.", HttpStatus.UNAUTHORIZED),
     EMPTY_JWT("10007", "JWT 클레임이 비어있습니다.", HttpStatus.UNAUTHORIZED),
     FORBIDDEN("10008", "접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
-    RESOURCE_NOT_FOUND("10009", "요청한 리소스를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    RESOURCE_NOT_FOUND("10009", "요청한 리소스를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),USER_NOT_FOUND("10010","사용자가 없습니다",HttpStatus.NOT_FOUND ),
 
     //payment
     PAYMENT_APPROVAL_FAILED("30001", "결제 승인에 실패했습니다", HttpStatus.BAD_REQUEST),

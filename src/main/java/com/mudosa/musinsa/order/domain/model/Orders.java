@@ -10,6 +10,7 @@ import com.mudosa.musinsa.payment.domain.model.PaymentEventType;
 import com.mudosa.musinsa.payment.domain.model.PaymentStatus;
 import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -32,9 +33,10 @@ public class Orders extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_id")
     private Long id;
-    
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
     
     @Column(name = "coupon_id")
     private Long couponId;
@@ -66,7 +68,7 @@ public class Orders extends BaseEntity {
 
     public static Orders create(
             BigDecimal totalPrice,
-            Long userId,
+            User user,
             Long couponId
             ) {
 
@@ -74,8 +76,12 @@ public class Orders extends BaseEntity {
             throw new BusinessException(ErrorCode.ORDER_INVALID_AMOUNT);
         }
 
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
         Orders order = new Orders();
-        order.userId = userId;
+        order.user = user;
         order.totalPrice = totalPrice;
         order.finalPaymentAmount = totalPrice;
         order.status = OrderStatus.PENDING;

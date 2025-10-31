@@ -72,4 +72,5 @@ public class User extends BaseEntity {
         this.oauths.add(oauth);
         oauth.assignUser(this);
     }
+
 }
