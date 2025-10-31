@@ -245,7 +245,7 @@
 - [ ] 브랜치 확인
   ```bash
   git branch
-  # * feature/order-api
+  # * feature/orders-api
   ```
 
 ---

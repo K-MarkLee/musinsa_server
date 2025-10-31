@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.domain.chat.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.mudosa.musinsa.domain.chat.enums.ChatRoomType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ChatRoomInfoResponse {
   private Long chatId;
   private Long brandId;
@@ -22,4 +24,8 @@ public class ChatRoomInfoResponse {
   private ChatRoomType type;
   private Long partNum;
   private LocalDateTime lastMessageAt;
+ 
+  private String logoUrl;
+
+  private boolean isParticipate;
 }

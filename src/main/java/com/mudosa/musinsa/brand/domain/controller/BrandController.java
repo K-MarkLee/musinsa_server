@@ -8,6 +8,7 @@ import com.mudosa.musinsa.brand.domain.service.BrandService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -55,7 +56,8 @@ public class BrandController {
 
     try {
       if (file != null && !file.isEmpty()) {
-        String uploadDir = System.getProperty("user.home") + "/uploads/brand/logo";
+        String uploadDir = new ClassPathResource("static/").getFile().getAbsolutePath()
+            + "/brand/logo";
         Files.createDirectories(Paths.get(uploadDir));
 
         // 파일명 정규화 + UUID로 충돌 방지
@@ -64,9 +66,14 @@ public class BrandController {
         Path target = Paths.get(uploadDir, safeName).toAbsolutePath().normalize();
 
         file.transferTo(target.toFile());
+
+
+        // 정적 서빙 경로 매핑에 맞춰 URL/상대경로를 저장 (예시는 상대경로)
+        String storedUrl = "/brand/logo/" + safeName;
+
         log.info("파일 업로드 성공: {}", target);
         log.info("request: " + request);
-        brandService.createBrand(request, uploadDir);
+        brandService.createBrand(request, storedUrl);
       }
 
       // TODO: request DTO 저장 로직 추가

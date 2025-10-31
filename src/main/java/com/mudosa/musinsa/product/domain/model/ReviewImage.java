@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+// 리뷰에 첨부된 이미지를 나타내는 엔티티이다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,9 +26,10 @@ public class ReviewImage extends BaseEntity {
     @Column(name = "image_url", nullable = false, length = 2048)
     private String imageUrl;
     
+    // 리뷰 이미지를 생성하며 필수 값을 검증한다.
     @Builder
     public ReviewImage(Review review, String imageUrl) {
-        // 엔티티 기본 무결성 검증
+        // 필수 파라미터를 확인해 무결성을 보장한다.
         if (review == null) {
             throw new IllegalArgumentException("리뷰는 필수입니다.");
         }

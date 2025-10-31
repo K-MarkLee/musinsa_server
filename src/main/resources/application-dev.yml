@@ -5,9 +5,9 @@ spring:
   # DataSource 설정
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:my_database}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:musinsa_dev}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:1234}
+    password: ${DB_PASSWORD:}
     
 #    # HikariCP 설정 (로컬 개발 환경)
 #    hikari:
@@ -24,14 +24,13 @@ spring:
   # JPA 개발 환경 설정
   jpa:
     hibernate:
-      ddl-auto: validate  # 일단 스키마 완벽해질 때까지만 검증 작업 안함
+      ddl-auto: none  # 일단 스키마 완벽해질 때까지만 검증 작업 안함
       naming:
         physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
     show-sql: true  # SQL 콘솔 출력
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-        generate_statistics: true  # 통계 정보 생성
 
   # MyBatis 개발 환경 설정
 #  mybatis:
@@ -56,39 +55,39 @@ spring:
 # ========================================
 # 개발 환경 로깅 설정 (상세)
 # ========================================
-#logging:
-#  level:
-#    # Application 로깅
-#    com.mudosa.musinsa: info
-#
-#    # JPA/Hibernate 로깅
-#    org.hibernate.SQL: info
-#    org.hibernate.type.descriptor.sql.BasicBinder: info  # 바인딩 파라미터
-#    org.hibernate.type.descriptor.sql.BasicExtractor: info  # 결과 추출
-#    org.hibernate.engine.transaction.internal.TransactionImpl: info
-#    org.hibernate.stat: info  # Hibernate 통계
-#
-#    # MyBatis 로깅 (도메인별)
-#    com.mudosa.musinsa.domain.order.mapper: trace
-#    com.mudosa.musinsa.domain.payment.mapper: trace
-#    com.mudosa.musinsa.domain.user.mapper: trace
-#    com.mudosa.musinsa.domain.product.mapper: trace
-#    com.mudosa.musinsa.domain.brand.mapper: trace
-#    com.mudosa.musinsa.domain.coupon.mapper: trace
-#    com.mudosa.musinsa.domain.event.mapper: trace
-#
-#    # Spring Framework 로깅
-#    org.springframework.web: info
-#    org.springframework.security: info
-#    org.springframework.jdbc.core: info
-#    org.springframework.transaction: info
-#
-#    # HikariCP 로깅
-#    com.zaxxer.hikari: info
-#
-#    # Connection Pool 상태 모니터링
-#    com.zaxxer.hikari.pool.HikariPool: info
-#    com.zaxxer.hikari.pool.PoolBase: info
+logging:
+  level:
+    # Application 로깅
+    com.mudosa.musinsa: debug
+
+    # JPA/Hibernate 로깅
+    org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql.BasicBinder: debug  # 바인딩 파라미터
+    org.hibernate.type.descriptor.sql.BasicExtractor: debug  # 결과 추출
+    org.hibernate.engine.transaction.internal.TransactionImpl: debug
+    org.hibernate.stat: debug  # Hibernate 통계
+
+    # MyBatis 로깅 (도메인별)
+    com.mudosa.musinsa.domain.order.mapper: trace
+    com.mudosa.musinsa.domain.payment.mapper: trace
+    com.mudosa.musinsa.domain.user.mapper: trace
+    com.mudosa.musinsa.domain.product.mapper: trace
+    com.mudosa.musinsa.domain.brand.mapper: trace
+    com.mudosa.musinsa.domain.coupon.mapper: trace
+    com.mudosa.musinsa.domain.event.mapper: trace
+
+    # Spring Framework 로깅
+    org.springframework.web: info
+    org.springframework.security: info
+    org.springframework.jdbc.core: info
+    org.springframework.transaction: info
+
+    # HikariCP 로깅
+    com.zaxxer.hikari: info
+
+    # Connection Pool 상태 모니터링
+    com.zaxxer.hikari.pool.HikariPool: info
+    com.zaxxer.hikari.pool.PoolBase: info
 
 # ========================================
 # JWT 개발 환경 설정
@@ -139,3 +138,11 @@ springdoc:
 #  endpoint:
 #    health:
 #      show-details: always
+
+# ========================================
+# FCM 환경변수 설정
+# ========================================
+fcm:
+  service-acount-file: key/fdbdproject.json
+  topic-name: fdbdMessage
+  project-id: fdbdproject

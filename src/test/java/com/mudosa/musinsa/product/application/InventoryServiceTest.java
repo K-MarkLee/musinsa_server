@@ -1,0 +1,93 @@
+package com.mudosa.musinsa.product.application;
+
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
+import com.mudosa.musinsa.product.domain.model.Inventory;
+import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
+import com.mudosa.musinsa.product.domain.vo.StockQuantity;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class InventoryServiceTest {
+
+    @Mock
+    private InventoryRepository inventoryRepository;
+
+    @InjectMocks
+    private InventoryService inventoryService;
+
+    @Test
+    @DisplayName("재고 수량을 추가하면 값과 가용 상태가 갱신된다")
+    void addStock_increaseQuantity() {
+        Inventory inventory = Inventory.builder()
+            .stockQuantity(new StockQuantity(5))
+            .isAvailable(true)
+            .build();
+
+        when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
+            .thenReturn(Optional.of(inventory));
+
+        inventoryService.addStock(1L, 3);
+
+        assertThat(inventory.getStockQuantity().getValue()).isEqualTo(8);
+        assertThat(inventory.getIsAvailable()).isTrue();
+        verify(inventoryRepository).save(inventory);
+    }
+
+    @Test
+    @DisplayName("음수나 0을 추가하면 예외가 발생한다")
+    void addStock_invalidQuantity() {
+        assertThatThrownBy(() -> inventoryService.addStock(1L, 0))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.VALIDATION_ERROR);
+    }
+
+    @Test
+    @DisplayName("재고 수량을 덮어쓰면 새로운 값이 저장되고 가용 상태가 갱신된다")
+    void overrideStock_updatesQuantity() {
+        Inventory inventory = Inventory.builder()
+            .stockQuantity(new StockQuantity(10))
+            .isAvailable(true)
+            .build();
+
+        when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
+            .thenReturn(Optional.of(inventory));
+
+        inventoryService.overrideStock(1L, 0);
+
+        assertThat(inventory.getStockQuantity().getValue()).isEqualTo(0);
+        assertThat(inventory.getIsAvailable()).isFalse();
+        verify(inventoryRepository).save(inventory);
+    }
+
+    @Test
+    @DisplayName("재고 판매 가능 전환 시 기본 검증을 수행한다")
+    void changeAvailability_validatesQuantity() {
+        Inventory inventory = Inventory.builder()
+            .stockQuantity(new StockQuantity(0))
+            .isAvailable(false)
+            .build();
+
+        when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
+            .thenReturn(Optional.of(inventory));
+
+        assertThatThrownBy(() -> inventoryService.changeAvailability(1L, true))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.VALIDATION_ERROR);
+    }
+}

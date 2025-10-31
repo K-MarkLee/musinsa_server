@@ -36,9 +36,9 @@ public class CartItem extends BaseEntity {
     @AttributeOverride(name = "amount", column = @Column(name = "unit_price", nullable = false, precision = 10, scale = 2))
     private Money unitPrice;
     
+    // 장바구니 항목을 생성하며 필수 값을 검증한다.
     @Builder
     public CartItem(User user, ProductOption productOption, Integer quantity, Money unitPrice) {
-        // 엔티티 기본 무결성 검증
         if (user == null) {
             throw new IllegalArgumentException("사용자는 필수입니다.");
         }
@@ -56,6 +56,14 @@ public class CartItem extends BaseEntity {
         this.productOption = productOption;
         this.quantity = quantity;
         this.unitPrice = unitPrice;
+    }
+
+    // 수량을 변경할 때 1 이상인지 검증한다.
+    public void changeQuantity(int quantity) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("수량은 1개 이상이어야 합니다.");
+        }
+        this.quantity = quantity;
     }
 
 }

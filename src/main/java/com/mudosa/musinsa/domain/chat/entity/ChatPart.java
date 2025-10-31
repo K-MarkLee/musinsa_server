@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.domain.chat.entity;
 
 import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
+import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
+@Setter
 public class ChatPart {
 
   @Id
@@ -28,8 +30,9 @@ public class ChatPart {
   @JoinColumn(name = "chat_id", nullable = false)
   private ChatRoom chatRoom;
 
-  @Column(name = "user_id", nullable = false)
-  private Long userId; // 별도 User 엔티티 연동 전까지 FK 값 보관
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "role", nullable = false, length = 20)

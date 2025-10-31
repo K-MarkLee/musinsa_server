@@ -15,6 +15,11 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.H2Dialect
+        # 쿼리 실행 횟수 통계 활성화
+        generate_statistics: true
+        # 배치 크기 설정
+        jdbc:
+          batch_size: 50
 
 
 tosspayments:
@@ -26,3 +31,7 @@ logging:
     com.mudosa.musinsa: debug
     org.springframework.web: info
     org.hibernate.SQL: debug
+    # 쿼리 파라미터 바인딩 로그
+    org.hibernate.type.descriptor.sql.BasicBinder: trace
+    # 쿼리 통계 로그
+    org.hibernate.stat: debug

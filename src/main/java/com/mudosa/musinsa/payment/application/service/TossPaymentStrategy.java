@@ -42,17 +42,12 @@ public class TossPaymentStrategy implements PaymentStrategy {
 	}
 
 	public PaymentConfirmResponse confirmPayment(PaymentConfirmRequest request) {
-		TossPaymentConfirmRequest tossRequest = TossPaymentConfirmRequest.builder()
-				.paymentKey(request.getPaymentKey())
-				.orderId(request.getOrderId())
-				.amount(request.getAmount())
-				.build();
+		TossPaymentConfirmRequest tossRequest = request.toTossRequest();
 
 		TossPaymentConfirmResponse tossResponse = callTossApi(tossRequest);
 
 		return PaymentConfirmResponse.builder()
 				.paymentKey(tossResponse.getPaymentKey())
-				.orderId(tossResponse.getOrderId())
 				.status(tossResponse.getStatus())
 				.pgProvider("TOSS")
 				.build();

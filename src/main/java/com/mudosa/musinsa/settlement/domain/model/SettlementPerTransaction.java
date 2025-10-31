@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.settlement.domain.model;
 
-import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.CreatedOnlyEntity;
 import com.mudosa.musinsa.common.vo.Money;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -23,11 +23,11 @@ import java.time.ZonedDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Slf4j
-public class SettlementPerTransaction extends BaseEntity {
+public class SettlementPerTransaction extends CreatedOnlyEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "transaction_id")
+    @Column(name = "settlement_transaction_id")
     private Long id;
 
     @Column(name = "brand_id", nullable = false)
@@ -35,6 +35,9 @@ public class SettlementPerTransaction extends BaseEntity {
 
     @Column(name = "payment_id", nullable = false)
     private Long paymentId;
+
+    @Column(name = "pg_transaction_id", length = 100)
+    private String pgTransactionId;
 
     @Column(name = "transaction_date", nullable = false)
     private LocalDateTime transactionDate;
@@ -76,6 +79,7 @@ public class SettlementPerTransaction extends BaseEntity {
     public static SettlementPerTransaction create(
         Long brandId,
         Long paymentId,
+        String pgTransactionId,
         Money transactionAmount,
         BigDecimal commissionRate,
         Money pgFeeAmount,
@@ -85,6 +89,7 @@ public class SettlementPerTransaction extends BaseEntity {
         SettlementPerTransaction settlement = new SettlementPerTransaction();
         settlement.brandId = brandId;
         settlement.paymentId = paymentId;
+        settlement.pgTransactionId = pgTransactionId;
         settlement.transactionAmount = transactionAmount;
         settlement.commissionRate = commissionRate;
         settlement.pgFeeAmount = pgFeeAmount;

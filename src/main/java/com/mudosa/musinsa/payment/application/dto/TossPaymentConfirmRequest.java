@@ -2,15 +2,10 @@ package com.mudosa.musinsa.payment.application.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Setter
 public class TossPaymentConfirmRequest{
 
 	@NotBlank(message = "결제 키는 필수입니다")

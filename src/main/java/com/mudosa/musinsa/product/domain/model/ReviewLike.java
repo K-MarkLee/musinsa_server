@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+// 리뷰 좋아요를 나타내는 엔티티로 사용자와 리뷰를 연결한다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -27,6 +28,7 @@ public class ReviewLike extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
+    // 좋아요를 생성하며 연관 엔티티를 설정한다.
     @Builder
     public ReviewLike(Review review, User user) {
         this.review = review;

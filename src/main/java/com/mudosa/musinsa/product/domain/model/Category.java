@@ -6,14 +6,11 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-/**
- * 카테고리 애그리거트 루트
- */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -31,21 +28,18 @@ public class Category extends BaseEntity {
     @Column(name = "image_url", length = 2048)
     private String imageUrl;
     
-    // 자기 참조: 부모 카테고리
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id", foreignKey = @ForeignKey(name = "fk_category_parent"))
     private Category parent;
     
-    // 자기 참조: 자식 카테고리 목록
+    // 자식 카테고리 컬렉션을 관리한다.
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private final List<Category> children = new ArrayList<>();
     
-    /**
-     * 카테고리 생성 (Builder 패턴)
-     */
+    // 카테고리를 생성하면서 필수 정보를 검증한다.
     @Builder
     public Category(String categoryName, Category parent, String imageUrl) {
-        // 엔티티 기본 무결성 검증
+        // 필수 파라미터를 확인해 무결성을 보장한다.
         if (categoryName == null || categoryName.trim().isEmpty()) {
             throw new IllegalArgumentException("카테고리명은 필수입니다.");
         }
@@ -55,20 +49,32 @@ public class Category extends BaseEntity {
         this.imageUrl = imageUrl;
     }
 
-    // 도메인 로직: 경로 생성 (재귀)
+    // 현재 카테고리의 전체 경로를 재귀적으로 생성한다.
     public String buildPath() {
-        if (parent == null) {
-            return categoryName;  // 부모: "상의"
+        return buildPathInternal(new HashSet<>());
+    }
+
+    // 순환 검사를 하며 부모 경로를 이어 붙인다.
+    private String buildPathInternal(Set<Category> visited) {
+        if (!visited.add(this)) {
+            throw new IllegalStateException("카테고리 계층에 순환 참조가 감지되었습니다.");
         }
-        return parent.buildPath() + "/" + categoryName;  // 자식: "상의/티셔츠"
+        try {
+            if (parent == null) {
+                return categoryName;  // 부모: "상의"
+            }
+            return parent.buildPathInternal(visited) + "/" + categoryName;  // 자식: "상의/티셔츠"
+        } finally {
+            visited.remove(this);
+        }
     }
     
-    // 도메인 로직: 하위 카테고리 여부 확인
+    // 부모 카테고리가 존재하는지 확인한다.
     public boolean hasParent() {
         return this.parent != null;
     }
     
-    // 도메인 로직: 상위 카테고리 여부 확인
+    // 루트 카테고리 여부를 확인한다.
     public boolean isRoot() {
         return this.parent == null;
     }

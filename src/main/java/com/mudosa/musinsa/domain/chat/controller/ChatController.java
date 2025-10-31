@@ -1,5 +1,7 @@
 package com.mudosa.musinsa.domain.chat.controller;
 
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
 import com.mudosa.musinsa.domain.chat.service.ChatService;
@@ -44,9 +46,10 @@ public class ChatController {
   public ResponseEntity<MessageResponse> sendMessage(
       @PathVariable Long chatId,
       @RequestParam("userId") Long userId,
+      @RequestParam(value = "parentId", required = false) Long parentId,
       @RequestPart(value = "message", required = false) String message,
       @RequestPart(value = "files", required = false) List<MultipartFile> files
-  ) {
+  ) throws FirebaseMessagingException {
     log.info("채팅 메시지 전송 요청: chatId={}, message={}, files={}",
         chatId, message, (files != null ? files.size() + "개" : "없음"));
 
@@ -60,13 +63,13 @@ public class ChatController {
     }
 
     //service에서 메시지 전송 로직 구현
-    MessageResponse savedMessage = chatService.saveMessage(chatId, userId, message, files);
+    MessageResponse savedMessage = chatService.saveMessage(chatId, userId, parentId, message, files);
     return ResponseEntity.ok(savedMessage);
   }
 
   /**
    * 채팅방 이전 메시지 조회 (페이징)
-   * GET /api/chat/rooms/1/messages?userId=1&page=0&size=20
+   * GET /api/chat/1/messages?userId=1&page=0&size=20
    */
   @GetMapping("/{chatId}/messages")
   public ResponseEntity<Page<MessageResponse>> getChatMessages(
@@ -85,49 +88,42 @@ public class ChatController {
   }
 
   /**
-   * 채팅방 이전 메시지 조회 (페이징)
-   * GET /api/chat/rooms/1/messages?userId=1&page=0&size=20
+   * 채팅방 정보 조회
+   * GET /api/chat/1/info
    */
   @GetMapping("/{chatId}/info")
-  public ResponseEntity<ChatRoomInfoResponse> getChatInfo(@PathVariable Long chatId) {
-    return ResponseEntity.ok(chatService.getChatRoomInfoByChatId(chatId));
+  public ResponseEntity<ChatRoomInfoResponse> getChatInfo(@PathVariable Long chatId, @RequestParam Long userId) {
+    return ResponseEntity.ok(chatService.getChatRoomInfoByChatId(chatId, userId));
   }
 
-//  /**
-//   * 사용자의 채팅방 목록 조회
-//   * GET /api/chat/rooms?userId=1
-//   */
-//  @GetMapping("/rooms")
-//  public ResponseEntity<List<ChatRoomResponse>> getUserChatRooms(
-//      @RequestParam Long userId
-//  ) {
-//    log.info("채팅방 목록 조회 요청: userId={}", userId);
-//    List<ChatRoomResponse> rooms = chatService.getUserChatRooms(userId);
-//    return ResponseEntity.ok(rooms);
-//  }
-//
-//  /**
-//   * 채팅방 생성
-//   * POST /api/chat/rooms
-//   * Body: { "brandId": 1, "type": "DM", "userIds": [1, 2] }
-//   */
-//  @PostMapping("/rooms")
-//  public ResponseEntity<ChatRoomResponse> createChatRoom(
-//      @RequestBody Map<String, Object> request
-//  ) {
-//    Long brandId = Long.parseLong(request.get("brandId").toString());
-//    String type = request.get("type").toString();
-//    List<Long> userIds = ((List<?>) request.get("userIds"))
-//        .stream()
-//        .map(id -> Long.parseLong(id.toString()))
-//        .toList();
-//
-//    log.info("채팅방 생성 요청: brandId={}, type={}, userIds={}", brandId, type, userIds);
-//
-//    ChatRoomResponse room = chatService.createChatRoom(brandId, type, userIds);
-//    return ResponseEntity.ok(room);
-//  }
-//
+
+  /**
+   * 채팅방 참가
+   * POST /api/chat/1/participants
+   */
+  @PostMapping("/{chatId}/participants")
+  public ResponseEntity<ChatPartResponse> addParticipant(@PathVariable Long chatId, @RequestParam Long userId) {
+    return ResponseEntity.ok(chatService.addParticipant(chatId, userId));
+  }
+
+  /**
+   * 채팅방 나가기
+   * PATCH /api/chat/1/leave
+   */
+  @PatchMapping("/{chatId}/leave")
+  public ResponseEntity<List<ChatRoomInfoResponse>> leaveChat(@PathVariable Long chatId, @RequestParam Long userId) {
+    chatService.leaveChat(chatId, userId);
+    return ResponseEntity.ok(chatService.getChatRoomByUserId(userId));
+  }
+
+  /**
+   * 나의 참가 채팅방 조회
+   * GET /api/chat/1/my
+   */
+  @GetMapping("/my")
+  public ResponseEntity<List<ChatRoomInfoResponse>> getMyChat(@RequestParam Long userId) {
+    return ResponseEntity.ok(chatService.getChatRoomByUserId(userId));
+  }
 
 
 }

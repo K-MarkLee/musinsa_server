@@ -1,0 +1,72 @@
+package com.mudosa.musinsa.product.presentation.controller;
+
+import com.mudosa.musinsa.product.application.ProductInventoryService;
+import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
+import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
+import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
+import com.mudosa.musinsa.product.application.dto.StockAvailabilityRequest;
+import com.mudosa.musinsa.product.application.dto.StockOverrideRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+// 브랜드 관리자용 재고 API를 제공한다.
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/brands/{brandId}/products/{productId}")
+public class ProductInventoryController {
+
+    private final ProductInventoryService productInventoryService;
+
+    // 브랜드별 상품 옵션 재고 목록 조회
+    @GetMapping("/inventory")
+    public ResponseEntity<List<ProductOptionStockResponse>> getProductOptionStocks(@PathVariable Long brandId,
+                                                                                   @PathVariable Long productId,
+                                                                                   @RequestHeader("X-USER-ID") Long userId) {
+        List<ProductOptionStockResponse> response = productInventoryService.getProductOptionStocks(brandId, productId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    // 상품 옵션 재고 추가 (입고)
+    @PostMapping("/inventory/increase")
+    public ResponseEntity<Void> increaseStock(@PathVariable Long brandId,
+                                              @PathVariable Long productId,
+                                              @RequestHeader("X-USER-ID") Long userId,
+                                              @Valid @RequestBody StockAdjustmentRequest request) {
+        productInventoryService.addStock(brandId, productId, userId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 상품 옵션 판매 가능 상태 변경
+    @PatchMapping("/inventory/availability")
+    public ResponseEntity<Void> changeInventoryAvailability(@PathVariable Long brandId,
+                                                            @PathVariable Long productId,
+                                                            @RequestHeader("X-USER-ID") Long userId,
+                                                            @Valid @RequestBody StockAvailabilityRequest request) {
+        productInventoryService.updateInventoryAvailability(brandId, productId, userId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 상품 옵션 재고 수량 직접 조정
+    @PatchMapping("/inventory/quantity")
+    public ResponseEntity<Void> overrideInventoryQuantity(@PathVariable Long brandId,
+                                                          @PathVariable Long productId,
+                                                          @RequestHeader("X-USER-ID") Long userId,
+                                                          @Valid @RequestBody StockOverrideRequest request) {
+        productInventoryService.overrideStock(brandId, productId, userId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 상품 전체 판매 가능 상태 변경
+    @PatchMapping("/availability")
+    public ResponseEntity<Void> changeProductAvailability(@PathVariable Long brandId,
+                                                          @PathVariable Long productId,
+                                                          @RequestHeader("X-USER-ID") Long userId,
+                                                          @Valid @RequestBody ProductAvailabilityRequest request) {
+        productInventoryService.updateProductAvailability(brandId, productId, userId, request);
+        return ResponseEntity.noContent().build();
+    }
+}

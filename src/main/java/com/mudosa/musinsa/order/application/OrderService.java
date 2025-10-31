@@ -1,21 +1,30 @@
 package com.mudosa.musinsa.order.application;
 
-import com.mudosa.musinsa.coupon.domain.model.MemberCoupon;
-import com.mudosa.musinsa.coupon.domain.repository.MemberCouponRepository;
+import com.mudosa.musinsa.coupon.domain.service.MemberCouponService;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.order.domain.model.Order;
+import com.mudosa.musinsa.order.application.dto.InsufficientStockItem;
+import com.mudosa.musinsa.order.application.dto.OrderCreateItem;
+import com.mudosa.musinsa.order.application.dto.OrderCreateRequest;
+import com.mudosa.musinsa.order.application.dto.OrderCreateResponse;
 import com.mudosa.musinsa.order.domain.model.OrderProduct;
+import com.mudosa.musinsa.order.domain.model.Orders;
+import com.mudosa.musinsa.order.domain.model.StockValidationResult;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
-import com.mudosa.musinsa.product.application.InventoryService;
+import com.mudosa.musinsa.order.domain.service.StockValidator;
+import com.mudosa.musinsa.payment.application.dto.OrderValidationResult;
+import com.mudosa.musinsa.product.application.CartService;
+import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -23,84 +32,322 @@ import java.util.stream.Collectors;
 public class OrderService {
     
     private final OrderRepository orderRepository;
-    private final InventoryService inventoryService;
-    private final MemberCouponRepository memberCouponRepository;
-//    private final CartService cartService;
+    private final CartService cartService;
+    private final MemberCouponService memberCouponService;
+    private final ProductOptionRepository productOptionRepository;
+    private final StockValidator stockValidator;
 
-    @Transactional(propagation = Propagation.MANDATORY)
-    public void completeOrder(Long orderId, boolean isFromCart) {
-        log.info("주문 완료 처리 시작 - orderId: {}, isFromCart: {}", orderId, isFromCart);
-        
-        Order order = orderRepository.findById(orderId)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void completeOrder(Long orderId) {
+        log.info("주문 완료 처리 시작 - orderId: {}", orderId);
+
+        /* 주문 조회 및 검증 */
+        Orders orders = orderRepository.findById(orderId)
             .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-        
-        order.validatePending();
-        
-        List<OrderProduct> orderProducts = order.getOrderProducts();
-        if (orderProducts.isEmpty()) {
-            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND);
-        }
-        
-        for (OrderProduct orderProduct : orderProducts) {
-            Long productOptionId = orderProduct.getProductOptionId();
-            Integer quantity = orderProduct.getProductQuantity();
-            
-            inventoryService.deduct(productOptionId, quantity);
-        }
-        
-        order.complete();
-        orderRepository.save(order);
-        
+
+        /* 주문 상태 재검증 -> 동시성 제어를 위해 */
+        orders.validatePending();
+
+        /* 주문 상품 재검증 */
+        orders.validateOrderProducts();
+
+        log.info("주문 검증 완료 - orderId: {}, orderProducts: {}",
+                orderId, orders.getOrderProducts().size());
+
+        /* 재고 차감 */
+        orders.decreaseStock();
+        log.info("재고 차감 완료 - orderId: {}", orderId);
+
+        /* 주문 상태 변경 */
+        orders.complete();
+        orderRepository.save(orders);
+
         log.info("주문 상태 변경 완료 - orderId: {}, status: COMPLETED", orderId);
-        
-        if (isFromCart) {
-            List<Long> productOptionIds = orderProducts.stream()
-                .map(OrderProduct::getProductOptionId)
-                .collect(Collectors.toList());
-            
-//            cartService.deleteCartItems(order.getUserId(), productOptionIds);
-            
-            log.info("장바구니 삭제 완료 - orderId: {}, userId: {}", orderId, order.getUserId());
-        }
-        
-        if (order.getCouponId() != null) {
-            MemberCoupon memberCoupon = memberCouponRepository
-                .findByUserIdAndCouponId(order.getUserId(), order.getCouponId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
-            
-            memberCoupon.use(orderId);
-            memberCouponRepository.save(memberCoupon);
-            
-            log.info("쿠폰 사용 처리 완료 - orderId: {}, couponId: {}", orderId, order.getCouponId());
-        }
+
+        /* 주문 제품에 대한 장바구니 제품 삭제 */
+        deleteCartItems(orders);
+
+        log.info("장바구니 삭제 완료 - orderId: {}, userId: {}", orderId, orders.getUserId());
+
+        /* 쿠폰을 사용한 주문이라면 MemberCoupon 사용 처리 */
+        useCouponIfExists(orders);
         
         log.info("주문 완료 처리 성공 - orderId: {}", orderId);
     }
 
-    @Transactional(propagation = Propagation.MANDATORY)
-    public void completeOrder(Long orderId) {
-        completeOrder(orderId, false);
+    private void deleteCartItems(Orders order) {
+        List<Long> productOptionIds = order.getOrderProducts().stream()
+                .map(op -> op.getProductOption().getProductOptionId())
+                .toList();
+
+        cartService.deleteCartItemsByProductOptions(order.getUserId(), productOptionIds);
+
+        log.info("장바구니 삭제 완료 - orderId: {}, count: {}",
+                order.getId(), productOptionIds.size());
+    }
+
+    private void useCouponIfExists(Orders order) {
+        if (!order.hasCoupon()) {
+            return;
+        }
+
+        try {
+            memberCouponService.useMemberCoupon(
+                    order.getUserId(),
+                    order.getCouponId(),
+                    order.getId()
+            );
+
+            log.info("쿠폰 사용 처리 완료 - orderId: {}, couponId: {}",
+                    order.getId(), order.getCouponId());
+
+        } catch (Exception e) {
+            log.error("쿠폰 사용 처리 실패 - orderId: {}, couponId: {}",
+                    order.getId(), order.getCouponId(), e);
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void rollbackOrder(Long orderId) {
         log.warn("주문 롤백 시작 - orderId: {}", orderId);
         
-        Order order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-        
-        List<OrderProduct> orderProducts = order.getOrderProducts();
-        
-        for (OrderProduct orderProduct : orderProducts) {
-            Long productOptionId = orderProduct.getProductOption().getProductOptionId();
-            Integer quantity = orderProduct.getProductQuantity();
-            
-            inventoryService.restore(productOptionId, quantity);
+        /* 재고 복구 */
+        Orders orders = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        orders.restoreStock();
+        log.info("재고 복구 완료 - orderId: {}", orderId);
+
+        /* 주문 상태 복구 */
+        orders.rollback();
+        orderRepository.save(orders);
+
+        /* 쿠폰 복구 */
+        rollbackCouponIfUsed(orders);
+
+        log.warn("주문 롤백 완료 - orderId: {}, status: PENDING", orderId);
+    }
+
+    public boolean isOrderCompleted(Long orderId) {
+        return orderRepository.findById(orderId).map(order -> order.getStatus().isCompleted()).orElse(false);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public OrderValidationResult validateAndPrepareOrder(
+            String orderNo,
+            Long userId,
+            BigDecimal requestAmount) {
+
+        log.info("주문 검증 시작 - orderNo: {}, userId: {}, requestAmount: {}",
+                orderNo, userId, requestAmount);
+
+        // 1. 주문 조회
+        Orders order = orderRepository.findByOrderNoWithOrderProducts(orderNo)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND,
+                        "주문을 찾을 수 없습니다: " + orderNo));
+
+        // 2. 사용자 권한 검증
+        if (!order.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_USER,
+                    "본인의 주문만 결제할 수 있습니다");
         }
-        
-        order.rollback();
-        orderRepository.save(order);
-        
-        log.warn("주문 롤백 완료 - orderId: {}", orderId);
+
+        // 3. 주문 상태 검증
+        order.validatePending();
+
+        // 4. 재고 검증
+        StockValidationResult stockValidationResult = stockValidator.validateStockForOrder(order);
+        if (stockValidationResult.hasInsufficientStock()) {
+            log.warn("재고 부족 - orderNo: {}", orderNo);
+            return OrderValidationResult.insufficientStock(
+                    order.getId(),
+                    stockValidationResult.getInsufficientItems()
+            );
+        }
+
+        // 5. 쿠폰 적용 및 최종 금액 계산
+        BigDecimal discount = calculateDiscount(order, userId);
+        BigDecimal finalAmount = order.getTotalPrice().subtract(discount);
+
+        // 6. 주문에 할인 금액 반영
+        if (discount.compareTo(BigDecimal.ZERO) > 0) {
+            order.applyDiscount(discount);
+            orderRepository.save(order);
+            log.info("할인 적용 완료 - orderId: {}, discount: {}", order.getId(), discount);
+        }
+
+
+        log.info("주문 검증 완료 - orderId: {}, finalAmount: {}", order.getId(), finalAmount);
+
+        return OrderValidationResult.success(
+                order.getId(),
+                order.getUserId(),
+                finalAmount,
+                discount
+        );
+    }
+
+    /* 쿠폰 할인 계산 */
+    private BigDecimal calculateDiscount(Orders order, Long userId) {
+        if (!order.hasCoupon()) {
+            return BigDecimal.ZERO;
+        }
+
+        try {
+            BigDecimal discount = memberCouponService.calculateDiscount(
+                    userId,
+                    order.getCouponId(),
+                    order.getTotalPrice()
+            );
+
+            log.info("쿠폰 할인 계산 완료 - orderId: {}, couponId: {}, discount: {}",
+                    order.getId(), order.getCouponId(), discount);
+
+            return discount;
+
+        } catch (Exception e) {
+            log.error("쿠폰 할인 계산 실패 - orderId: {}, couponId: {}",
+                    order.getId(), order.getCouponId(), e);
+            throw new BusinessException(ErrorCode.COUPON_NOT_FOUND,
+                    "쿠폰 적용에 실패했습니다: " + e.getMessage());
+        }
+    }
+
+    private void rollbackCouponIfUsed(Orders order) {
+        if (!order.hasCoupon()) {
+            log.debug("쿠폰 없음 - 쿠폰 롤백 스킵");
+            return;
+        }
+
+        try {
+            memberCouponService.rollbackMemberCoupon(
+                    order.getUserId(),
+                    order.getCouponId(),
+                    order.getId()
+            );
+
+            log.info("✓ 쿠폰 복구 완료 - orderId: {}, couponId: {}",
+                    order.getId(), order.getCouponId());
+
+        } catch (Exception e) {
+            log.error("쿠폰 복구 실패 - orderId: {}, couponId: {}",
+                    order.getId(), order.getCouponId(), e);
+
+            // TODO:쿠폰 복구 못했다고 결제를 취소해야되나...?
+            throw new BusinessException(
+                    ErrorCode.COUPON_ROLLBACK_INVALID,
+                    "쿠폰 복구에 실패했습니다: " + e.getMessage()
+            );
+        }
+    }
+
+    @Transactional
+    public OrderCreateResponse createPendingOrder(OrderCreateRequest request) {
+        log.info("주문 생성 시작 - userId: {}, itemCount: {}",
+                request.getUserId(), request.getItems().size());
+
+        /* 1. 상품 옵션 조회 */
+        List<Long> productOptionIds = request.getItems().stream()
+                .map(OrderCreateItem::getProductOptionId)
+                .toList();
+
+        List<ProductOption> productOptions = productOptionRepository.findAllByIdWithInventory(productOptionIds);
+
+        // 요청된 모든 상품 옵션이 존재하는지 확인
+        if (productOptions.size() != productOptionIds.size()) {
+            List<Long> foundIds = productOptions.stream()
+                    .map(ProductOption::getProductOptionId)
+                    .toList();
+            List<Long> notFoundIds = productOptionIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .toList();
+
+            log.error("존재하지 않는 상품 옵션: {}", notFoundIds);
+            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_FOUND,
+                    "존재하지 않는 상품 옵션: " + notFoundIds);
+        }
+
+        /* 2. 총 금액 계산 */
+        BigDecimal totalPrice = calculateTotalPrice(request.getItems(), productOptions);
+        log.info("총 금액 계산 완료 - totalPrice: {}", totalPrice);
+
+        /* 3. 주문 생성 (status: PENDING) */
+        Orders order = Orders.create(
+                totalPrice,
+                request.getUserId(),
+                request.getCouponId()
+        );
+
+        /* 4. 주문 아이템 생성 */
+        List<OrderProduct> orderProducts = createOrderProducts(
+                request.getItems(),
+                productOptions,
+                request.getUserId()
+        );
+
+        order.addOrderProducts(orderProducts);
+
+        /* 5. 재고 확인 (StockValidator 재사용) */
+        StockValidationResult stockValidation = stockValidator.validateStockForOrder(order);
+        if (stockValidation.hasInsufficientStock()) {
+            log.warn("재고 부족 - 부족한 상품 수: {}", stockValidation.getInsufficientItems().size());
+            return OrderCreateResponse.insufficientStock(stockValidation.getInsufficientItems());
+        }
+
+        /* 6. 주문 저장 */
+        Orders savedOrder = orderRepository.save(order);
+        log.info("주문 생성 완료 - orderId: {}, orderNo: {}, totalPrice: {}",
+                savedOrder.getId(), savedOrder.getOrderNo(), savedOrder.getTotalPrice());
+
+        return OrderCreateResponse.success(savedOrder.getId(), savedOrder.getOrderNo());
+    }
+
+    private BigDecimal calculateTotalPrice(
+            List<OrderCreateItem> items,
+            List<ProductOption> productOptions) {
+
+        BigDecimal totalPrice = BigDecimal.ZERO;
+
+        for (OrderCreateItem item : items) {
+            ProductOption productOption = productOptions.stream()
+                    .filter(po -> po.getProductOptionId().equals(item.getProductOptionId()))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_FOUND));
+
+            BigDecimal itemPrice = productOption.getProductPrice().getAmount()
+                    .multiply(BigDecimal.valueOf(item.getQuantity()));
+            totalPrice = totalPrice.add(itemPrice);
+        }
+
+        return totalPrice;
+    }
+
+    private List<OrderProduct> createOrderProducts(
+            List<OrderCreateItem> items,
+            List<ProductOption> productOptions,
+            Long userId) {
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+
+        for (OrderCreateItem item : items) {
+            ProductOption productOption = productOptions.stream()
+                    .filter(po -> po.getProductOptionId().equals(item.getProductOptionId()))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_FOUND));
+
+            OrderProduct orderProduct = OrderProduct.create(
+                    userId,
+                    productOption,
+                    productOption.getProductPrice().getAmount(),
+                    item.getQuantity(),
+                    null,  // event
+                    null,  // eventOption
+                    null   // limitScope
+            );
+
+            orderProducts.add(orderProduct);
+        }
+
+        return orderProducts;
     }
 }

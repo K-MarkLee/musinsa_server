@@ -21,12 +21,10 @@ import java.time.ZoneId;
 @Table(
     name = "settlements_monthly",
     uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"settlement_number"}),
-        @UniqueConstraint(columnNames = {"brand_id", "settlement_year_month"})
+        @UniqueConstraint(columnNames = {"settlement_number"})
     },
     indexes = {
-        @Index(name = "idx_settlement_year_month", columnList = "settlement_year_month"),
-        @Index(name = "idx_brand_id", columnList = "brand_id"),
+        @Index(name = "idx_year_month", columnList = "settlement_year, settlement_month"),
         @Index(name = "idx_settlement_status", columnList = "settlement_status")
     }
 )
@@ -46,17 +44,20 @@ public class SettlementMonthly extends BaseEntity {
     @Column(name = "brand_id", nullable = false)
     private Long brandId;
 
-    @Column(name = "settlement_year_month", nullable = false, length = 10)
-    private String settlementYearMonth;
+    @Column(name = "settlement_year", nullable = false)
+    private Integer settlementYear;
+
+    @Column(name = "settlement_month", nullable = false)
+    private Integer settlementMonth;
+
+    @Column(name = "settlement_timezone", nullable = false, length = 50)
+    private String settlementTimezone;
 
     @Column(name = "month_start_date", nullable = false)
     private LocalDate monthStartDate;
 
     @Column(name = "month_end_date", nullable = false)
     private LocalDate monthEndDate;
-
-    @Column(name = "settlement_timezone", nullable = false, length = 50)
-    private String settlementTimezone;
 
     @Column(name = "total_order_count", nullable = false)
     private Integer totalOrderCount = 0;
@@ -103,7 +104,8 @@ public class SettlementMonthly extends BaseEntity {
     ) {
         SettlementMonthly settlement = new SettlementMonthly();
         settlement.brandId = brandId;
-        settlement.settlementYearMonth = String.format("%d-%02d", year, month);
+        settlement.settlementYear = year;
+        settlement.settlementMonth = month;
         settlement.settlementNumber = settlementNumber;
 
         // Timezone 검증
