@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.domain.chat.controller;
 
+import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
@@ -48,7 +49,7 @@ public class ChatController {
       @RequestParam(value = "parentId", required = false) Long parentId,
       @RequestPart(value = "message", required = false) String message,
       @RequestPart(value = "files", required = false) List<MultipartFile> files
-  ) {
+  ) throws FirebaseMessagingException {
     log.info("채팅 메시지 전송 요청: chatId={}, message={}, files={}",
         chatId, message, (files != null ? files.size() + "개" : "없음"));
 

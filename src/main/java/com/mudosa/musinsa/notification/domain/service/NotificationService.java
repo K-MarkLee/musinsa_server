@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 /**
  * 필요한 기능
@@ -69,6 +70,25 @@ public class NotificationService {
                 .build();
         notificationRepository.save(notification);
         //푸시 알림 보내기
+        fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
+    }
+
+    public void createChatNotification(Long userId, String title, String message, Long chatRoomId) throws FirebaseMessagingException {
+        NotificationMetadata result = notificationMetadataRepository.findByNotificationCategory("CHAT").orElseThrow(
+                ()->new NoSuchElementException("Notification Metadata not found")
+        );
+        User resultUser = userRepository.findById(userId).orElseThrow(
+                ()->new NoSuchElementException("User not found")
+        );
+
+        Notification notification = Notification.builder()
+                .user(resultUser)
+                .notificationMetadata(result)
+                .notificationTitle(title + "채팅방에서 메세지가 왔습니다.")
+                .notificationMessage(Objects.isNull(message)?"첨부파일이 있습니다":message)
+                .notificationUrl("/chat/"+chatRoomId.toString()+"/")
+                .build();
+        notificationRepository.save(notification);
         fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
     }
 
