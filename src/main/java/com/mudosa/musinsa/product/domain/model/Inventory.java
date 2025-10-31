@@ -1,8 +1,6 @@
 package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
-import com.mudosa.musinsa.exception.BusinessException;
-import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -16,16 +14,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "inventory")
 public class Inventory extends BaseEntity {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "inventory_id")
     private Long inventoryId;
-
+    
     @Embedded
     @AttributeOverride(name = "value", column = @Column(name = "stock_quantity"))
     private StockQuantity stockQuantity;
-
+    
     @Column(name = "is_available", nullable = false)
     private Boolean isAvailable;
 
@@ -36,7 +34,7 @@ public class Inventory extends BaseEntity {
         if (stockQuantity == null) {
             throw new IllegalArgumentException("재고 수량은 필수입니다.");
         }
-
+        
         this.stockQuantity = stockQuantity;
         // 재고가 존재하면 기본적으로 판매 가능, 0이면 자동으로 false
         if (stockQuantity.getValue() > 0) {
