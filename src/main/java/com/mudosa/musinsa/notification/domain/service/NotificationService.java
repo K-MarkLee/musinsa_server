@@ -118,7 +118,7 @@ public class NotificationService {
                         ()->new NoSuchElementException("User not found")
                 ))
                 .notificationMetadata(resultNotificationMetadata)
-                .notificationTitle(prodOption.getProduct().getProductName()+prodOption.getProductOptionValues()+resultNotificationMetadata.getNotificationTitle())
+                .notificationTitle(prodOption.getProduct().getProductName()+resultNotificationMetadata.getNotificationTitle())
                 .notificationMessage(resultNotificationMetadata.getNotificationMessage())
                 .notificationUrl(resultNotificationMetadata.getNotificationUrl())
                 .build();
