@@ -114,7 +114,7 @@ public class ProductService {
     public Long createProduct(ProductCreateRequest request,
                               Brand brand,
                               Category category) {
-        ProductGenderType.Type genderType = ProductGenderType.Type.valueOf(request.getProductGenderType());
+        ProductGenderType.Type genderType = parseGenderType(request.getProductGenderType());
 
         validateDenormalizedFields(request, brand, category);
 
