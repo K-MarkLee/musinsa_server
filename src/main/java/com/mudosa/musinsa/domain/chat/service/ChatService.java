@@ -39,4 +39,8 @@ public interface ChatService {
   ChatRoomInfoResponse getChatRoomInfoByChatId(Long chatId, Long userId);
 
   ChatPartResponse addParticipant(Long chatId, Long userId);
+
+  void leaveChat(Long chatId, Long userId);
+
+  List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId);
 }

@@ -53,6 +53,26 @@ public class ChatServiceImpl implements ChatService {
   private final UserRepository userRepository;
   private final BrandMemberRepository brandMemberRepository;
 
+
+  @Override
+  public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
+    List<ChatRoom> chatRooms = chatRoomRepository.findDistinctByParts_User_IdAndParts_LeftAtIsNull(userId);
+
+    return chatRooms.stream()
+        .map(room -> ChatRoomInfoResponse.builder()
+            .chatId(room.getChatId())
+            .brandId(room.getBrand().getBrandId())
+            .brandNameKo(room.getBrand().getNameKo())
+            .type(room.getType())
+            .lastMessageAt(room.getLastMessageAt())
+            .partNum((long) room.getParts().size())
+            .isParticipate(true)
+            .logoUrl(room.getBrand().getLogoUrl())
+            .build())
+        .toList();
+  }
+
+
   /**
    * 메시지 저장
    */
@@ -64,7 +84,7 @@ public class ChatServiceImpl implements ChatService {
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
         .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
 
-    ChatPart chatPart = chatPartRepository.findByChatRoomChatIdAndUser_Id(chatId, userId)
+    ChatPart chatPart = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndLeftAtIsNull(chatId, userId)
         .orElseThrow(() -> new EntityNotFoundException(
             "ChatPart not found: chatId=" + chatId + ", userId=" + userId));
 
@@ -96,6 +116,8 @@ public class ChatServiceImpl implements ChatService {
 
     Message createdMessage = messageRepository.save(message);
 
+    chatRoom.setLastMessageAt(LocalDateTime.now());
+    
     // 4) 첨부 저장
     List<MessageAttachment> savedAttachments = new ArrayList<>();
     if (hasFiles) {
@@ -200,7 +222,7 @@ public class ChatServiceImpl implements ChatService {
             .build();
       }
       boolean isManager = brandMemberRepository.existsByBrand_BrandIdAndUserId(msg.getChatRoom().getBrand().getBrandId(), msg.getChatPart().getUser().getId());
-      log.info("확인" + msg.getChatRoom().getBrand().getBrandId() + ":" + userId + "->" + isManager);
+
       return MessageResponse.builder()
           .messageId(msg.getMessageId())
           .chatId(msg.getChatRoom().getChatId()) // 식별자만 꺼내기(프록시 안전)
@@ -247,7 +269,7 @@ public class ChatServiceImpl implements ChatService {
   public ChatPartResponse addParticipant(Long chatId, Long userId) {
     // 1️⃣ 채팅방 존재 확인
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
-        .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
+        .orElseThrow(() -> new EntityNotFoundException("ChatRoom nosaveMessaget found: " + chatId));
 
     // 2️⃣ 이미 참여 중인지 확인 (중복 방지)
     if (chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndLeftAtIsNull(chatId, userId)) {
@@ -270,6 +292,18 @@ public class ChatServiceImpl implements ChatService {
         .userName(chatPart.getUser().getUserName())
         .joinedAt(chatPart.getJoinedAt())
         .build();
+  }
+
+  @Transactional
+  @Override
+  public void leaveChat(Long chatId, Long userId) {
+    // 활성 상태의 참여 기록 조회
+    ChatPart chatPart = chatPartRepository
+        .findByChatRoom_ChatIdAndUserIdAndLeftAtIsNull(chatId, userId)
+        .orElseThrow(() -> new IllegalStateException("참여 중인 채팅방이 존재하지 않습니다."));
+
+    // 이미 나갔는지 확인할 필요 없음 (조건상 leftAt IS NULL 보장됨)
+    chatPart.setLeftAt(LocalDateTime.now());
   }
 
 }
