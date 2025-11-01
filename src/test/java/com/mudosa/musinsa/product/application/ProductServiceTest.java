@@ -1,9 +1,7 @@
 package com.mudosa.musinsa.product.application;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
-import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
-import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
 import com.mudosa.musinsa.product.domain.model.Product;
@@ -24,7 +22,6 @@ import java.util.Collections;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,15 +39,12 @@ class ProductServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
-    @Mock
-    private BrandMemberRepository brandMemberRepository;
-
     @InjectMocks
     private ProductService productService;
 
     @Test
-    @DisplayName("브랜드 멤버가 상품 정보를 수정한다")
-    void updateProductAsBrandMember() {
+    @DisplayName("상품 기본 정보를 수정하면 해당 값이 갱신된다")
+    void updateProduct_updatesFields() {
         Brand brand = Brand.builder()
             .brandId(1L)
             .nameKo("브랜드")
@@ -69,7 +63,6 @@ class ProductServiceTest {
             .build();
 
         when(productRepository.findDetailById(1L)).thenReturn(Optional.of(product));
-        when(brandMemberRepository.existsByBrand_BrandIdAndUserId(brand.getBrandId(), 99L)).thenReturn(true);
         when(productLikeRepository.countByProduct(product)).thenReturn(0L);
 
         ProductUpdateRequest request = ProductUpdateRequest.builder()
@@ -84,56 +77,16 @@ class ProductServiceTest {
                 .build()))
             .build();
 
-        ProductDetailResponse response = productService.updateProduct(1L, 99L, request);
+        ProductDetailResponse response = productService.updateProduct(1L, request);
 
         assertThat(response.getProductName()).isEqualTo("수정된 상품");
-        assertThat(product.getProductName()).isEqualTo("수정된 상품");
-    assertThat(product.getProductGenderType()).isEqualTo(ProductGenderType.WOMEN);
+        assertThat(product.getProductGenderType()).isEqualTo(ProductGenderType.WOMEN);
         assertThat(product.getImages()).hasSize(1);
     }
 
     @Test
-    @DisplayName("브랜드 멤버가 아니면 수정에 실패한다")
-    void updateProductWithoutMembership() {
-        Brand brand = Brand.builder()
-            .brandId(1L)
-            .nameKo("브랜드")
-            .nameEn("BRAND")
-            .status(BrandStatus.ACTIVE)
-            .commissionRate(BigDecimal.TEN)
-            .build();
-        Product product = Product.builder()
-            .brand(brand)
-            .productName("기존 상품")
-            .productInfo("기존 설명")
-            .productGenderType(ProductGenderType.MEN)
-            .brandName("브랜드")
-            .categoryPath("상의/티셔츠")
-            .isAvailable(true)
-            .build();
-
-        when(productRepository.findDetailById(1L)).thenReturn(Optional.of(product));
-        when(brandMemberRepository.existsByBrand_BrandIdAndUserId(brand.getBrandId(), 99L)).thenReturn(false);
-
-        ProductUpdateRequest request = ProductUpdateRequest.builder()
-            .productName("수정된 상품")
-            .productInfo("수정 설명")
-            .productGenderType("WOMEN")
-            .categoryPath("상의/셔츠")
-            .isAvailable(true)
-            .images(Collections.singletonList(ProductUpdateRequest.ImageUpdateRequest.builder()
-                .imageUrl("http://example.com/thumb.jpg")
-                .isThumbnail(true)
-                .build()))
-            .build();
-
-        assertThatThrownBy(() -> productService.updateProduct(1L, 99L, request))
-            .isInstanceOf(BusinessException.class);
-    }
-
-    @Test
-    @DisplayName("상품 삭제는 isAvailable 을 false 로 설정한다")
-    void disableProductChangesAvailability() {
+    @DisplayName("상품 비활성화 요청 시 isAvailable 이 false 로 바뀐다")
+    void disableProduct_changesAvailability() {
         Brand brand = Brand.builder()
             .brandId(1L)
             .nameKo("브랜드")
@@ -152,9 +105,8 @@ class ProductServiceTest {
             .build();
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(brandMemberRepository.existsByBrand_BrandIdAndUserId(brand.getBrandId(), 99L)).thenReturn(true);
 
-        productService.disableProduct(1L, 99L);
+        productService.disableProduct(1L);
 
         assertThat(product.getIsAvailable()).isFalse();
     }

@@ -49,10 +49,10 @@ class ProductGenderTypeTest {
 
         // When: 상품 조회
         log.info("조회된 상품 ID: {}", product.getProductId());
-    log.info("상품 성별 타입: {}", product.getProductGenderType());
+        log.info("상품 성별 타입: {}", product.getProductGenderType());
 
         // Then: ALL 타입이 정상적으로 조회됨
-    assertThat(product.getProductGenderType())
+        assertThat(product.getProductGenderType())
         .isEqualTo(ProductGenderType.ALL);
 
         log.info("✅ ProductGenderType.ALL 정상 조회 성공");
@@ -72,7 +72,7 @@ class ProductGenderTypeTest {
         log.info("전체 상품 수: {}", products.size());
 
         // When & Then: 각 타입별로 확인
-    for (ProductGenderType type : ProductGenderType.values()) {
+        for (ProductGenderType type : ProductGenderType.values()) {
             long count = products.stream()
                     .filter(p -> p.getProductGenderType() != null)
             .filter(p -> p.getProductGenderType() == type)

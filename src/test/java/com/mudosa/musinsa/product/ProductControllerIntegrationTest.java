@@ -170,7 +170,7 @@ class ProductControllerIntegrationTest {
             .build());
         OptionValue optionValue = createOptionValue("사이즈", "M");
 
-    ProductCreateRequest request = buildCreateRequest(brand, category, optionValue, Collections.singletonList(optionValue.getOptionValueId()));
+        ProductCreateRequest request = buildCreateRequest(brand, category, optionValue, Collections.singletonList(optionValue.getOptionValueId()));
 
         MvcResult createResult = mockMvc.perform(post("/api/products")
                 .contentType(MediaType.APPLICATION_JSON)

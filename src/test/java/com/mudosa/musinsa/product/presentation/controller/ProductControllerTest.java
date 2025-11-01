@@ -15,7 +15,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,7 +29,9 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@SuppressWarnings("removal")
 @WebMvcTest(ProductController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class ProductControllerTest {
 
     @Autowired
@@ -36,11 +40,14 @@ class ProductControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private final ProductService productService = Mockito.mock(ProductService.class);
+    @MockBean
+    private ProductService productService;
 
-    private final BrandRepository brandRepository = Mockito.mock(BrandRepository.class);
+    @MockBean
+    private BrandRepository brandRepository;
 
-    private final CategoryRepository categoryRepository = Mockito.mock(CategoryRepository.class);
+    @MockBean
+    private CategoryRepository categoryRepository;
 
     @Nested
     @DisplayName("상품 조회")
@@ -144,10 +151,9 @@ class ProductControllerTest {
                 .categories(List.of())
                 .build();
 
-            Mockito.when(productService.updateProduct(anyLong(), anyLong(), any())).thenReturn(detail);
+            Mockito.when(productService.updateProduct(anyLong(), any())).thenReturn(detail);
 
             mockMvc.perform(put("/api/products/1")
-                    .header("X-USER-ID", 99L)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -157,11 +163,10 @@ class ProductControllerTest {
         @Test
         @DisplayName("상품 삭제 (비활성화)")
         void deleteProduct() throws Exception {
-            mockMvc.perform(delete("/api/products/1")
-                    .header("X-USER-ID", 99L))
+            mockMvc.perform(delete("/api/products/1"))
                 .andExpect(status().isNoContent());
 
-            Mockito.verify(productService).disableProduct(1L, 99L);
+            Mockito.verify(productService).disableProduct(1L);
         }
     }
 }

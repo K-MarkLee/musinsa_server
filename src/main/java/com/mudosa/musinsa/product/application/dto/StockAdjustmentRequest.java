@@ -19,6 +19,6 @@ public class StockAdjustmentRequest {
     private Long productOptionId;
 
     @NotNull(message = "재고 수량은 필수입니다.")
-    @Positive(message = "재고 증가는 0보다 커야 합니다.")
+    @Positive(message = "재고 조정 수량은 0보다 커야 합니다.")
     private Integer quantity;
 }

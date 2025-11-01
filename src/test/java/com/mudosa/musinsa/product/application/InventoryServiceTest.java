@@ -54,4 +54,45 @@ class InventoryServiceTest {
             .isEqualTo(ErrorCode.VALIDATION_ERROR);
     }
 
+    @Test
+    @DisplayName("재고 수량을 차감하면 값이 감소한다")
+    void subtractStock_decreaseQuantity() {
+        Inventory inventory = Inventory.builder()
+            .stockQuantity(new StockQuantity(5))
+            .build();
+
+        when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
+            .thenReturn(Optional.of(inventory));
+
+        inventoryService.subtractStock(1L, 2);
+
+        assertThat(inventory.getStockQuantity().getValue()).isEqualTo(3);
+        verify(inventoryRepository).save(inventory);
+    }
+
+    @Test
+    @DisplayName("음수나 0을 차감하면 예외가 발생한다")
+    void subtractStock_invalidQuantity() {
+        assertThatThrownBy(() -> inventoryService.subtractStock(1L, -1))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.VALIDATION_ERROR);
+    }
+
+    @Test
+    @DisplayName("보유 재고보다 많이 차감하면 예외가 발생한다")
+    void subtractStock_insufficientQuantity() {
+        Inventory inventory = Inventory.builder()
+            .stockQuantity(new StockQuantity(1))
+            .build();
+
+        when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
+            .thenReturn(Optional.of(inventory));
+
+        assertThatThrownBy(() -> inventoryService.subtractStock(1L, 2))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.INSUFFICIENT_STOCK);
+    }
+
 }

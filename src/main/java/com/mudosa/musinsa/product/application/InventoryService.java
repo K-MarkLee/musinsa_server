@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-// 재고 증감과 모니터링을 담당하는 서비스이다.
+// 재고 컨트롤을 담당하는 서비스이다.
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -35,6 +35,29 @@ public class InventoryService {
         inventoryRepository.save(inventory);
 
         log.info("재고 추가 완료 - productOptionId: {}, 추가 수량: {}, 현재 재고: {}",
+            productOptionId, quantity, inventory.getStockQuantity());
+    }
+
+    // 지정된 수량만큼 옵션 재고를 차감한다 (출고/조정).
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void subtractStock(Long productOptionId, Integer quantity) {
+        log.info("재고 차감 시작 - productOptionId: {}, quantity: {}",
+            productOptionId, quantity);
+
+        if (quantity == null || quantity <= 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
+
+        Inventory inventory = loadInventoryWithLock(productOptionId);
+        try {
+            inventory.decrease(quantity);
+        } catch (IllegalStateException ex) {
+            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK, ex.getMessage());
+        }
+
+        inventoryRepository.save(inventory);
+
+        log.info("재고 차감 완료 - productOptionId: {}, 차감 수량: {}, 현재 재고: {}",
             productOptionId, quantity, inventory.getStockQuantity());
     }
 

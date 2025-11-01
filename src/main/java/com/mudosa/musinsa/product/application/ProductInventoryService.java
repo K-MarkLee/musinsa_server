@@ -13,7 +13,6 @@ import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
-import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,17 +31,15 @@ public class ProductInventoryService {
     private final ProductRepository productRepository;
     private final ProductOptionRepository productOptionRepository;
     private final InventoryService inventoryService;
-    private final BrandMemberRepository brandMemberRepository;
 
     // 브랜드와 상품을 기준으로 옵션 재고 목록을 조회한다.
     public List<ProductOptionStockResponse> getProductOptionStocks(Long brandId,
-                                                                  Long productId,
-                                                                  Long userId) {
+                                                                  Long productId) {
         Product product = productRepository.findDetailById(productId)
             .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,
                 "상품을 찾을 수 없습니다. productId=" + productId));
 
-        validateBrandPrivileges(product, brandId, userId);
+        validateBrandOwnership(product, brandId);
 
         return product.getProductOptions().stream()
             .map(this::mapToStockResponse)
@@ -53,32 +50,38 @@ public class ProductInventoryService {
     @Transactional
     public void addStock(Long brandId,
                          Long productId,
-                         Long userId,
                          StockAdjustmentRequest request) {
-        ProductOption productOption = loadProductOptionForBrand(brandId, productId, userId, request.getProductOptionId());
+        ProductOption productOption = loadProductOptionForBrand(brandId, productId, request.getProductOptionId());
 
         inventoryService.addStock(productOption.getProductOptionId(), request.getQuantity());
     }
 
-    // 옵션 재고 수량을 직접 덮어쓴다.
+    // 옵션 재고를 감소시킨다.
+    @Transactional
+    public void subtractStock(Long brandId,
+                              Long productId,
+                              StockAdjustmentRequest request) {
+        ProductOption productOption = loadProductOptionForBrand(brandId, productId, request.getProductOptionId());
+
+        inventoryService.subtractStock(productOption.getProductOptionId(), request.getQuantity());
+    }
+
     // 상품 전체 판매 가능 상태를 변경한다.
     @Transactional
     public void updateProductAvailability(Long brandId,
                                           Long productId,
-                                          Long userId,
                                           ProductAvailabilityRequest request) {
         Product product = productRepository.findDetailById(productId)
             .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,
                 "상품을 찾을 수 없습니다. productId=" + productId));
 
-        validateBrandPrivileges(product, brandId, userId);
+        validateBrandOwnership(product, brandId);
 
         product.changeAvailability(request.getIsAvailable());
     }
 
     private ProductOption loadProductOptionForBrand(Long brandId,
                                                    Long productId,
-                                                   Long userId,
                                                    Long productOptionId) {
         ProductOption productOption = productOptionRepository.findById(productOptionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,
@@ -95,29 +98,16 @@ public class ProductInventoryService {
                 "요청한 상품과 옵션이 일치하지 않습니다. productId=" + productId);
         }
 
-        validateBrandPrivileges(product, brandId, userId);
+        validateBrandOwnership(product, brandId);
         return productOption;
     }
 
-    private void validateBrandPrivileges(Product product,
-                                         Long brandId,
-                                         Long userId) {
+    private void validateBrandOwnership(Product product,
+                                        Long brandId) {
         if (product.getBrand() == null || !Objects.equals(product.getBrand().getBrandId(), brandId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN,
                 "브랜드 권한이 없습니다. brandId=" + brandId);
         }
-
-        if (userId == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_USER);
-        }
-
-        boolean member = brandMemberRepository.existsByBrand_BrandIdAndUserId(brandId, userId);
-        if (!member) {
-            throw new BusinessException(ErrorCode.FORBIDDEN,
-                "브랜드 멤버가 아닙니다. brandId=" + brandId);
-        }
-
-        // TODO 추후 인증 체계 도입 시 사용자 역할(OWNER, ADMIN 등)까지 확인해 세부 권한을 제어한다.
     }
 
     private ProductOptionStockResponse mapToStockResponse(ProductOption productOption) {

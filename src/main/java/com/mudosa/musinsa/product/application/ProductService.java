@@ -20,7 +20,6 @@ import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
-import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.EntityNotFoundException;
@@ -55,7 +54,6 @@ public class ProductService {
     private final OptionValueRepository optionValueRepository;
     private final ProductLikeRepository productLikeRepository;
     private final CategoryRepository categoryRepository;
-    private final BrandMemberRepository brandMemberRepository;
 
     // ProductCreateCommand를 기반으로 상품과 연관 엔티티를 한 번에 저장한다.
     @Transactional
@@ -322,21 +320,14 @@ public class ProductService {
         return productLikeRepository.countByProduct(product);
     }
 
-    // 브랜드 멤버 검증 후 상품 기본 정보를 갱신한다.
+    // 상품 기본 정보를 갱신한다.
     @Transactional
     public ProductDetailResponse updateProduct(Long productId,
-                                               Long userId,
                                                ProductUpdateRequest request) {
-        if (userId == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_USER);
-        }
-
         Product product = productRepository.findDetailById(productId)
             .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
 
-        verifyBrandMember(product, userId);
-
-    ProductGenderType genderType = parseGenderType(request.getProductGenderType());
+        ProductGenderType genderType = parseGenderType(request.getProductGenderType());
 
         String brandName = request.getBrandName() != null
             ? request.getBrandName()
@@ -372,15 +363,9 @@ public class ProductService {
 
     // 상품을 비활성화해 소프트 삭제 상태로 전환한다.
     @Transactional
-    public void disableProduct(Long productId, Long userId) {
-        if (userId == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_USER);
-        }
-
+    public void disableProduct(Long productId) {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
-
-        verifyBrandMember(product, userId);
         product.changeAvailability(false);
     }
 
@@ -521,18 +506,6 @@ public class ProductService {
             .thumbnailUrl(thumbnailUrl)
             .categoryPath(product.getCategoryPath())
             .build();
-    }
-
-    private void verifyBrandMember(Product product, Long userId) {
-        Brand brand = product.getBrand();
-        if (brand == null || brand.getBrandId() == null) {
-            throw new BusinessException(ErrorCode.BRAND_NOT_FOUND);
-        }
-
-        boolean member = brandMemberRepository.existsByBrand_BrandIdAndUserId(brand.getBrandId(), userId);
-        if (!member) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
     }
 
     private ProductGenderType parseGenderType(String gender) {
