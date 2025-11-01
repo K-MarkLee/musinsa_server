@@ -44,16 +44,6 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(response, ErrorCode.RESOURCE_NOT_FOUND.getHttpStatus());
   }
 
-  /* 도메인 검증 예외 처리 */
-  @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
-  public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(RuntimeException e) {
-    ErrorCode errorCode = ErrorCode.VALIDATION_ERROR;
-    String message = e.getMessage() != null ? e.getMessage() : errorCode.getMessage();
-    log.warn("Validation 예외 발생: {}", message, e);
-    ApiResponse<Void> response = ApiResponse.failure(errorCode.getCode(), message);
-    return new ResponseEntity<>(response, errorCode.getHttpStatus());
-  }
-
   /* 예상치 못한 예외 처리 */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
