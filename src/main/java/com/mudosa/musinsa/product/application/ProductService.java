@@ -424,6 +424,23 @@ public class ProductService {
 
     // 상품 옵션 중 최저 가격을 계산해 정렬 및 요약 정보에 활용한다.
     private BigDecimal extractLowestPrice(Product product) {
+        BigDecimal lowestAvailablePrice = product.getProductOptions().stream()
+            .filter(option -> {
+                Inventory inventory = option.getInventory();
+                return inventory != null
+                    && inventory.getStockQuantity() != null
+                    && inventory.getStockQuantity().getValue() > 0;
+            })
+            .map(ProductOption::getProductPrice)
+            .filter(Objects::nonNull)
+            .map(Money::getAmount)
+            .min(BigDecimal::compareTo)
+            .orElse(null);
+
+        if (lowestAvailablePrice != null) {
+            return lowestAvailablePrice;
+        }
+
         return product.getProductOptions().stream()
             .map(ProductOption::getProductPrice)
             .filter(Objects::nonNull)

@@ -35,3 +35,9 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBinder: trace
     # 쿼리 통계 로그
     org.hibernate.stat: debug
+
+//fcm 오류 관련 설정 추가
+fcm:
+  service-acount-file: key/fdbdproject.json
+  topic-name: test-topic
+  project-id: test-project
