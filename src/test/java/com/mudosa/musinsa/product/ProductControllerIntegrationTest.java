@@ -108,7 +108,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("9900"))
                 .stockQuantity(5)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -129,7 +128,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(8)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -172,7 +170,7 @@ class ProductControllerIntegrationTest {
             .build());
         OptionValue optionValue = createOptionValue("사이즈", "M");
 
-        ProductCreateRequest request = buildCreateRequest(brand, category, optionValue, true, Collections.singletonList(optionValue.getOptionValueId()));
+    ProductCreateRequest request = buildCreateRequest(brand, category, optionValue, Collections.singletonList(optionValue.getOptionValueId()));
 
         MvcResult createResult = mockMvc.perform(post("/api/products")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -224,7 +222,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(5)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -265,7 +262,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("15900"))
                 .stockQuantity(3)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -305,7 +301,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("18900"))
                 .stockQuantity(7)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(999L))
                 .build()))
             .build();
@@ -361,7 +356,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("21900"))
                 .stockQuantity(4)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -378,7 +372,6 @@ class ProductControllerIntegrationTest {
     private ProductCreateRequest buildCreateRequest(Brand brand,
                                                     Category category,
                                                     OptionValue optionValue,
-                                                    boolean inventoryAvailable,
                                                     List<Long> optionValueIds) {
         return ProductCreateRequest.builder()
             .brandId(brand.getBrandId())
@@ -396,7 +389,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(10)
-                .inventoryAvailable(inventoryAvailable)
                 .optionValueIds(optionValueIds)
                 .build()))
             .build();

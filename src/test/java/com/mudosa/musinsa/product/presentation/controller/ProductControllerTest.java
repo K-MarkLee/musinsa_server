@@ -106,7 +106,6 @@ class ProductControllerTest {
                 .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                     .productPrice(BigDecimal.valueOf(10000))
                     .stockQuantity(10)
-                    .inventoryAvailable(true)
                     .optionValueIds(List.of(1L))
                     .build()))
                 .build();

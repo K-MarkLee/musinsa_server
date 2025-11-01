@@ -4,8 +4,6 @@ import com.mudosa.musinsa.product.application.ProductInventoryService;
 import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
-import com.mudosa.musinsa.product.application.dto.StockAvailabilityRequest;
-import com.mudosa.musinsa.product.application.dto.StockOverrideRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -37,26 +35,6 @@ public class ProductInventoryController {
                                               @RequestHeader("X-USER-ID") Long userId,
                                               @Valid @RequestBody StockAdjustmentRequest request) {
         productInventoryService.addStock(brandId, productId, userId, request);
-        return ResponseEntity.noContent().build();
-    }
-
-    // 상품 옵션 판매 가능 상태 변경
-    @PatchMapping("/inventory/availability")
-    public ResponseEntity<Void> changeInventoryAvailability(@PathVariable Long brandId,
-                                                            @PathVariable Long productId,
-                                                            @RequestHeader("X-USER-ID") Long userId,
-                                                            @Valid @RequestBody StockAvailabilityRequest request) {
-        productInventoryService.updateInventoryAvailability(brandId, productId, userId, request);
-        return ResponseEntity.noContent().build();
-    }
-
-    // 상품 옵션 재고 수량 직접 조정
-    @PatchMapping("/inventory/quantity")
-    public ResponseEntity<Void> overrideInventoryQuantity(@PathVariable Long brandId,
-                                                          @PathVariable Long productId,
-                                                          @RequestHeader("X-USER-ID") Long userId,
-                                                          @Valid @RequestBody StockOverrideRequest request) {
-        productInventoryService.overrideStock(brandId, productId, userId, request);
         return ResponseEntity.noContent().build();
     }
 

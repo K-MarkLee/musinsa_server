@@ -81,7 +81,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(10)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -132,7 +131,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("29900"))
                 .stockQuantity(5)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -165,7 +163,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("11900"))
                 .stockQuantity(7)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -206,7 +203,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(5)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -239,7 +235,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("15900"))
                 .stockQuantity(8)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -370,7 +365,6 @@ class ProductCreateServiceTest {
             .options(List.of(new ProductService.ProductCreateCommand.OptionSpec(
                 new BigDecimal("19900"),
                 3,
-                true,
                 List.of(999L)
             )))
             .build();
@@ -428,7 +422,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(price)
                 .stockQuantity(10)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();

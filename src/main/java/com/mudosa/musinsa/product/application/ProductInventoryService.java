@@ -5,8 +5,6 @@ import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
-import com.mudosa.musinsa.product.application.dto.StockAvailabilityRequest;
-import com.mudosa.musinsa.product.application.dto.StockOverrideRequest;
 import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.OptionName;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
@@ -63,25 +61,6 @@ public class ProductInventoryService {
     }
 
     // 옵션 재고 수량을 직접 덮어쓴다.
-    @Transactional
-    public void overrideStock(Long brandId,
-                              Long productId,
-                              Long userId,
-                              StockOverrideRequest request) {
-        ProductOption productOption = loadProductOptionForBrand(brandId, productId, userId, request.getProductOptionId());
-        inventoryService.overrideStock(productOption.getProductOptionId(), request.getQuantity());
-    }
-
-    // 옵션 판매 가능 상태를 변경한다.
-    @Transactional
-    public void updateInventoryAvailability(Long brandId,
-                                            Long productId,
-                                            Long userId,
-                                            StockAvailabilityRequest request) {
-        ProductOption productOption = loadProductOptionForBrand(brandId, productId, userId, request.getProductOptionId());
-        inventoryService.changeAvailability(productOption.getProductOptionId(), request.getIsAvailable());
-    }
-
     // 상품 전체 판매 가능 상태를 변경한다.
     @Transactional
     public void updateProductAvailability(Long brandId,
@@ -144,12 +123,10 @@ public class ProductInventoryService {
     private ProductOptionStockResponse mapToStockResponse(ProductOption productOption) {
         Inventory inventory = productOption.getInventory();
         Integer stockQuantity = null;
-        Boolean inventoryAvailable = null;
-        if (inventory != null) {
-            if (inventory.getStockQuantity() != null) {
-                stockQuantity = inventory.getStockQuantity().getValue();
-            }
-            inventoryAvailable = inventory.getIsAvailable();
+        boolean hasStock = false;
+        if (inventory != null && inventory.getStockQuantity() != null) {
+            stockQuantity = inventory.getStockQuantity().getValue();
+            hasStock = stockQuantity > 0;
         }
 
         BigDecimal productPrice = productOption.getProductPrice() != null
@@ -168,7 +145,7 @@ public class ProductInventoryService {
             .productName(productName)
             .productPrice(productPrice)
             .stockQuantity(stockQuantity)
-            .inventoryAvailable(inventoryAvailable)
+            .hasStock(hasStock)
             .optionValues(optionValueSummaries)
             .build();
     }

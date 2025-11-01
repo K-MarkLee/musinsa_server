@@ -65,7 +65,6 @@ public class ProductUpdateRequest {
         private Long productOptionId;
         private BigDecimal productPrice;
         private Integer stockQuantity;
-        private Boolean inventoryAvailable;
         private List<Long> optionValueIds;
     }
 

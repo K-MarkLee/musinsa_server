@@ -1,8 +1,8 @@
 package com.mudosa.musinsa.product.domain;
 
 import com.mudosa.musinsa.product.domain.model.Product;
+import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
-import com.mudosa.musinsa.product.domain.vo.ProductGenderType;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ class ProductGenderTypeTest {
         // Given: ALL 타입을 가진 상품 조회
         Product product = productRepository.findAll().stream()
                 .filter(p -> p.getProductGenderType() != null)
-                .filter(p -> p.getProductGenderType().getValue() == ProductGenderType.Type.ALL)
+                .filter(p -> p.getProductGenderType() == ProductGenderType.ALL)
                 .findFirst()
                 .orElse(null);
 
@@ -49,11 +49,11 @@ class ProductGenderTypeTest {
 
         // When: 상품 조회
         log.info("조회된 상품 ID: {}", product.getProductId());
-        log.info("상품 성별 타입: {}", product.getProductGenderType().getValue());
+    log.info("상품 성별 타입: {}", product.getProductGenderType());
 
         // Then: ALL 타입이 정상적으로 조회됨
-        assertThat(product.getProductGenderType().getValue())
-                .isEqualTo(ProductGenderType.Type.ALL);
+    assertThat(product.getProductGenderType())
+        .isEqualTo(ProductGenderType.ALL);
 
         log.info("✅ ProductGenderType.ALL 정상 조회 성공");
     }
@@ -72,10 +72,10 @@ class ProductGenderTypeTest {
         log.info("전체 상품 수: {}", products.size());
 
         // When & Then: 각 타입별로 확인
-        for (ProductGenderType.Type type : ProductGenderType.Type.values()) {
+    for (ProductGenderType type : ProductGenderType.values()) {
             long count = products.stream()
                     .filter(p -> p.getProductGenderType() != null)
-                    .filter(p -> p.getProductGenderType().getValue() == type)
+            .filter(p -> p.getProductGenderType() == type)
                     .count();
 
             log.info("{} 타입 상품 수: {}", type, count);

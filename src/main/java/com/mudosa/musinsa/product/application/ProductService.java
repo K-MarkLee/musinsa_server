@@ -82,7 +82,6 @@ public class ProductService {
         command.getOptions().forEach(optionSpec -> {
             Inventory inventory = Inventory.builder()
                 .stockQuantity(new StockQuantity(optionSpec.stockQuantity()))
-                .isAvailable(optionSpec.inventoryAvailable())
                 .build();
 
             ProductOption productOption = ProductOption.builder()
@@ -128,7 +127,6 @@ public class ProductService {
             .map(option -> new ProductCreateCommand.OptionSpec(
                 option.getProductPrice(),
                 option.getStockQuantity(),
-                option.getInventoryAvailable(),
                 option.getOptionValueIds()))
             .collect(Collectors.toList());
 
@@ -230,19 +228,17 @@ public class ProductService {
                     .collect(Collectors.toList());
 
                 Integer stockQuantity = null;
-                Boolean inventoryAvailable = null;
+                Boolean hasStock = null;
                 if (option.getInventory() != null && option.getInventory().getStockQuantity() != null) {
                     stockQuantity = option.getInventory().getStockQuantity().getValue();
-                    inventoryAvailable = option.getInventory().getIsAvailable();
-                } else if (option.getInventory() != null) {
-                    inventoryAvailable = option.getInventory().getIsAvailable();
+                    hasStock = stockQuantity > 0;
                 }
 
                 return ProductDetailResponse.OptionDetail.builder()
                     .optionId(option.getProductOptionId())
                     .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
                     .stockQuantity(stockQuantity)
-                    .inventoryAvailable(inventoryAvailable)
+                    .hasStock(hasStock)
                     .optionValues(optionValueDetails)
                     .build();
             })
@@ -427,10 +423,9 @@ public class ProductService {
 
         public record ImageSpec(String imageUrl, boolean isThumbnail) {}
 
-        public record OptionSpec(BigDecimal productPrice,
-                                 int stockQuantity,
-                                 Boolean inventoryAvailable,
-                                 List<Long> optionValueIds) {}
+    public record OptionSpec(BigDecimal productPrice,
+                 int stockQuantity,
+                 List<Long> optionValueIds) {}
     }
 
     // 검색 조건을 전달하기 위한 내부 DTO로 페이지 정보와 정렬 기준을 포함한다.
@@ -502,7 +497,8 @@ public class ProductService {
         boolean hasStock = product.getProductOptions().stream()
             .map(ProductOption::getInventory)
             .filter(Objects::nonNull)
-            .anyMatch(inventory -> Boolean.TRUE.equals(inventory.getIsAvailable()));
+            .anyMatch(inventory -> inventory.getStockQuantity() != null
+                && inventory.getStockQuantity().getValue() > 0);
 
         String thumbnailUrl = product.getImages().stream()
             .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))

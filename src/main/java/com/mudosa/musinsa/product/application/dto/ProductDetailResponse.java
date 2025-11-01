@@ -72,7 +72,7 @@ public class ProductDetailResponse {
         private Long optionId;
         private BigDecimal productPrice;
         private Integer stockQuantity;
-        private Boolean inventoryAvailable;
+    private Boolean hasStock;
         private List<OptionValueDetail> optionValues;
 
         // 옵션 값 상세 목록을 NULL 안전하게 반환한다.

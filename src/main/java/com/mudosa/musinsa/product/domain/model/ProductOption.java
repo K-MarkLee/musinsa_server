@@ -29,7 +29,7 @@ public class ProductOption extends BaseEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "inventory_id", nullable = false, unique = true)
     private Inventory inventory;
 
@@ -103,7 +103,8 @@ public class ProductOption extends BaseEntity {
 
     // 옵션이 판매 가능한 상태인지 확인한다.
     public void validateAvailable() {
-        if (!Boolean.TRUE.equals(this.inventory.getIsAvailable())) {
+        if (this.inventory.getStockQuantity() == null
+            || this.inventory.getStockQuantity().getValue() <= 0) {
             throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE);
         }
     }
