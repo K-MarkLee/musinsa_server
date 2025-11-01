@@ -22,9 +22,8 @@ public class ProductInventoryController {
     // 브랜드별 상품 옵션 재고 목록 조회
     @GetMapping("/inventory")
     public ResponseEntity<List<ProductOptionStockResponse>> getProductOptionStocks(@PathVariable Long brandId,
-                                                                                   @PathVariable Long productId,
-                                                                                   @RequestHeader("X-USER-ID") Long userId) {
-        List<ProductOptionStockResponse> response = productInventoryService.getProductOptionStocks(brandId, productId, userId);
+                                                                                   @PathVariable Long productId) {
+        List<ProductOptionStockResponse> response = productInventoryService.getProductOptionStocks(brandId, productId);
         return ResponseEntity.ok(response);
     }
 
@@ -32,9 +31,8 @@ public class ProductInventoryController {
     @PostMapping("/inventory/increase")
     public ResponseEntity<Void> increaseStock(@PathVariable Long brandId,
                                               @PathVariable Long productId,
-                                              @RequestHeader("X-USER-ID") Long userId,
                                               @Valid @RequestBody StockAdjustmentRequest request) {
-        productInventoryService.addStock(brandId, productId, userId, request);
+        productInventoryService.addStock(brandId, productId, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -42,9 +40,8 @@ public class ProductInventoryController {
     @PostMapping("/inventory/decrease")
     public ResponseEntity<Void> decreaseStock(@PathVariable Long brandId,
                                               @PathVariable Long productId,
-                                              @RequestHeader("X-USER-ID") Long userId,
                                               @Valid @RequestBody StockAdjustmentRequest request) {
-        productInventoryService.subtractStock(brandId, productId, userId, request);
+        productInventoryService.subtractStock(brandId, productId, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -52,9 +49,8 @@ public class ProductInventoryController {
     @PatchMapping("/availability")
     public ResponseEntity<Void> changeProductAvailability(@PathVariable Long brandId,
                                                           @PathVariable Long productId,
-                                                          @RequestHeader("X-USER-ID") Long userId,
                                                           @Valid @RequestBody ProductAvailabilityRequest request) {
-        productInventoryService.updateProductAvailability(brandId, productId, userId, request);
+        productInventoryService.updateProductAvailability(brandId, productId, request);
         return ResponseEntity.noContent().build();
     }
 }

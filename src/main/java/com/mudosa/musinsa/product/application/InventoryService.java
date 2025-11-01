@@ -51,8 +51,6 @@ public class InventoryService {
         Inventory inventory = loadInventoryWithLock(productOptionId);
         try {
             inventory.decrease(quantity);
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, ex.getMessage());
         } catch (IllegalStateException ex) {
             throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK, ex.getMessage());
         }
