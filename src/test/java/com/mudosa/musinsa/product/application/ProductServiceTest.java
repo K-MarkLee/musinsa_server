@@ -6,7 +6,6 @@ import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
-import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
@@ -36,9 +35,6 @@ class ProductServiceTest {
     @Mock
     private ProductLikeRepository productLikeRepository;
 
-    @Mock
-    private CategoryRepository categoryRepository;
-
     @InjectMocks
     private ProductService productService;
 
@@ -61,6 +57,7 @@ class ProductServiceTest {
             .categoryPath("상의/티셔츠")
             .isAvailable(true)
             .build();
+        String originalCategoryPath = product.getCategoryPath();
 
         when(productRepository.findDetailById(1L)).thenReturn(Optional.of(product));
         when(productLikeRepository.countByProduct(product)).thenReturn(0L);
@@ -69,7 +66,6 @@ class ProductServiceTest {
             .productName("수정된 상품")
             .productInfo("수정 설명")
             .productGenderType("women")
-            .categoryPath("상의/셔츠")
             .isAvailable(true)
             .images(Collections.singletonList(ProductUpdateRequest.ImageUpdateRequest.builder()
                 .imageUrl("http://example.com/thumb.jpg")
@@ -82,6 +78,7 @@ class ProductServiceTest {
         assertThat(response.getProductName()).isEqualTo("수정된 상품");
         assertThat(product.getProductGenderType()).isEqualTo(ProductGenderType.WOMEN);
         assertThat(product.getImages()).hasSize(1);
+    assertThat(product.getCategoryPath()).isEqualTo(originalCategoryPath);
     }
 
     @Test

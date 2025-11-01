@@ -77,9 +77,9 @@ class ProductControllerTest {
             ProductDetailResponse detail = ProductDetailResponse.builder()
                 .productId(1L)
                 .productName("테스트 상품")
+                .categoryPath("상의/티셔츠")
                 .images(List.of())
                 .options(List.of())
-                .categories(List.of())
                 .build();
 
             Mockito.when(productService.getProductDetail(1L)).thenReturn(detail);
@@ -135,7 +135,6 @@ class ProductControllerTest {
                 .productName("수정된 상품")
                 .productInfo("수정 설명")
                 .productGenderType("WOMEN")
-                .categoryPath("상의/셔츠")
                 .isAvailable(true)
                 .images(List.of(ProductUpdateRequest.ImageUpdateRequest.builder()
                     .imageUrl("http://example.com/thumb")
@@ -146,9 +145,9 @@ class ProductControllerTest {
             ProductDetailResponse detail = ProductDetailResponse.builder()
                 .productId(1L)
                 .productName("수정된 상품")
+                .categoryPath("상의/티셔츠")
                 .images(List.of())
                 .options(List.of())
-                .categories(List.of())
                 .build();
 
             Mockito.when(productService.updateProduct(anyLong(), any())).thenReturn(detail);

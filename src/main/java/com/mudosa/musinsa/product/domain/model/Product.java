@@ -31,10 +31,6 @@ public class Product extends BaseEntity {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private java.util.List<ProductOption> productOptions = new java.util.ArrayList<>();
 
-    // 카테고리 조인 테이블(`product_category`)과 좋아요(`product_like`) 대응
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private java.util.List<ProductCategory> productCategories = new java.util.ArrayList<>();
-
     @OneToMany(mappedBy = "product", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
     private java.util.List<ProductLike> productLikes = new java.util.ArrayList<>();
 
@@ -89,10 +85,10 @@ public class Product extends BaseEntity {
         }
         
         this.brand = brand;
-        this.productName = productName;
-        this.productInfo = productInfo;
-        this.productGenderType = productGenderType;
-        this.brandName = brandName;
+    this.productName = productName;
+    this.productInfo = productInfo;
+    this.productGenderType = productGenderType;
+    this.brandName = brandName;
         this.categoryPath = categoryPath;
         this.isAvailable = isAvailable != null ? isAvailable : true;
 
@@ -147,27 +143,6 @@ public class Product extends BaseEntity {
         newImages.forEach(this::addImage);
     }
 
-    // 전달받은 카테고리와 상품의 매핑을 생성해 추가한다.
-    public void addCategory(Category category) {
-        if (category == null) {
-            return;
-        }
-        ProductCategory mapping = ProductCategory.builder()
-            .product(this)
-            .category(category)
-            .build();
-        this.productCategories.add(mapping);
-    }
-
-    // 이미 생성된 카테고리 매핑을 재연결할 때 사용한다.
-    public void addProductCategory(ProductCategory productCategory) {
-        if (productCategory == null) {
-            return;
-        }
-        productCategory.assignProduct(this);
-        this.productCategories.add(productCategory);
-    }
-
     // 외부에서 생성된 좋아요 엔티티를 상품에 연결한다.
     public void addProductLike(ProductLike productLike) {
         if (productLike == null) {
@@ -186,8 +161,7 @@ public class Product extends BaseEntity {
     public void updateBasicInfo(String productName,
                                 String productInfo,
                                 ProductGenderType productGenderType,
-                                String brandName,
-                                String categoryPath) {
+                                String brandName) {
         if (productName == null || productName.trim().isEmpty()) {
             throw new IllegalArgumentException("상품명은 필수입니다.");
         }
@@ -200,15 +174,11 @@ public class Product extends BaseEntity {
         if (brandName == null || brandName.trim().isEmpty()) {
             throw new IllegalArgumentException("브랜드명은 필수입니다.");
         }
-        if (categoryPath == null || categoryPath.trim().isEmpty()) {
-            throw new IllegalArgumentException("카테고리 경로는 필수입니다.");
-        }
 
         this.productName = productName;
         this.productInfo = productInfo;
     this.productGenderType = productGenderType;
         this.brandName = brandName;
-        this.categoryPath = categoryPath;
     }
 
     // 현재 이미지 중 썸네일이 존재하는지 확인한다.

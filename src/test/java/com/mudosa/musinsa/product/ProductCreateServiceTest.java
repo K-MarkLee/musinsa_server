@@ -90,16 +90,16 @@ class ProductCreateServiceTest {
         entityManager.flush();
         entityManager.clear();
 
-    ProductDetailResponse persisted = productService.getProductDetail(productId);
+        ProductDetailResponse persisted = productService.getProductDetail(productId);
 
-    assertThat(persisted.getProductName()).isEqualTo("테스트 상품");
-    assertThat(persisted.getImages()).hasSize(1);
-    assertThat(Boolean.TRUE.equals(persisted.getImages().get(0).getIsThumbnail())).isTrue();
-    assertThat(persisted.getOptions()).hasSize(1);
-    ProductDetailResponse.OptionDetail option = persisted.getOptions().get(0);
-    assertThat(option.getStockQuantity()).isEqualTo(10);
-    assertThat(option.getOptionValues()).hasSize(1);
-    assertThat(persisted.getCategories()).hasSize(1);
+        assertThat(persisted.getProductName()).isEqualTo("테스트 상품");
+        assertThat(persisted.getCategoryPath()).isEqualTo(category.buildPath());
+        assertThat(persisted.getImages()).hasSize(1);
+        assertThat(Boolean.TRUE.equals(persisted.getImages().get(0).getIsThumbnail())).isTrue();
+        assertThat(persisted.getOptions()).hasSize(1);
+        ProductDetailResponse.OptionDetail option = persisted.getOptions().get(0);
+        assertThat(option.getStockQuantity()).isEqualTo(10);
+        assertThat(option.getOptionValues()).hasSize(1);
     }
 
     @Test
@@ -262,16 +262,16 @@ class ProductCreateServiceTest {
     void searchProducts_returnsEmptyPage() {
         ProductService.ProductSearchCondition condition = ProductService.ProductSearchCondition.builder()
             .keyword("니트")
-            .categoryIds(Collections.singletonList(1L))
+            .categoryPaths(Collections.singletonList("상의/니트"))
             .gender(ProductGenderType.WOMEN)
             .brandId(1L)
             .pageable(PageRequest.of(0, 20))
             .build();
 
-    ProductSearchResponse response = productService.searchProducts(condition);
+        ProductSearchResponse response = productService.searchProducts(condition);
 
-    assertThat(response.getProducts()).isEmpty();
-    assertThat(response.getTotalElements()).isZero();
+        assertThat(response.getProducts()).isEmpty();
+        assertThat(response.getTotalElements()).isZero();
     }
 
     @Test
@@ -295,13 +295,13 @@ class ProductCreateServiceTest {
         });
 
         ProductService.ProductSearchCondition condition = ProductService.ProductSearchCondition.builder()
-            .categoryIds(List.of(top.getCategoryId()))
+            .categoryPaths(List.of(top.buildPath()))
             .gender(ProductGenderType.MEN)
             .priceSort(ProductService.ProductSearchCondition.PriceSort.LOWEST)
             .pageable(PageRequest.of(0, 10))
             .build();
 
-    ProductSearchResponse response = productService.searchProducts(condition);
+        ProductSearchResponse response = productService.searchProducts(condition);
 
         List<String> expectedNames = IntStream.range(0, 10)
             .filter(i -> i % 2 == 0)
@@ -360,7 +360,6 @@ class ProductCreateServiceTest {
             .brandName(brand.getNameKo())
             .categoryPath(category.buildPath())
             .isAvailable(true)
-            .categories(List.of(category))
             .images(List.of(new ProductService.ProductCreateCommand.ImageSpec("https://cdn.musinsa.com/product/main.jpg", true)))
             .options(List.of(new ProductService.ProductCreateCommand.OptionSpec(
                 new BigDecimal("19900"),
@@ -380,7 +379,7 @@ class ProductCreateServiceTest {
         OptionValue optionValue = prepareOptionValue("사이즈", "FREE");
 
     return createProduct(brand, category, optionValue, "샘플 상품", ProductGenderType.ALL,
-            new BigDecimal("9900"), "테스트용");
+        new BigDecimal("9900"), "테스트용");
     }
 
     private Brand prepareBrand() {

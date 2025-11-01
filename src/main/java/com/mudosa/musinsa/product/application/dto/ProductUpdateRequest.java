@@ -32,9 +32,6 @@ public class ProductUpdateRequest {
     @NotBlank(message = "상품 성별 타입은 필수입니다.")
     private String productGenderType;
 
-    @NotBlank(message = "카테고리 경로는 필수입니다.")
-    private String categoryPath;
-
     private Boolean isAvailable;
 
     private String brandName;

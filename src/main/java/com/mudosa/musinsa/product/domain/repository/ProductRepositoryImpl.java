@@ -103,14 +103,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
     // 상세 조회 시 필요한 컬렉션과 연관 엔티티를 Hibernate.initialize로 강제 로딩한다.
     private void initializeCollections(Product product) {
         Hibernate.initialize(product.getImages());
-        Hibernate.initialize(product.getProductCategories());
         Hibernate.initialize(product.getProductOptions());
-
-        product.getProductCategories().forEach(mapping -> {
-            if (mapping != null) {
-                Hibernate.initialize(mapping.getCategory());
-            }
-        });
 
         product.getProductOptions().forEach(option -> {
             Hibernate.initialize(option.getInventory());

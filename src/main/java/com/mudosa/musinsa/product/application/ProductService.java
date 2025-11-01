@@ -15,7 +15,6 @@ import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.model.ProductLike;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
-import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
@@ -53,7 +52,6 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final OptionValueRepository optionValueRepository;
     private final ProductLikeRepository productLikeRepository;
-    private final CategoryRepository categoryRepository;
 
     // ProductCreateCommand를 기반으로 상품과 연관 엔티티를 한 번에 저장한다.
     @Transactional
@@ -67,8 +65,6 @@ public class ProductService {
             .categoryPath(command.getCategoryPath())
             .isAvailable(command.getIsAvailable())
             .build();
-
-        command.getCategories().forEach(product::addCategory);
 
         List<Product.ImageRegistration> imageRegistrations = command.getImages().stream()
             .map(imageSpec -> new Product.ImageRegistration(imageSpec.imageUrl(), imageSpec.isThumbnail()))
@@ -138,7 +134,6 @@ public class ProductService {
             .isAvailable(request.getIsAvailable())
             .images(imageSpecs)
             .options(optionSpecs)
-            .categories(category != null ? List.of(category) : Collections.emptyList())
             .build();
 
         return createProduct(command);
@@ -200,16 +195,6 @@ public class ProductService {
                 .build())
             .collect(Collectors.toList());
 
-        List<ProductDetailResponse.CategorySummary> categorySummaries = product.getProductCategories().stream()
-            .map(mapping -> {
-                Category category = mapping.getCategory();
-                return ProductDetailResponse.CategorySummary.builder()
-                    .categoryId(category != null ? category.getCategoryId() : null)
-                    .categoryName(category != null ? category.getCategoryName() : null)
-                    .build();
-            })
-            .collect(Collectors.toList());
-
         List<ProductDetailResponse.OptionDetail> optionDetails = product.getProductOptions().stream()
             .map(option -> {
                 List<ProductDetailResponse.OptionDetail.OptionValueDetail> optionValueDetails = option.getProductOptionValues().stream()
@@ -254,7 +239,6 @@ public class ProductService {
             .isAvailable(product.getIsAvailable())
             .categoryPath(product.getCategoryPath())
             .likeCount(likeCount)
-            .categories(categorySummaries)
             .images(imageResponses)
             .options(optionDetails)
             .build();
@@ -264,13 +248,12 @@ public class ProductService {
     public ProductSearchResponse searchProducts(ProductSearchCondition condition) {
         Pageable pageable = condition != null ? condition.getPageable() : Pageable.unpaged();
 
-        List<Long> categoryIds = condition != null ? condition.getCategoryIds() : Collections.emptyList();
-    ProductGenderType gender = condition != null ? condition.getGender() : null;
+        ProductGenderType gender = condition != null ? condition.getGender() : null;
         String keyword = condition != null ? condition.getKeyword() : null;
         Long brandId = condition != null ? condition.getBrandId() : null;
         ProductSearchCondition.PriceSort priceSort = condition != null ? condition.getPriceSort() : null;
 
-        List<String> categoryPaths = resolveCategoryPaths(categoryIds);
+        List<String> categoryPaths = condition != null ? condition.getCategoryPaths() : Collections.emptyList();
         List<Product> products = new ArrayList<>(productRepository.findAllByFilters(categoryPaths, gender, keyword, brandId));
 
         if (priceSort != null) {
@@ -337,8 +320,7 @@ public class ProductService {
             request.getProductName(),
             request.getProductInfo(),
             genderType,
-            brandName,
-            request.getCategoryPath()
+            brandName
         );
 
         if (request.getIsAvailable() != null) {
@@ -381,7 +363,6 @@ public class ProductService {
         private final Boolean isAvailable;
         private final List<ImageSpec> images;
         private final List<OptionSpec> options;
-        private final List<Category> categories;
 
         @Builder
         public ProductCreateCommand(Brand brand,
@@ -392,8 +373,7 @@ public class ProductService {
                                     String categoryPath,
                                     Boolean isAvailable,
                                     List<ImageSpec> images,
-                                    List<OptionSpec> options,
-                                    List<Category> categories) {
+                                    List<OptionSpec> options) {
             this.brand = brand;
             this.productName = productName;
             this.productInfo = productInfo;
@@ -403,14 +383,13 @@ public class ProductService {
             this.isAvailable = isAvailable;
             this.images = images != null ? images : Collections.emptyList();
             this.options = options != null ? options : Collections.emptyList();
-            this.categories = categories != null ? categories : Collections.emptyList();
         }
 
         public record ImageSpec(String imageUrl, boolean isThumbnail) {}
 
-    public record OptionSpec(BigDecimal productPrice,
-                 int stockQuantity,
-                 List<Long> optionValueIds) {}
+        public record OptionSpec(BigDecimal productPrice,
+                                 int stockQuantity,
+                                 List<Long> optionValueIds) {}
     }
 
     // 검색 조건을 전달하기 위한 내부 DTO로 페이지 정보와 정렬 기준을 포함한다.
@@ -418,7 +397,7 @@ public class ProductService {
     @Builder
     public static class ProductSearchCondition {
         private final String keyword;
-        private final List<Long> categoryIds;
+    private final List<String> categoryPaths;
     private final ProductGenderType gender;
         private final Long brandId;
         private final Pageable pageable;
@@ -429,9 +408,9 @@ public class ProductService {
             return pageable != null ? pageable : Pageable.unpaged();
         }
 
-        // 카테고리 ID 리스트를 널 안전하게 반환한다.
-        public List<Long> getCategoryIds() {
-            return categoryIds != null ? categoryIds : Collections.emptyList();
+        // 카테고리 경로 리스트를 널 안전하게 반환한다.
+        public List<String> getCategoryPaths() {
+            return categoryPaths != null ? categoryPaths : Collections.emptyList();
         }
 
         public enum PriceSort {
@@ -441,18 +420,6 @@ public class ProductService {
     }
 
     // 전달받은 카테고리 ID 목록을 경로 문자열 집합으로 변환한다.
-    private List<String> resolveCategoryPaths(List<Long> categoryIds) {
-        if (categoryIds == null || categoryIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return categoryRepository.findAllById(categoryIds).stream()
-            .map(Category::buildPath)
-            .filter(Objects::nonNull)
-            .distinct()
-            .collect(Collectors.toList());
-    }
-
     // 상품 옵션 중 최저 가격을 계산해 정렬 및 요약 정보에 활용한다.
     private BigDecimal extractLowestPrice(Product product) {
         return product.getProductOptions().stream()
