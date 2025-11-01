@@ -55,20 +55,18 @@ public class ProductController {
         return ResponseEntity.ok(response);
     }
 
-    // 브랜드 멤버가 상품 기본 정보를 수정한다.
+    // 상품 기본 정보를 수정한다.
     @PutMapping("/{productId}")
     public ResponseEntity<ProductDetailResponse> updateProduct(@PathVariable Long productId,
-                                                               @RequestHeader("X-USER-ID") Long userId,
                                                                @Valid @RequestBody ProductUpdateRequest request) {
-        ProductDetailResponse response = productService.updateProduct(productId, userId, request);
+        ProductDetailResponse response = productService.updateProduct(productId, request);
         return ResponseEntity.ok(response);
     }
 
-    // 브랜드 멤버가 상품을 비활성화(소프트 삭제) 처리한다.
+    // 상품을 비활성화(소프트 삭제) 처리한다.
     @DeleteMapping("/{productId}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long productId,
-                                              @RequestHeader("X-USER-ID") Long userId) {
-        productService.disableProduct(productId, userId);
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long productId) {
+        productService.disableProduct(productId);
         return ResponseEntity.noContent().build();
     }
 }
