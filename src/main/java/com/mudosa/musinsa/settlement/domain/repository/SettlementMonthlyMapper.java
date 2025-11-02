@@ -1,15 +1,18 @@
 package com.mudosa.musinsa.settlement.domain.repository;
 
 import com.mudosa.musinsa.settlement.domain.dto.YearlyAggregationDto;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 집계 Repository 인터페이스
- * 월 -> 년
+ * SettlementMonthly MyBatis Mapper
+ * 월간 정산 데이터를 연간으로 집계
  */
-public interface SettlementMonthlyAggregationRepository {
+@Mapper
+public interface SettlementMonthlyMapper {
 
     /**
      * 연간 집계 쿼리
@@ -20,8 +23,8 @@ public interface SettlementMonthlyAggregationRepository {
      * @return 연도별 집계 결과
      */
     List<YearlyAggregationDto> aggregateByYearly(
-        Long brandId,
-        LocalDate startDate,
-        LocalDate endDate
+        @Param("brandId") Long brandId,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate
     );
 }

@@ -99,6 +99,8 @@ public class SettlementWeekly extends BaseEntity {
      */
     public static SettlementWeekly create(
         Long brandId,
+        int year,
+        int weekOfMonth,
         LocalDate weekStartDate,
         LocalDate weekEndDate,
         String settlementNumber,
@@ -110,10 +112,10 @@ public class SettlementWeekly extends BaseEntity {
         settlement.weekStartDate = weekStartDate;
         settlement.weekEndDate = weekEndDate;
 
-        // 연도, 월, 주차 계산 (시작일 기준)
-        settlement.settlementYear = weekStartDate.getYear();
+        // 연도, 월, 주차 설정
+        settlement.settlementYear = year;
         settlement.settlementMonth = weekStartDate.getMonthValue();
-        settlement.weekOfMonth = calculateWeekOfMonth(weekStartDate);
+        settlement.weekOfMonth = weekOfMonth;
 
         // 실제 일수 계산
         settlement.weekDayCount = (int) java.time.temporal.ChronoUnit.DAYS.between(weekStartDate, weekEndDate) + 1;
@@ -151,6 +153,24 @@ public class SettlementWeekly extends BaseEntity {
         this.totalCommissionAmount = this.totalCommissionAmount.add(daily.getTotalCommissionAmount());
         this.totalTaxAmount = this.totalTaxAmount.add(daily.getTotalTaxAmount());
         this.totalPgFeeAmount = this.totalPgFeeAmount.add(daily.getTotalPgFeeAmount());
+        this.finalSettlementAmount = calculateFinalAmount();
+    }
+
+    /**
+     * 집계된 데이터 직접 설정 (쿼리 기반 집계용)
+     */
+    public void setAggregatedData(
+        int totalOrderCount,
+        Money totalSalesAmount,
+        Money totalCommissionAmount,
+        Money totalTaxAmount,
+        Money totalPgFeeAmount
+    ) {
+        this.totalOrderCount = totalOrderCount;
+        this.totalSalesAmount = totalSalesAmount;
+        this.totalCommissionAmount = totalCommissionAmount;
+        this.totalTaxAmount = totalTaxAmount;
+        this.totalPgFeeAmount = totalPgFeeAmount;
         this.finalSettlementAmount = calculateFinalAmount();
     }
 

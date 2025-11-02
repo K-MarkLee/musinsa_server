@@ -3,10 +3,8 @@ package com.mudosa.musinsa.order.domain.model;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
 public enum OrderStatus {
     PENDING("결제 대기 중"),
     COMPLETED("결제 완료"),
@@ -17,6 +15,10 @@ public enum OrderStatus {
     REFUNDED("환불 완료");
 
     private final String description;
+
+    OrderStatus(String description) {
+        this.description = description;
+    }
 
 
     public boolean canTransitionTo(OrderStatus nextStatus) {

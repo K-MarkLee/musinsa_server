@@ -13,8 +13,7 @@ import java.time.LocalDate;
  */
 @Repository
 public interface SettlementMonthlyRepository
-    extends JpaRepository<SettlementMonthly, Long>,
-            SettlementMonthlyAggregationRepository {
+    extends JpaRepository<SettlementMonthly, Long> {
 
     /**
      * 브랜드별 월간 정산 조회 (페이징)

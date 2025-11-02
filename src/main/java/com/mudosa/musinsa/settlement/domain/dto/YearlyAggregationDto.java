@@ -36,4 +36,33 @@ public class YearlyAggregationDto {
         this.totalTaxAmount = new Money(totalTaxAmount);
         this.totalPgFeeAmount = new Money(totalPgFeeAmount);
     }
+
+    // MyBatis용 setter 메서드들
+    public void setBrandId(Long brandId) {
+        this.brandId = brandId;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
+
+    public void setTotalOrderCount(Long totalOrderCount) {
+        this.totalOrderCount = totalOrderCount;
+    }
+
+    public void setTotalSalesAmount(BigDecimal totalSalesAmount) {
+        this.totalSalesAmount = new Money(totalSalesAmount);
+    }
+
+    public void setTotalCommissionAmount(BigDecimal totalCommissionAmount) {
+        this.totalCommissionAmount = new Money(totalCommissionAmount);
+    }
+
+    public void setTotalTaxAmount(BigDecimal totalTaxAmount) {
+        this.totalTaxAmount = new Money(totalTaxAmount);
+    }
+
+    public void setTotalPgFeeAmount(BigDecimal totalPgFeeAmount) {
+        this.totalPgFeeAmount = new Money(totalPgFeeAmount);
+    }
 }

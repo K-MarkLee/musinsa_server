@@ -5,7 +5,7 @@
 <mapper namespace="com.mudosa.musinsa.domain.orders.mapper.OrderMapper">
 
     <!-- ResultMap 예시 -->
-    <resultMap id="OrderResultMap" type="com.mudosa.musinsa.domain.orders.entity.Order">
+    <resultMap id="OrderResultMap" type="com.mudosa.musinsa.order.domain.model.Orders">
         <id property="orderId" column="order_id"/>
         <result property="userId" column="user_id"/>
         <result property="couponId" column="coupon_id"/>

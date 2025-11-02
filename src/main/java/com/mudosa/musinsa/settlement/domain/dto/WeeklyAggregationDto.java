@@ -25,6 +25,10 @@ public class WeeklyAggregationDto {
     private Money totalTaxAmount;
     private Money totalPgFeeAmount;
 
+    // MyBatis가 setter를 사용하도록 기본 생성자 추가
+    public WeeklyAggregationDto() {
+    }
+
     public WeeklyAggregationDto(
         Long brandId,
         Integer year,
@@ -50,6 +54,59 @@ public class WeeklyAggregationDto {
         this.totalSalesAmount = new Money(totalSalesAmount);
         this.totalCommissionAmount = new Money(totalCommissionAmount);
         this.totalTaxAmount = new Money(totalTaxAmount);
+        this.totalPgFeeAmount = new Money(totalPgFeeAmount);
+    }
+
+    // MyBatis용 setter 메서드들
+    public void setBrandId(Long brandId) {
+        this.brandId = brandId;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
+
+    public void setMonth(Integer month) {
+        this.month = month;
+    }
+
+    public void setWeekOfMonth(Integer weekOfMonth) {
+        this.weekOfMonth = weekOfMonth;
+    }
+
+    public void setWeekStartDate(LocalDate weekStartDate) {
+        this.weekStartDate = weekStartDate;
+        // month가 null이면 weekStartDate에서 추출
+        if (this.month == null && weekStartDate != null) {
+            this.month = weekStartDate.getMonthValue();
+        }
+    }
+
+    public void setWeekEndDate(LocalDate weekEndDate) {
+        this.weekEndDate = weekEndDate;
+    }
+
+    public void setSettlementTimezone(String settlementTimezone) {
+        this.settlementTimezone = settlementTimezone;
+    }
+
+    public void setTotalOrderCount(Long totalOrderCount) {
+        this.totalOrderCount = totalOrderCount;
+    }
+
+    public void setTotalSalesAmount(BigDecimal totalSalesAmount) {
+        this.totalSalesAmount = new Money(totalSalesAmount);
+    }
+
+    public void setTotalCommissionAmount(BigDecimal totalCommissionAmount) {
+        this.totalCommissionAmount = new Money(totalCommissionAmount);
+    }
+
+    public void setTotalTaxAmount(BigDecimal totalTaxAmount) {
+        this.totalTaxAmount = new Money(totalTaxAmount);
+    }
+
+    public void setTotalPgFeeAmount(BigDecimal totalPgFeeAmount) {
         this.totalPgFeeAmount = new Money(totalPgFeeAmount);
     }
 }

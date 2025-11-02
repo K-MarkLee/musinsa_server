@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mudosa.musinsa.settlement.domain.repository.SettlementDailyMapper">
+
+    <!-- 주간 집계 쿼리 -->
+    <select id="aggregateByWeekly" resultType="com.mudosa.musinsa.settlement.domain.dto.WeeklyAggregationDto">
+        SELECT
+            brand_id as brandId,
+            YEAR(settlement_date) as "year",
+            WEEK(settlement_date) as weekOfMonth,
+            MIN(settlement_date) as weekStartDate,
+            MAX(settlement_date) as weekEndDate,
+            COALESCE(SUM(total_order_count), 0) as totalOrderCount,
+            COALESCE(SUM(total_sales_amount), 0) as totalSalesAmount,
+            COALESCE(SUM(total_commission_amount), 0) as totalCommissionAmount,
+            COALESCE(SUM(total_tax_amount), 0) as totalTaxAmount,
+            COALESCE(SUM(total_pg_fee_amount), 0) as totalPgFeeAmount
+        FROM settlements_daily
+        WHERE brand_id = #{brandId}
+          AND settlement_date BETWEEN #{startDate} AND #{endDate}
+        GROUP BY brand_id, YEAR(settlement_date), WEEK(settlement_date)
+        ORDER BY YEAR(settlement_date), WEEK(settlement_date)
+    </select>
+
+    <!-- 월간 집계 쿼리 -->
+    <select id="aggregateByMonthly" resultType="com.mudosa.musinsa.settlement.domain.dto.MonthlyAggregationDto">
+        SELECT
+            brand_id as brandId,
+            YEAR(settlement_date) as "year",
+            MONTH(settlement_date) as "month",
+            COALESCE(SUM(total_order_count), 0) as totalOrderCount,
+            COALESCE(SUM(total_sales_amount), 0) as totalSalesAmount,
+            COALESCE(SUM(total_commission_amount), 0) as totalCommissionAmount,
+            COALESCE(SUM(total_tax_amount), 0) as totalTaxAmount,
+            COALESCE(SUM(total_pg_fee_amount), 0) as totalPgFeeAmount
+        FROM settlements_daily
+        WHERE brand_id = #{brandId}
+          AND settlement_date BETWEEN #{startDate} AND #{endDate}
+        GROUP BY brand_id, YEAR(settlement_date), MONTH(settlement_date)
+        ORDER BY YEAR(settlement_date), MONTH(settlement_date)
+    </select>
+
+</mapper>

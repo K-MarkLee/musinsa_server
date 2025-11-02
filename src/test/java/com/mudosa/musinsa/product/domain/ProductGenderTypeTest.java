@@ -7,6 +7,7 @@ import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,12 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * ProductGenderType Enum 저장/조회 테스트
+ *
+ * 목적: @Enumerated(EnumType.STRING) 적용 후 정상 동작 확인
+ */
+@Slf4j
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -52,7 +59,6 @@ class ProductGenderTypeTest {
 
         assertThat(reloaded.getProductGenderType()).isEqualTo(ProductGenderType.ALL);
 
-        // Native 확인: 컬럼에 enum 이름이 그대로 저장되는지 검증한다.
         String rawValue = jdbcTemplate.queryForObject(
             "select product_gender_type from product where product_id = ?",
             String.class,

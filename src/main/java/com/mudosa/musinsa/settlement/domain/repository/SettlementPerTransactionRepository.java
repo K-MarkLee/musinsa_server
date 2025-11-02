@@ -36,4 +36,18 @@ public interface SettlementPerTransactionRepository
      * 특정 결제 ID에 연결된 모든 정산 거래를 조회
      */
     List<SettlementPerTransaction> findByPaymentId(Long paymentId);
+
+    /**
+     * 특정 결제 ID에 연결된 단일 정산 거래를 조회
+     */
+    java.util.Optional<SettlementPerTransaction> findFirstByPaymentId(Long paymentId);
+
+    /**
+     * 브랜드 ID와 날짜 범위로 정산 거래 조회 (페이징 없음)
+     */
+    List<SettlementPerTransaction> findByBrandIdAndTransactionDateLocalBetween(
+        Long brandId,
+        LocalDate startDate,
+        LocalDate endDate
+    );
 }

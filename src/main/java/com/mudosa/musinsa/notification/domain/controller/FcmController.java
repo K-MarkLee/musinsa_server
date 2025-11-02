@@ -5,6 +5,7 @@ import com.mudosa.musinsa.notification.domain.dto.MessageRequestDTO;
 import com.mudosa.musinsa.notification.domain.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,6 +15,7 @@ import java.io.IOException;
 
 @RestController
 @RequiredArgsConstructor
+@ConditionalOnBean(FcmService.class)
 @Slf4j
 public class FcmController {
     private final FcmService fcmService;

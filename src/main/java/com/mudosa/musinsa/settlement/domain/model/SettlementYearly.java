@@ -131,6 +131,24 @@ public class SettlementYearly extends BaseEntity {
     }
 
     /**
+     * 집계된 데이터 직접 설정 (쿼리 기반 집계용)
+     */
+    public void setAggregatedData(
+        int totalOrderCount,
+        Money totalSalesAmount,
+        Money totalCommissionAmount,
+        Money totalTaxAmount,
+        Money totalPgFeeAmount
+    ) {
+        this.totalOrderCount = totalOrderCount;
+        this.totalSalesAmount = totalSalesAmount;
+        this.totalCommissionAmount = totalCommissionAmount;
+        this.totalTaxAmount = totalTaxAmount;
+        this.totalPgFeeAmount = totalPgFeeAmount;
+        this.finalSettlementAmount = calculateFinalAmount();
+    }
+
+    /**
      * 최종 정산 금액 계산
      */
     private Money calculateFinalAmount() {

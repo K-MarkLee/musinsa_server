@@ -13,8 +13,7 @@ import java.time.LocalDate;
  */
 @Repository
 public interface SettlementDailyRepository
-    extends JpaRepository<SettlementDaily, Long>,
-            SettlementDailyAggregationRepository {
+    extends JpaRepository<SettlementDaily, Long> {
 
     /**
      * 브랜드별 일일 정산 조회 (페이징)

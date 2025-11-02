@@ -9,6 +9,7 @@ import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import com.mudosa.musinsa.fbtoken.dto.FBTokenDTO;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.util.List;
 
 @Service
+@ConditionalOnProperty(name = "fcm.enabled", havingValue = "true", matchIfMissing = true)
 public class FcmService {
 
     @Value("${fcm.service-acount-file}")

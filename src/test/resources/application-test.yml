@@ -5,7 +5,7 @@ spring:
     url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
     password:
-    
+
   # JPA 테스트 설정
   jpa:
     hibernate:
@@ -21,10 +21,24 @@ spring:
         jdbc:
           batch_size: 50
 
+# MyBatis 설정 (Settlement 집계 테스트용 - settlement 매퍼만 로드)
+mybatis:
+  mapper-locations: classpath:mappers/settlement/*.xml
+  type-aliases-package: com.mudosa.musinsa.settlement.domain.dto
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
 
 tosspayments:
   secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
   client-key: test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm
+
+# FCM 테스트 환경 설정
+fcm:
+  service-acount-file: key/fdbdproject.json
+  topic-name: test-topic
+  project-id: test-project
 
 logging:
   level:
@@ -35,9 +49,3 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBinder: trace
     # 쿼리 통계 로그
     org.hibernate.stat: debug
-
-# fcm 관련 설정
-fcm:
-  service-acount-file: key/fdbdproject.json
-  topic-name: test-topic
-  project-id: test-project
