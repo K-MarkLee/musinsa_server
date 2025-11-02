@@ -39,9 +39,10 @@ class InventoryServiceTest {
         when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
             .thenReturn(Optional.of(inventory));
 
-        inventoryService.addStock(1L, 3);
+    Inventory result = inventoryService.addStock(1L, 3);
 
-        assertThat(inventory.getStockQuantity().getValue()).isEqualTo(8);
+    assertThat(inventory.getStockQuantity().getValue()).isEqualTo(8);
+    assertThat(result.getStockQuantity().getValue()).isEqualTo(8);
         verify(inventoryRepository).save(inventory);
     }
 
@@ -64,9 +65,10 @@ class InventoryServiceTest {
         when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
             .thenReturn(Optional.of(inventory));
 
-        inventoryService.subtractStock(1L, 2);
+    Inventory result = inventoryService.subtractStock(1L, 2);
 
         assertThat(inventory.getStockQuantity().getValue()).isEqualTo(3);
+    assertThat(result.getStockQuantity().getValue()).isEqualTo(3);
         verify(inventoryRepository).save(inventory);
     }
 

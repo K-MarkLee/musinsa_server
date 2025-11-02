@@ -42,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@SuppressWarnings("removal")
 class ProductControllerIntegrationTest {
 
     @MockBean
@@ -132,12 +133,12 @@ class ProductControllerIntegrationTest {
                 .build()))
             .build();
 
-        mockMvc.perform(post("/api/products")
+        mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestA)))
             .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/products")
+        mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestB)))
             .andExpect(status().isCreated());
@@ -172,11 +173,11 @@ class ProductControllerIntegrationTest {
 
         ProductCreateRequest request = buildCreateRequest(brand, category, optionValue, Collections.singletonList(optionValue.getOptionValueId()));
 
-        MvcResult createResult = mockMvc.perform(post("/api/products")
+        MvcResult createResult = mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
-            .andExpect(header().string("Location", Matchers.matchesPattern("/api/products/\\d+")))
+            .andExpect(header().string("Location", Matchers.matchesPattern("/api/brands/" + brand.getBrandId() + "/products/\\d+")))
             .andReturn();
 
         JsonNode createNode = objectMapper.readTree(createResult.getResponse().getContentAsString());
@@ -226,7 +227,7 @@ class ProductControllerIntegrationTest {
                 .build()))
             .build();
 
-        mockMvc.perform(post("/api/products")
+    mockMvc.perform(post("/api/brands/999/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isNotFound())
@@ -266,7 +267,7 @@ class ProductControllerIntegrationTest {
                 .build()))
             .build();
 
-        mockMvc.perform(post("/api/products")
+    mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest())
@@ -305,7 +306,7 @@ class ProductControllerIntegrationTest {
                 .build()))
             .build();
 
-        mockMvc.perform(post("/api/products")
+    mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest())

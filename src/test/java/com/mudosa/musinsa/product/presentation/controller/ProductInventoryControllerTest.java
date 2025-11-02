@@ -73,10 +73,24 @@ class ProductInventoryControllerTest {
             .quantity(3)
             .build();
 
+        ProductOptionStockResponse response = ProductOptionStockResponse.builder()
+            .productOptionId(200L)
+            .productName("패딩")
+            .productPrice(new BigDecimal("19900"))
+            .stockQuantity(13)
+            .hasStock(true)
+            .optionValues(List.of())
+            .build();
+
+        Mockito.when(productInventoryService.addStock(eq(1L), eq(100L), Mockito.any(StockAdjustmentRequest.class)))
+            .thenReturn(response);
+
         mockMvc.perform(post("/api/brands/{brandId}/products/{productId}/inventory/increase", 1L, 100L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.productOptionId").value(200L))
+            .andExpect(jsonPath("$.stockQuantity").value(13));
 
         Mockito.verify(productInventoryService)
             .addStock(eq(1L), eq(100L), argThat(r ->
@@ -91,10 +105,24 @@ class ProductInventoryControllerTest {
             .quantity(2)
             .build();
 
+        ProductOptionStockResponse response = ProductOptionStockResponse.builder()
+            .productOptionId(200L)
+            .productName("패딩")
+            .productPrice(new BigDecimal("19900"))
+            .stockQuantity(8)
+            .hasStock(true)
+            .optionValues(List.of())
+            .build();
+
+        Mockito.when(productInventoryService.subtractStock(eq(1L), eq(100L), Mockito.any(StockAdjustmentRequest.class)))
+            .thenReturn(response);
+
         mockMvc.perform(post("/api/brands/{brandId}/products/{productId}/inventory/decrease", 1L, 100L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.productOptionId").value(200L))
+            .andExpect(jsonPath("$.stockQuantity").value(8));
 
         Mockito.verify(productInventoryService)
             .subtractStock(eq(1L), eq(100L), argThat(r ->
@@ -108,10 +136,20 @@ class ProductInventoryControllerTest {
             .isAvailable(false)
             .build();
 
+        var response = com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse.builder()
+            .productId(100L)
+            .isAvailable(false)
+            .build();
+
+        Mockito.when(productInventoryService.updateProductAvailability(eq(1L), eq(100L), Mockito.any(ProductAvailabilityRequest.class)))
+            .thenReturn(response);
+
         mockMvc.perform(patch("/api/brands/{brandId}/products/{productId}/availability", 1L, 100L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.productId").value(100L))
+            .andExpect(jsonPath("$.isAvailable").value(false));
 
         Mockito.verify(productInventoryService)
             .updateProductAvailability(eq(1L), eq(100L), argThat(r ->

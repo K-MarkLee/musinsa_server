@@ -4,6 +4,7 @@ import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
+import com.mudosa.musinsa.product.application.dto.ProductOptionCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
 import com.mudosa.musinsa.product.domain.model.Category;
@@ -164,19 +165,31 @@ public class ProductService {
         if (optionValueIds.isEmpty()) {
             return Collections.emptyMap();
         }
+        return loadOptionValuesByIds(new ArrayList<>(optionValueIds));
+    }
 
-            Map<Long, OptionValue> optionValueMap = optionValueRepository.findAllByOptionValueIdIn(new ArrayList<>(optionValueIds))
+    private Map<Long, OptionValue> loadOptionValuesByIds(List<Long> optionValueIds) {
+        if (optionValueIds == null || optionValueIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Set<Long> uniqueOptionValueIds = new HashSet<>(optionValueIds);
+        if (uniqueOptionValueIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Long, OptionValue> optionValueMap = optionValueRepository.findAllByOptionValueIdIn(new ArrayList<>(uniqueOptionValueIds))
             .stream()
-                .collect(Collectors.toMap(OptionValue::getOptionValueId, Function.identity()));
+            .collect(Collectors.toMap(OptionValue::getOptionValueId, Function.identity()));
 
-            if (optionValueMap.size() != optionValueIds.size()) {
-                Set<Long> missingIds = new HashSet<>(optionValueIds);
-                missingIds.removeAll(optionValueMap.keySet());
-                throw new BusinessException(ErrorCode.VALIDATION_ERROR,
-                    "존재하지 않는 옵션 값 ID가 포함되어 있습니다: " + missingIds);
-            }
+        if (optionValueMap.size() != uniqueOptionValueIds.size()) {
+            Set<Long> missingIds = new HashSet<>(uniqueOptionValueIds);
+            missingIds.removeAll(optionValueMap.keySet());
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                "존재하지 않는 옵션 값 ID가 포함되어 있습니다: " + missingIds);
+        }
 
-            return optionValueMap;
+        return optionValueMap;
     }
 
     // 상세 화면에 필요한 연관 정보를 로딩하고 응답 DTO로 변환한다.
@@ -199,35 +212,7 @@ public class ProductService {
             .collect(Collectors.toList());
 
         List<ProductDetailResponse.OptionDetail> optionDetails = product.getProductOptions().stream()
-            .map(option -> {
-                List<ProductDetailResponse.OptionDetail.OptionValueDetail> optionValueDetails = option.getProductOptionValues().stream()
-                    .map(mapping -> {
-                        OptionValue optionValue = mapping.getOptionValue();
-                        OptionName optionName = optionValue != null ? optionValue.getOptionName() : null;
-                        return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
-                            .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-                            .optionNameId(optionName != null ? optionName.getOptionNameId() : null)
-                            .optionName(optionName != null ? optionName.getOptionName() : null)
-                            .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
-                            .build();
-                    })
-                    .collect(Collectors.toList());
-
-                Integer stockQuantity = null;
-                Boolean hasStock = null;
-                if (option.getInventory() != null && option.getInventory().getStockQuantity() != null) {
-                    stockQuantity = option.getInventory().getStockQuantity().getValue();
-                    hasStock = stockQuantity > 0;
-                }
-
-                return ProductDetailResponse.OptionDetail.builder()
-                    .optionId(option.getProductOptionId())
-                    .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
-                    .stockQuantity(stockQuantity)
-                    .hasStock(hasStock)
-                    .optionValues(optionValueDetails)
-                    .build();
-            })
+            .map(this::mapToOptionDetail)
             .collect(Collectors.toList());
 
         return ProductDetailResponse.builder()
@@ -244,6 +229,36 @@ public class ProductService {
             .likeCount(likeCount)
             .images(imageResponses)
             .options(optionDetails)
+            .build();
+    }
+
+    private ProductDetailResponse.OptionDetail mapToOptionDetail(ProductOption option) {
+        List<ProductDetailResponse.OptionDetail.OptionValueDetail> optionValueDetails = option.getProductOptionValues().stream()
+            .map(mapping -> {
+                OptionValue optionValue = mapping.getOptionValue();
+                OptionName optionName = optionValue != null ? optionValue.getOptionName() : null;
+                return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
+                    .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
+                    .optionNameId(optionName != null ? optionName.getOptionNameId() : null)
+                    .optionName(optionName != null ? optionName.getOptionName() : null)
+                    .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+                    .build();
+            })
+            .collect(Collectors.toList());
+
+        Integer stockQuantity = null;
+        Boolean hasStock = null;
+        if (option.getInventory() != null && option.getInventory().getStockQuantity() != null) {
+            stockQuantity = option.getInventory().getStockQuantity().getValue();
+            hasStock = stockQuantity > 0;
+        }
+
+        return ProductDetailResponse.OptionDetail.builder()
+            .optionId(option.getProductOptionId())
+            .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
+            .stockQuantity(stockQuantity)
+            .hasStock(hasStock)
+            .optionValues(optionValueDetails)
             .build();
     }
 
@@ -312,25 +327,50 @@ public class ProductService {
                                                ProductUpdateRequest request) {
         Product product = productRepository.findDetailById(productId)
             .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        return updateProduct(product, request);
+    }
 
-        ProductGenderType genderType = parseGenderType(request.getProductGenderType());
+    @Transactional
+    public ProductDetailResponse updateProductForBrand(Long brandId,
+                                                       Long productId,
+                                                       ProductUpdateRequest request) {
+        Product product = productRepository.findDetailById(productId)
+            .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        validateBrandOwnership(product, brandId);
+        return updateProduct(product, request);
+    }
+
+    private ProductDetailResponse updateProduct(Product product,
+                                                ProductUpdateRequest request) {
+        if (!request.hasUpdatableField()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "변경할 데이터가 없습니다.");
+        }
+
+        ProductGenderType genderType = request.getProductGenderType() != null
+            ? parseGenderType(request.getProductGenderType())
+            : null;
 
         if (request.getBrandName() != null && !request.getBrandName().equals(product.getBrandName())) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "브랜드명은 수정할 수 없습니다.");
         }
 
-        product.updateBasicInfo(
+        boolean changed = product.updateBasicInfo(
             request.getProductName(),
             request.getProductInfo(),
-            genderType,
-            product.getBrandName()
+            genderType
         );
 
         if (request.getIsAvailable() != null) {
-            product.changeAvailability(request.getIsAvailable());
+            if (!Objects.equals(product.getIsAvailable(), request.getIsAvailable())) {
+                product.changeAvailability(request.getIsAvailable());
+                changed = true;
+            }
         }
 
-        if (request.getImages() != null && !request.getImages().isEmpty()) {
+        if (request.getImages() != null) {
+            if (request.getImages().isEmpty()) {
+                throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 이미지는 최소 1장 이상 등록해야 합니다.");
+            }
             List<Product.ImageRegistration> registrations = request.getImages().stream()
                 .map(image -> new Product.ImageRegistration(
                     image.getImageUrl(),
@@ -338,20 +378,88 @@ public class ProductService {
                 ))
                 .collect(Collectors.toList());
             product.registerImages(registrations);
+            changed = true;
         }
 
         // TODO 옵션 가격/재고 수정은 정책 확정 후 구현한다.
+
+        if (!changed) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "변경된 항목이 없습니다.");
+        }
 
         long likeCount = productLikeRepository.countByProduct(product);
         return mapToDetailResponse(product, likeCount);
     }
 
-    // 상품을 비활성화해 소프트 삭제 상태로 전환한다.
     @Transactional
-    public void disableProduct(Long productId) {
-        Product product = productRepository.findById(productId)
+    public ProductDetailResponse.OptionDetail addProductOption(Long brandId,
+                                                               Long productId,
+                                                               ProductOptionCreateRequest request) {
+        Product product = productRepository.findDetailById(productId)
             .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
-        product.changeAvailability(false);
+        validateBrandOwnership(product, brandId);
+
+        if (request == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "옵션 정보가 필요합니다.");
+        }
+        if (request.getProductPrice() == null || request.getStockQuantity() == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "옵션 가격과 재고는 필수입니다.");
+        }
+        if (request.getOptionValueIds() == null || request.getOptionValueIds().isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "옵션 값 ID는 최소 1개 이상이어야 합니다.");
+        }
+
+        Map<Long, OptionValue> optionValueMap = loadOptionValuesByIds(request.getOptionValueIds());
+
+        Inventory inventory = Inventory.builder()
+            .stockQuantity(new StockQuantity(request.getStockQuantity()))
+            .build();
+
+        ProductOption productOption = ProductOption.builder()
+            .product(product)
+            .productPrice(new Money(request.getProductPrice()))
+            .inventory(inventory)
+            .build();
+
+        request.getOptionValueIds().forEach(optionValueId -> {
+            OptionValue optionValue = optionValueMap.get(optionValueId);
+            productOption.addOptionValue(ProductOptionValue.builder()
+                .productOption(productOption)
+                .optionValue(optionValue)
+                .build());
+        });
+
+        product.addProductOption(productOption);
+        productRepository.flush();
+        return mapToOptionDetail(productOption);
+    }
+
+    @Transactional
+    public void removeProductOption(Long brandId,
+                                    Long productId,
+                                    Long productOptionId) {
+        Product product = productRepository.findDetailById(productId)
+            .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        validateBrandOwnership(product, brandId);
+
+        ProductOption targetOption = product.getProductOptions().stream()
+            .filter(option -> Objects.equals(option.getProductOptionId(), productOptionId))
+            .findFirst()
+            .orElseThrow(() -> new EntityNotFoundException("Product option not found: " + productOptionId));
+
+        product.removeProductOption(targetOption);
+        productRepository.flush();
+    }
+
+    private void validateBrandOwnership(Product product, Long brandId) {
+        if (brandId == null) {
+            return;
+        }
+        if (product.getBrand() == null
+            || product.getBrand().getBrandId() == null
+            || !Objects.equals(product.getBrand().getBrandId(), brandId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "해당 브랜드의 상품이 아닙니다.");
+        }
     }
 
     // 서비스 내부에서 상품 생성 파라미터를 묶어 전달하기 위한 커맨드 객체이다.

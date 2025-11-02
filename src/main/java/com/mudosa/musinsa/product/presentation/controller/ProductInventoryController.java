@@ -2,6 +2,7 @@ package com.mudosa.musinsa.product.presentation.controller;
 
 import com.mudosa.musinsa.product.application.ProductInventoryService;
 import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
+import com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
 import jakarta.validation.Valid;
@@ -29,28 +30,28 @@ public class ProductInventoryController {
 
     // 상품 옵션 재고 추가 (입고)
     @PostMapping("/inventory/increase")
-    public ResponseEntity<Void> increaseStock(@PathVariable Long brandId,
-                                              @PathVariable Long productId,
-                                              @Valid @RequestBody StockAdjustmentRequest request) {
-        productInventoryService.addStock(brandId, productId, request);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ProductOptionStockResponse> increaseStock(@PathVariable Long brandId,
+                                                                    @PathVariable Long productId,
+                                                                    @Valid @RequestBody StockAdjustmentRequest request) {
+        ProductOptionStockResponse response = productInventoryService.addStock(brandId, productId, request);
+        return ResponseEntity.ok(response);
     }
 
     // 상품 옵션 재고 차감 (출고)
     @PostMapping("/inventory/decrease")
-    public ResponseEntity<Void> decreaseStock(@PathVariable Long brandId,
-                                              @PathVariable Long productId,
-                                              @Valid @RequestBody StockAdjustmentRequest request) {
-        productInventoryService.subtractStock(brandId, productId, request);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ProductOptionStockResponse> decreaseStock(@PathVariable Long brandId,
+                                                                    @PathVariable Long productId,
+                                                                    @Valid @RequestBody StockAdjustmentRequest request) {
+        ProductOptionStockResponse response = productInventoryService.subtractStock(brandId, productId, request);
+        return ResponseEntity.ok(response);
     }
 
     // 상품 전체 판매 가능 상태 변경
     @PatchMapping("/availability")
-    public ResponseEntity<Void> changeProductAvailability(@PathVariable Long brandId,
-                                                          @PathVariable Long productId,
-                                                          @Valid @RequestBody ProductAvailabilityRequest request) {
-        productInventoryService.updateProductAvailability(brandId, productId, request);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ProductAvailabilityResponse> changeProductAvailability(@PathVariable Long brandId,
+                                                                                 @PathVariable Long productId,
+                                                                                 @Valid @RequestBody ProductAvailabilityRequest request) {
+        ProductAvailabilityResponse response = productInventoryService.updateProductAvailability(brandId, productId, request);
+        return ResponseEntity.ok(response);
     }
 }

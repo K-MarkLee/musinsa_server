@@ -6,7 +6,7 @@ import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
 import com.mudosa.musinsa.product.application.ProductService;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
-import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
+import com.mudosa.musinsa.product.application.dto.ProductOptionCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
 import com.mudosa.musinsa.product.domain.model.Category;
 import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
@@ -23,16 +23,21 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SuppressWarnings("removal")
-@WebMvcTest(ProductController.class)
+@WebMvcTest(BrandProductController.class)
 @AutoConfigureMockMvc(addFilters = false)
-class ProductControllerTest {
+class BrandProductControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -50,49 +55,8 @@ class ProductControllerTest {
     private CategoryRepository categoryRepository;
 
     @Nested
-    @DisplayName("상품 조회")
-    class ProductSearch {
-
-        @Test
-        @DisplayName("상품 검색 API 기본 응답")
-        void searchProducts() throws Exception {
-            ProductSearchResponse response = ProductSearchResponse.builder()
-                .products(List.of())
-                .totalElements(0)
-                .totalPages(0)
-                .page(0)
-                .size(0)
-                .build();
-
-            Mockito.when(productService.searchProducts(any())).thenReturn(response);
-
-            mockMvc.perform(get("/api/products"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(0));
-        }
-
-        @Test
-        @DisplayName("상품 상세 조회")
-        void getProductDetail() throws Exception {
-            ProductDetailResponse detail = ProductDetailResponse.builder()
-                .productId(1L)
-                .productName("테스트 상품")
-                .categoryPath("상의/티셔츠")
-                .images(List.of())
-                .options(List.of())
-                .build();
-
-            Mockito.when(productService.getProductDetail(1L)).thenReturn(detail);
-
-            mockMvc.perform(get("/api/products/1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productId").value(1L));
-        }
-    }
-
-    @Nested
-    @DisplayName("상품 생성/수정/삭제")
-    class ProductMutation {
+    @DisplayName("브랜드 관리자 상품 관리")
+    class BrandProductManagement {
 
         @Test
         @DisplayName("상품 생성")
@@ -117,15 +81,18 @@ class ProductControllerTest {
                     .build()))
                 .build();
 
-            Mockito.when(brandRepository.findById(1L)).thenReturn(java.util.Optional.of(Brand.create("브랜드", "BRAND", BigDecimal.TEN)));
-            Mockito.when(categoryRepository.findById(1L)).thenReturn(java.util.Optional.of(Category.builder().categoryName("상의").build()));
+            Brand brand = Brand.create("브랜드", "BRAND", BigDecimal.TEN);
+            Category category = Category.builder().categoryName("상의").build();
+
+            Mockito.when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+            Mockito.when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
             Mockito.when(productService.createProduct(any(), any(), any())).thenReturn(10L);
 
-            mockMvc.perform(post("/api/products")
+            mockMvc.perform(post("/api/brands/1/products")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "/api/products/10"));
+                .andExpect(header().string("Location", "/api/brands/1/products/10"));
         }
 
         @Test
@@ -150,9 +117,9 @@ class ProductControllerTest {
                 .options(List.of())
                 .build();
 
-            Mockito.when(productService.updateProduct(anyLong(), any())).thenReturn(detail);
+            Mockito.when(productService.updateProductForBrand(anyLong(), anyLong(), any())).thenReturn(detail);
 
-            mockMvc.perform(put("/api/products/1")
+            mockMvc.perform(put("/api/brands/1/products/1")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -160,12 +127,38 @@ class ProductControllerTest {
         }
 
         @Test
-        @DisplayName("상품 삭제 (비활성화)")
-        void deleteProduct() throws Exception {
-            mockMvc.perform(delete("/api/products/1"))
+        @DisplayName("상품 옵션 추가")
+        void addProductOption() throws Exception {
+            ProductOptionCreateRequest request = ProductOptionCreateRequest.builder()
+                .productPrice(BigDecimal.valueOf(15000))
+                .stockQuantity(5)
+                .optionValueIds(List.of(1L, 2L))
+                .build();
+
+            ProductDetailResponse.OptionDetail optionDetail = ProductDetailResponse.OptionDetail.builder()
+                .optionId(100L)
+                .productPrice(BigDecimal.valueOf(15000))
+                .stockQuantity(5)
+                .hasStock(true)
+                .optionValues(List.of())
+                .build();
+
+            Mockito.when(productService.addProductOption(anyLong(), anyLong(), any())).thenReturn(optionDetail);
+
+            mockMvc.perform(post("/api/brands/1/products/1/options")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.optionId").value(100L));
+        }
+
+        @Test
+        @DisplayName("상품 옵션 삭제")
+        void deleteProductOption() throws Exception {
+            mockMvc.perform(delete("/api/brands/1/products/1/options/200"))
                 .andExpect(status().isNoContent());
 
-            Mockito.verify(productService).disableProduct(1L);
+            Mockito.verify(productService).removeProductOption(1L, 1L, 200L);
         }
     }
 }

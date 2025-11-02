@@ -79,6 +79,12 @@ public class ProductOption extends BaseEntity {
         this.productOptionValues.add(optionValue);
     }
 
+    // 상품과의 연관을 제거해 고아 제거가 정상 동작하도록 한다.
+    void detachFromProduct() {
+        this.product = null;
+        this.productOptionValues.forEach(ProductOptionValue::refreshIdentifiers);
+    }
+
     // 주문 과정에서 옵션 재고를 차감한다.
     public void decreaseStock(int quantity) {
         if (quantity <= 0) {
