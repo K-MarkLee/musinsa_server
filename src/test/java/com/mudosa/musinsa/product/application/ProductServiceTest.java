@@ -2,6 +2,8 @@ package com.mudosa.musinsa.product.application;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
 import com.mudosa.musinsa.product.domain.model.Product;
@@ -21,6 +23,7 @@ import java.util.Collections;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -106,5 +109,35 @@ class ProductServiceTest {
         productService.disableProduct(1L);
 
         assertThat(product.getIsAvailable()).isFalse();
+    }
+
+    @Test
+    @DisplayName("변경할 값이 없으면 상품 수정이 거부된다")
+    void updateProduct_noChanges_throws() {
+        Brand brand = Brand.builder()
+            .brandId(1L)
+            .nameKo("브랜드")
+            .nameEn("BRAND")
+            .status(BrandStatus.ACTIVE)
+            .commissionRate(BigDecimal.TEN)
+            .build();
+        Product product = Product.builder()
+            .brand(brand)
+            .productName("기존 상품")
+            .productInfo("기존 설명")
+            .productGenderType(ProductGenderType.MEN)
+            .brandName("브랜드")
+            .categoryPath("상의/티셔츠")
+            .isAvailable(true)
+            .build();
+
+        when(productRepository.findDetailById(1L)).thenReturn(Optional.of(product));
+
+        ProductUpdateRequest request = ProductUpdateRequest.builder().build();
+
+        assertThatThrownBy(() -> productService.updateProduct(1L, request))
+            .isInstanceOf(BusinessException.class)
+            .extracting(ex -> ((BusinessException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.VALIDATION_ERROR);
     }
 }

@@ -22,13 +22,10 @@ import java.util.List;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductUpdateRequest {
 
-    @NotBlank(message = "상품명은 필수입니다.")
     private String productName;
 
-    @NotBlank(message = "상품 정보는 필수입니다.")
     private String productInfo;
 
-    @NotBlank(message = "상품 성별 타입은 필수입니다.")
     private String productGenderType;
 
     private Boolean isAvailable;
@@ -72,5 +69,35 @@ public class ProductUpdateRequest {
             .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
             .count();
         return thumbnailCount == 1;
+    }
+
+    @AssertTrue(message = "상품명은 비어 있을 수 없습니다.")
+    public boolean isProductNameValid() {
+        return productName == null || !productName.trim().isEmpty();
+    }
+
+    @AssertTrue(message = "상품 정보는 비어 있을 수 없습니다.")
+    public boolean isProductInfoValid() {
+        return productInfo == null || !productInfo.trim().isEmpty();
+    }
+
+    @AssertTrue(message = "상품 성별 타입은 비어 있을 수 없습니다.")
+    public boolean isGenderTypeValid() {
+        return productGenderType == null || !productGenderType.trim().isEmpty();
+    }
+
+    @AssertTrue(message = "브랜드명은 비어 있을 수 없습니다.")
+    public boolean isBrandNameValid() {
+        return brandName == null || !brandName.trim().isEmpty();
+    }
+
+    public boolean hasUpdatableField() {
+        return productName != null
+            || productInfo != null
+            || productGenderType != null
+            || isAvailable != null
+            || brandName != null
+            || (images != null)
+            || (options != null && !options.isEmpty());
     }
 }

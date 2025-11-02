@@ -21,7 +21,7 @@ public class InventoryService {
 
     // 지정된 수량만큼 옵션 재고를 추가한다 (입고/재입고).
     @Transactional(propagation = Propagation.MANDATORY)
-    public void addStock(Long productOptionId, Integer quantity) {
+    public Inventory addStock(Long productOptionId, Integer quantity) {
         log.info("재고 추가 시작 - productOptionId: {}, quantity: {}",
             productOptionId, quantity);
 
@@ -36,11 +36,12 @@ public class InventoryService {
 
         log.info("재고 추가 완료 - productOptionId: {}, 추가 수량: {}, 현재 재고: {}",
             productOptionId, quantity, inventory.getStockQuantity());
+        return inventory;
     }
 
     // 지정된 수량만큼 옵션 재고를 차감한다 (출고/조정).
     @Transactional(propagation = Propagation.MANDATORY)
-    public void subtractStock(Long productOptionId, Integer quantity) {
+    public Inventory subtractStock(Long productOptionId, Integer quantity) {
         log.info("재고 차감 시작 - productOptionId: {}, quantity: {}",
             productOptionId, quantity);
 
@@ -59,6 +60,7 @@ public class InventoryService {
 
         log.info("재고 차감 완료 - productOptionId: {}, 차감 수량: {}, 현재 재고: {}",
             productOptionId, quantity, inventory.getStockQuantity());
+        return inventory;
     }
 
     private Inventory loadInventoryWithLock(Long productOptionId) {

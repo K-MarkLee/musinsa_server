@@ -1,32 +1,22 @@
 package com.mudosa.musinsa.product.presentation.controller;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
-import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
-import com.mudosa.musinsa.product.application.ProductService;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
-import com.mudosa.musinsa.product.application.dto.ProductCreateResponse;
-import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchRequest;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
-import com.mudosa.musinsa.product.domain.model.Category;
-import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-// 상품 API 초안 컨트롤러로 검색, 생성, 상세 조회 엔드포인트를 제공한다.
-@RestController
+// 상품 API 초안 컨트롤러로 검색과 상세 조회 엔드포인트를 제공한다.
 @RequiredArgsConstructor
 @RequestMapping("/api/products")
 public class ProductController {
-
+public class ProductController {
     private final ProductService productService;
     private final BrandRepository brandRepository;
-    private final CategoryRepository categoryRepository;
-
     // 검색 조건을 받아 상품 목록을 조회한다.
     @GetMapping
     public ResponseEntity<ProductSearchResponse> searchProducts(@Valid ProductSearchRequest request) {
@@ -41,21 +31,6 @@ public class ProductController {
             .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("브랜드를 찾을 수 없습니다. brandId=" + request.getBrandId()));
         Category category = categoryRepository.findById(request.getCategoryId())
             .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("카테고리를 찾을 수 없습니다. categoryId=" + request.getCategoryId()));
-
-        Long productId = productService.createProduct(request, brand, category);
-        URI location = URI.create("/api/products/" + productId);
-        return ResponseEntity.created(location)
-            .body(ProductCreateResponse.builder().productId(productId).build());
-    }
-
-    // 상품 식별자를 기준으로 상세 정보를 조회한다.
-    @GetMapping("/{productId}")
-    public ResponseEntity<ProductDetailResponse> getProductDetail(@PathVariable Long productId) {
-        ProductDetailResponse response = productService.getProductDetail(productId);
-        return ResponseEntity.ok(response);
-    }
-
-    // 상품 기본 정보를 수정한다.
     @PutMapping("/{productId}")
     public ResponseEntity<ProductDetailResponse> updateProduct(@PathVariable Long productId,
                                                                @Valid @RequestBody ProductUpdateRequest request) {

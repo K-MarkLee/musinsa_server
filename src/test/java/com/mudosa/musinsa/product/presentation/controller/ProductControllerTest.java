@@ -128,6 +128,7 @@ class ProductControllerTest {
                 .andExpect(header().string("Location", "/api/products/10"));
         }
 
+
         @Test
         @DisplayName("상품 수정")
         void updateProduct() throws Exception {

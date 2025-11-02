@@ -2,8 +2,9 @@ package com.mudosa.musinsa.product.application;
 
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
+import com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse;
+import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
 import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.OptionName;
@@ -48,42 +49,60 @@ public class ProductInventoryService {
 
     // 옵션 재고를 증가시킨다.
     @Transactional
-    public void addStock(Long brandId,
-                         Long productId,
-                         StockAdjustmentRequest request) {
+    public ProductOptionStockResponse addStock(Long brandId,
+                                               Long productId,
+                                               StockAdjustmentRequest request) {
         ProductOption productOption = loadProductOptionForBrand(brandId, productId, request.getProductOptionId());
 
-        inventoryService.addStock(productOption.getProductOptionId(), request.getQuantity());
+        Inventory updatedInventory = inventoryService.addStock(productOption.getProductOptionId(), request.getQuantity());
+
+        return mapToStockResponse(productOption, updatedInventory);
     }
 
     // 옵션 재고를 감소시킨다.
     @Transactional
-    public void subtractStock(Long brandId,
-                              Long productId,
-                              StockAdjustmentRequest request) {
+    public ProductOptionStockResponse subtractStock(Long brandId,
+                                                    Long productId,
+                                                    StockAdjustmentRequest request) {
         ProductOption productOption = loadProductOptionForBrand(brandId, productId, request.getProductOptionId());
 
-        inventoryService.subtractStock(productOption.getProductOptionId(), request.getQuantity());
+        Inventory updatedInventory = inventoryService.subtractStock(productOption.getProductOptionId(), request.getQuantity());
+
+        return mapToStockResponse(productOption, updatedInventory);
     }
 
     // 상품 전체 판매 가능 상태를 변경한다.
     @Transactional
-    public void updateProductAvailability(Long brandId,
-                                          Long productId,
-                                          ProductAvailabilityRequest request) {
+    public ProductAvailabilityResponse updateProductAvailability(Long brandId,
+                                                                 Long productId,
+                                                                 ProductAvailabilityRequest request) {
         Product product = productRepository.findDetailById(productId)
             .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,
                 "상품을 찾을 수 없습니다. productId=" + productId));
 
         validateBrandOwnership(product, brandId);
 
-        product.changeAvailability(request.getIsAvailable());
+        Boolean requestedAvailability = request.getIsAvailable();
+        if (requestedAvailability == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "판매 가능 여부는 필수입니다.");
+        }
+
+        if (Objects.equals(product.getIsAvailable(), requestedAvailability)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "이미 요청한 판매 상태와 동일합니다.");
+        }
+
+        product.changeAvailability(requestedAvailability);
+
+        return ProductAvailabilityResponse.builder()
+            .productId(product.getProductId())
+            .isAvailable(product.getIsAvailable())
+            .build();
     }
 
     private ProductOption loadProductOptionForBrand(Long brandId,
                                                    Long productId,
                                                    Long productOptionId) {
-        ProductOption productOption = productOptionRepository.findById(productOptionId)
+        ProductOption productOption = productOptionRepository.findByIdWithProductAndInventory(productOptionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,
                 "상품 옵션을 찾을 수 없습니다. productOptionId=" + productOptionId));
 
@@ -111,11 +130,16 @@ public class ProductInventoryService {
     }
 
     private ProductOptionStockResponse mapToStockResponse(ProductOption productOption) {
-        Inventory inventory = productOption.getInventory();
+        return mapToStockResponse(productOption, productOption.getInventory());
+    }
+
+    private ProductOptionStockResponse mapToStockResponse(ProductOption productOption,
+                                                          Inventory inventory) {
+        Inventory effectiveInventory = inventory != null ? inventory : productOption.getInventory();
         Integer stockQuantity = null;
         boolean hasStock = false;
-        if (inventory != null && inventory.getStockQuantity() != null) {
-            stockQuantity = inventory.getStockQuantity().getValue();
+        if (effectiveInventory != null && effectiveInventory.getStockQuantity() != null) {
+            stockQuantity = effectiveInventory.getStockQuantity().getValue();
             hasStock = stockQuantity > 0;
         }
 

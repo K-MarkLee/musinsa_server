@@ -157,28 +157,38 @@ public class Product extends BaseEntity {
         this.isAvailable = available;
     }
 
-    // 상품 기본 정보를 갱신한다. 필수 값 검증은 기존 생성 규칙을 따른다.
-    public void updateBasicInfo(String productName,
-                                String productInfo,
-                                ProductGenderType productGenderType,
-                                String brandName) {
-        if (productName == null || productName.trim().isEmpty()) {
-            throw new IllegalArgumentException("상품명은 필수입니다.");
-        }
-        if (productInfo == null || productInfo.trim().isEmpty()) {
-            throw new IllegalArgumentException("상품 정보는 필수입니다.");
-        }
-        if (productGenderType == null) {
-            throw new IllegalArgumentException("상품 성별 타입은 필수입니다.");
-        }
-        if (brandName == null || brandName.trim().isEmpty()) {
-            throw new IllegalArgumentException("브랜드명은 필수입니다.");
+    // 전달된 값이 존재할 때만 갱신하고, 값이 달라졌을 때 true를 반환한다.
+    public boolean updateBasicInfo(String productName,
+                                   String productInfo,
+                                   ProductGenderType productGenderType) {
+        boolean updated = false;
+
+        if (productName != null) {
+            if (productName.trim().isEmpty()) {
+                throw new IllegalArgumentException("상품명은 비어 있을 수 없습니다.");
+            }
+            if (!productName.equals(this.productName)) {
+                this.productName = productName;
+                updated = true;
+            }
         }
 
-        this.productName = productName;
-        this.productInfo = productInfo;
-        this.productGenderType = productGenderType; 
-        this.brandName = brandName;
+        if (productInfo != null) {
+            if (productInfo.trim().isEmpty()) {
+                throw new IllegalArgumentException("상품 정보는 비어 있을 수 없습니다.");
+            }
+            if (!productInfo.equals(this.productInfo)) {
+                this.productInfo = productInfo;
+                updated = true;
+            }
+        }
+
+        if (productGenderType != null && productGenderType != this.productGenderType) {
+            this.productGenderType = productGenderType;
+            updated = true;
+        }
+
+        return updated;
     }
 
     // 현재 이미지 중 썸네일이 존재하는지 확인한다.

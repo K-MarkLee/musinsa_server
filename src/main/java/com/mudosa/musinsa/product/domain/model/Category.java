@@ -59,11 +59,16 @@ public class Category extends BaseEntity {
         if (!visited.add(this)) {
             throw new IllegalStateException("카테고리 계층에 순환 참조가 감지되었습니다.");
         }
+
         try {
-            if (parent == null) {
-                return categoryName;  // 부모: "상의"
+            Category currentParent = getParent();
+            String currentName = getCategoryName();  // 게터를 사용해 지연 로딩 프록시를 초기화한다.
+
+            if (currentParent == null) {
+                return currentName;  // 부모: "상의"
             }
-            return parent.buildPathInternal(visited) + "/" + categoryName;  // 자식: "상의/티셔츠"
+
+            return currentParent.buildPathInternal(visited) + "/" + currentName;  // 자식: "상의/티셔츠"
         } finally {
             visited.remove(this);
         }

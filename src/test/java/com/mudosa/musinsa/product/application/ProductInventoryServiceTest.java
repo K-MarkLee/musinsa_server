@@ -155,16 +155,23 @@ class ProductInventoryServiceTest {
         Product product = prepareProductWithOption();
         ProductOption productOption = product.getProductOptions().get(0);
 
-        when(productOptionRepository.findById(200L)).thenReturn(Optional.of(productOption));
+        Inventory updatedInventory = Inventory.builder()
+            .stockQuantity(new StockQuantity(13))
+            .build();
+
+        when(productOptionRepository.findByIdWithProductAndInventory(200L)).thenReturn(Optional.of(productOption));
+        when(inventoryService.addStock(200L, 3)).thenReturn(updatedInventory);
 
         StockAdjustmentRequest request = StockAdjustmentRequest.builder()
             .productOptionId(200L)
             .quantity(3)
             .build();
 
-        productInventoryService.addStock(1L, 100L, request);
+        ProductOptionStockResponse response = productInventoryService.addStock(1L, 100L, request);
 
         verify(inventoryService, times(1)).addStock(200L, 3);
+        assertThat(response.getStockQuantity()).isEqualTo(13);
+        assertThat(response.getProductOptionId()).isEqualTo(200L);
     }
 
     @Test
@@ -173,16 +180,22 @@ class ProductInventoryServiceTest {
         Product product = prepareProductWithOption();
         ProductOption productOption = product.getProductOptions().get(0);
 
-        when(productOptionRepository.findById(200L)).thenReturn(Optional.of(productOption));
+        Inventory updatedInventory = Inventory.builder()
+            .stockQuantity(new StockQuantity(8))
+            .build();
+
+        when(productOptionRepository.findByIdWithProductAndInventory(200L)).thenReturn(Optional.of(productOption));
+        when(inventoryService.subtractStock(200L, 2)).thenReturn(updatedInventory);
 
         StockAdjustmentRequest request = StockAdjustmentRequest.builder()
             .productOptionId(200L)
             .quantity(2)
             .build();
 
-        productInventoryService.subtractStock(1L, 100L, request);
+        ProductOptionStockResponse response = productInventoryService.subtractStock(1L, 100L, request);
 
         verify(inventoryService, times(1)).subtractStock(200L, 2);
+        assertThat(response.getStockQuantity()).isEqualTo(8);
     }
 
     @Test
@@ -191,7 +204,7 @@ class ProductInventoryServiceTest {
         Product product = prepareProductWithOption();
         ProductOption productOption = product.getProductOptions().get(0);
 
-        when(productOptionRepository.findById(200L)).thenReturn(Optional.of(productOption));
+        when(productOptionRepository.findByIdWithProductAndInventory(200L)).thenReturn(Optional.of(productOption));
 
         StockAdjustmentRequest request = StockAdjustmentRequest.builder()
             .productOptionId(200L)
@@ -237,9 +250,12 @@ class ProductInventoryServiceTest {
             .isAvailable(false)
             .build();
 
-        productInventoryService.updateProductAvailability(1L, 100L, request);
+        com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse response =
+            productInventoryService.updateProductAvailability(1L, 100L, request);
 
         assertThat(product.getIsAvailable()).isFalse();
+        assertThat(response.getProductId()).isEqualTo(100L);
+        assertThat(response.getIsAvailable()).isFalse();
     }
 
     @Test
@@ -258,6 +274,24 @@ class ProductInventoryServiceTest {
             .isInstanceOf(BusinessException.class)
             .extracting(ex -> ((BusinessException) ex).getErrorCode())
             .isEqualTo(ErrorCode.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("동일한 판매 상태로 변경을 요청하면 예외가 발생한다")
+    void updateProductAvailability_noChange_throws() {
+        Product product = prepareProductWithOption();
+        ReflectionTestUtils.setField(product.getBrand(), "brandId", 1L);
+
+        when(productRepository.findDetailById(100L)).thenReturn(Optional.of(product));
+
+        ProductAvailabilityRequest request = ProductAvailabilityRequest.builder()
+            .isAvailable(true)
+            .build();
+
+        assertThatThrownBy(() -> productInventoryService.updateProductAvailability(1L, 100L, request))
+            .isInstanceOf(BusinessException.class)
+            .extracting(ex -> ((BusinessException) ex).getErrorCode())
+            .isEqualTo(ErrorCode.VALIDATION_ERROR);
     }
 
     private Product prepareProductWithOption() {

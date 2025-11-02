@@ -313,24 +313,35 @@ public class ProductService {
         Product product = productRepository.findDetailById(productId)
             .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
 
-        ProductGenderType genderType = parseGenderType(request.getProductGenderType());
+        if (!request.hasUpdatableField()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "변경할 데이터가 없습니다.");
+        }
+
+        ProductGenderType genderType = request.getProductGenderType() != null
+            ? parseGenderType(request.getProductGenderType())
+            : null;
 
         if (request.getBrandName() != null && !request.getBrandName().equals(product.getBrandName())) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "브랜드명은 수정할 수 없습니다.");
         }
 
-        product.updateBasicInfo(
+        boolean changed = product.updateBasicInfo(
             request.getProductName(),
             request.getProductInfo(),
-            genderType,
-            product.getBrandName()
+            genderType
         );
 
         if (request.getIsAvailable() != null) {
-            product.changeAvailability(request.getIsAvailable());
+            if (!java.util.Objects.equals(product.getIsAvailable(), request.getIsAvailable())) {
+                product.changeAvailability(request.getIsAvailable());
+                changed = true;
+            }
         }
 
-        if (request.getImages() != null && !request.getImages().isEmpty()) {
+        if (request.getImages() != null) {
+            if (request.getImages().isEmpty()) {
+                throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 이미지는 최소 1장 이상 등록해야 합니다.");
+            }
             List<Product.ImageRegistration> registrations = request.getImages().stream()
                 .map(image -> new Product.ImageRegistration(
                     image.getImageUrl(),
@@ -338,9 +349,14 @@ public class ProductService {
                 ))
                 .collect(Collectors.toList());
             product.registerImages(registrations);
+            changed = true;
         }
 
         // TODO 옵션 가격/재고 수정은 정책 확정 후 구현한다.
+
+        if (!changed) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "변경된 항목이 없습니다.");
+        }
 
         long likeCount = productLikeRepository.countByProduct(product);
         return mapToDetailResponse(product, likeCount);
