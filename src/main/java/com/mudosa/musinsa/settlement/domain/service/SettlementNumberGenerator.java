@@ -64,7 +64,7 @@ public class SettlementNumberGenerator {
      */
     private Long getNextSequence(String sequenceName) {
         // MySQL에는 시퀀스가 없으므로 간단히 현재 시간 밀리초 사용
-        // 실제 운영에서는 별도 시퀀스 테이블 또는 Redis 등 사용 권장
+        // 고도화 단계에서는 별도 시퀀스 테이블 또는 Redis 등 사용 예정
         return System.currentTimeMillis() % 100000; // 5자리 숫자
     }
 }

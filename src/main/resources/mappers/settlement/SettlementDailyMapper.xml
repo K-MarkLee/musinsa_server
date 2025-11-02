@@ -9,6 +9,7 @@
         SELECT
             brand_id as brandId,
             YEAR(settlement_date) as "year",
+            MONTH(MIN(settlement_date)) as "month",
             WEEK(settlement_date) as weekOfMonth,
             MIN(settlement_date) as weekStartDate,
             MAX(settlement_date) as weekEndDate,

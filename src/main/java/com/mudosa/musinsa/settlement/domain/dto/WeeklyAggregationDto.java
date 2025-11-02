@@ -76,10 +76,6 @@ public class WeeklyAggregationDto {
 
     public void setWeekStartDate(LocalDate weekStartDate) {
         this.weekStartDate = weekStartDate;
-        // month가 null이면 weekStartDate에서 추출
-        if (this.month == null && weekStartDate != null) {
-            this.month = weekStartDate.getMonthValue();
-        }
     }
 
     public void setWeekEndDate(LocalDate weekEndDate) {

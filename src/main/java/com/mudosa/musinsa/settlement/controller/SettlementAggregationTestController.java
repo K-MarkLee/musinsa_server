@@ -145,12 +145,19 @@ public class SettlementAggregationTestController {
         log.info("Yearly aggregation request: brandId={}, year={}", brandId, year);
 
         try {
-            SettlementYearly result = aggregationService.aggregateToYearly(brandId, year);
-
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", result);
-            response.put("message", "Yearly aggregation completed successfully");
+            aggregationService.aggregateToYearly(brandId, year)
+                .ifPresentOrElse(
+                    result -> {
+                        response.put("success", true);
+                        response.put("data", result);
+                        response.put("message", "Yearly aggregation completed successfully");
+                    },
+                    () -> {
+                        response.put("success", false);
+                        response.put("message", "No data found for yearly aggregation");
+                    }
+                );
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {

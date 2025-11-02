@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 정산 집계 서비스
@@ -210,10 +211,10 @@ public class SettlementAggregationService {
      *
      * @param brandId 브랜드 ID
      * @param year 연도
-     * @return 생성된 연간 정산
+     * @return 생성된 연간 정산 (데이터가 없으면 Optional.empty())
      */
     @Transactional
-    public SettlementYearly aggregateToYearly(Long brandId, int year) {
+    public Optional<SettlementYearly> aggregateToYearly(Long brandId, int year) {
         log.info("Starting yearly aggregation for brandId={}, year={}", brandId, year);
 
         LocalDate startDate = LocalDate.of(year, 1, 1);
@@ -223,7 +224,7 @@ public class SettlementAggregationService {
 
         if (aggregations.isEmpty()) {
             log.warn("No monthly settlements found for yearly aggregation");
-            throw new IllegalStateException("No data for yearly aggregation");
+            return Optional.empty();
         }
 
         YearlyAggregationDto dto = aggregations.get(0);
@@ -247,7 +248,7 @@ public class SettlementAggregationService {
         log.info("Created yearly settlement: {}, amount={}",
             saved.getSettlementNumber(), saved.getFinalSettlementAmount());
 
-        return saved;
+        return Optional.of(saved);
     }
 
     /**

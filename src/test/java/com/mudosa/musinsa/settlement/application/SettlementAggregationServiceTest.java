@@ -267,7 +267,8 @@ public class SettlementAggregationServiceTest {
         log.info("월간 정산 집계 완료: {} 건", monthlySettlements.size());
 
         // Step 4: 연간 정산으로 집계
-        SettlementYearly yearly = aggregationService.aggregateToYearly(TEST_BRAND_ID, 2025);
+        SettlementYearly yearly = aggregationService.aggregateToYearly(TEST_BRAND_ID, 2025)
+            .orElseThrow(() -> new AssertionError("연간 정산 데이터가 없습니다"));
 
         // Then: 연간 정산 확인
         assertThat(yearly).isNotNull();
