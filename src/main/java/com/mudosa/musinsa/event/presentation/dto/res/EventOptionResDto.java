@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.event.presentation.dto.res;
 
+import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.event.model.EventOption;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -22,10 +23,11 @@ public class EventOptionResDto {
     //private String thumbnailUrl;   // 대표 이미지 URL
     private BigDecimal eventPrice; // 이벤트 가격
     private Integer eventStock;
+    private Long productId; // 상품 상세 리스트를 위한 매핑 추가
 
     // private String description; 필요한가?
 
-    public static EventOptionResDto from(EventOption eo, String productName, String optionLabel,Long productOptionId) {
+    public static EventOptionResDto from(EventOption eo, String productName, String optionLabel,Long productOptionId, Long productId) {
         //[static]: 클래스 레벨에 속한다. 인스턴스(객체)를 만들지 않아도 클래스 이름으로 직접 호출 가능
         return new EventOptionResDto(
                 eo.getId(),
@@ -33,7 +35,9 @@ public class EventOptionResDto {
                 productName, // 기존의 eventOption 테이블에 없음 , 접근 경로 타고타고 ~
                 optionLabel, // 기존의 eventOption 테이블에 없음
                 eo.getEventPrice(),
-                eo.getEventStock()
+                eo.getEventStock(),
+                productId
+                //eo.getProductOption().getProduct().getProductId()
         );
     }
 
