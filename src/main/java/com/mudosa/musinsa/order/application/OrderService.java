@@ -244,12 +244,12 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderCreateResponse createPendingOrder(OrderCreateRequest request) {
+    public OrderCreateResponse createPendingOrder(OrderCreateRequest request, Long userId) {
         log.info("주문 생성 시작 - userId: {}, itemCount: {}",
-                request.getUserId(), request.getItems().size());
+                userId, request.getItems().size());
 
         /* 1. 사용자 조회 */
-        User user = userRepository.findById(request.getUserId())
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         /* 2. 상품 옵션 조회 */
@@ -288,7 +288,7 @@ public class OrderService {
         List<OrderProduct> orderProducts = createOrderProducts(
                 request.getItems(),
                 productOptions,
-                request.getUserId()
+                userId
         );
 
         order.addOrderProducts(orderProducts);

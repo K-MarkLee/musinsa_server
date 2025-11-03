@@ -6,6 +6,7 @@ import com.mudosa.musinsa.order.application.OrderService;
 import com.mudosa.musinsa.order.application.dto.OrderCreateRequest;
 import com.mudosa.musinsa.order.application.dto.OrderCreateResponse;
 import com.mudosa.musinsa.order.application.dto.PendingOrderResponse;
+import com.mudosa.musinsa.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
@@ -28,18 +31,20 @@ public class OrderController {
             description = "주문을 생성합니다"
     )
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody OrderCreateRequest request)
     {
-        log.info("[Order] 주문 생성 요청, userId: {}",
-                request.getUserId());
+        Long userId = userDetails.getUserId();
 
-        OrderCreateResponse response = orderService.createPendingOrder(request);
+        log.info("[Order] 주문 생성 요청, userId: {}", userId);
 
-        // 재고 부족인 경우 BAD_REQUEST로 응답
+        OrderCreateResponse response = orderService.createPendingOrder(request, userId);
+
         if (response.hasInsufficientStock()) {
             log.warn("[Order] 재고 부족으로 주문 생성 실패, userId: {}, 부족한 상품 수: {}", 
-                    request.getUserId(), response.getInsufficientStockItems().size());
+                    userId, response.getInsufficientStockItems().size());
             
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
@@ -57,14 +62,17 @@ public class OrderController {
 
     @Operation(
             summary = "주문 조회",
-            description = "생성한 주문을 조회합니다. "
+            description = "생성한 주문을 조회합니다."
     )
     @GetMapping("/pending")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<PendingOrderResponse>> fetchOrder(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(value="orderNo") String orderNo
     ){
-        log.info("[Order] 주문 조회 요청, orderNo: {}",
-                orderNo);
+        Long userId = userDetails.getUserId();
+        
+        log.info("[Order] 주문 조회 요청, userId: {}, orderNo: {}", userId, orderNo);
 
         PendingOrderResponse response = orderService.fetchPendingOrder(orderNo);
 

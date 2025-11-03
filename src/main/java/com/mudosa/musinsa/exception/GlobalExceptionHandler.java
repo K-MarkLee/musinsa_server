@@ -5,6 +5,8 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -53,5 +55,29 @@ public class GlobalExceptionHandler {
         ApiResponse.failure(errorSplit[errorSplit.length - 1], e.getMessage());
 
     return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+
+  @ExceptionHandler(BadCredentialsException.class)
+  public ResponseEntity<ApiResponse<Void>> handleBadCredentials() {
+    ErrorCode errorCode = ErrorCode.UNAUTHORIZED_USER;
+    log.warn("BadCredentialsException 발생: 인증 실패");
+    ApiResponse<Void> response = ApiResponse.failure(errorCode.getCode(), errorCode.getMessage());
+    return new ResponseEntity<>(response, errorCode.getHttpStatus());
+  }
+
+  @ExceptionHandler(AuthorizationDeniedException.class)
+  public ResponseEntity<ApiResponse<Void>> handleAccessDenied() {
+    ErrorCode errorCode = ErrorCode.FORBIDDEN;
+    log.warn("AuthorizationDeniedException 발생: 권한 없음");
+    ApiResponse<Void> response = ApiResponse.failure(errorCode.getCode(), errorCode.getMessage());
+    return new ResponseEntity<>(response, errorCode.getHttpStatus());
+  }
+
+  @ExceptionHandler(CustomJwtException.class)
+  public ResponseEntity<ApiResponse<Void>> handleJwtException(CustomJwtException e) {
+    ErrorCode errorCode = e.getErrorCode();
+    log.warn("JWT 예외 발생: {} - {}", errorCode.getCode(), errorCode.getMessage(), e);
+    ApiResponse<Void> response = ApiResponse.failure(errorCode.getCode(), errorCode.getMessage());
+    return new ResponseEntity<>(response, errorCode.getHttpStatus());
   }
 }

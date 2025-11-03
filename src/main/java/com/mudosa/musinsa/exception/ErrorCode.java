@@ -19,6 +19,13 @@ public enum ErrorCode {
     EMPTY_JWT("10007", "JWT 클레임이 비어있습니다.", HttpStatus.UNAUTHORIZED),
     FORBIDDEN("10008", "접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
     RESOURCE_NOT_FOUND("10009", "요청한 리소스를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),USER_NOT_FOUND("10010","사용자가 없습니다",HttpStatus.NOT_FOUND ),
+    INVALID_CREDENTIALS("10011", "아이디 혹은 비밀번호가 올바르지 않습니다.", HttpStatus.BAD_REQUEST),
+    INVALID_PHONE_NUMBER_FORMAT(
+            "20005", "휴대폰 번호는 하이픈(-) 없이 10자리 또는 11자리 숫자로 입력해주세요. 예: 01012345678", HttpStatus.BAD_REQUEST),
+    INVALID_EMAIL_FORMAT(
+            "20006", "이메일 형식이 올바르지 않습니다. 예: example@example.com", HttpStatus.BAD_REQUEST),
+    INVALID_PASSWORD_FORMAT("20004", "최소 8자, 영문자, 숫자, 특수문자 포함해야합니다.", HttpStatus.BAD_REQUEST),
+    ALREADY_REGISTERED_EMAIL("20003", "이미 가입한 이메일입니다.", HttpStatus.CONFLICT),
 
     //payment
     PAYMENT_APPROVAL_FAILED("30001", "결제 승인에 실패했습니다", HttpStatus.BAD_REQUEST),

@@ -1,8 +1,4 @@
-# ========================================
-# 로컬 개발 환경 설정 (Dev Profile)
-# ========================================
 spring:
-  # DataSource 설정
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:my_database}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true
@@ -52,9 +48,7 @@ spring:
     livereload:
       enabled: true
 
-# ========================================
-# 개발 환경 로깅 설정 (상세)
-# ========================================
+
 logging:
   level:
     # Application 로깅
@@ -89,24 +83,13 @@ logging:
     com.zaxxer.hikari.pool.HikariPool: info
     com.zaxxer.hikari.pool.PoolBase: info
 
-# ========================================
-# JWT 개발 환경 설정
-# ========================================
-jwt:
-  secret: ${JWT_SECRET:dev-musinsa-secret-key-for-development-environment-minimum-256-bits-required-1234567890}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}  # 1시간
-  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7일
 
-# ========================================
-# 토스페이먼츠 개발 환경 설정
-# ========================================
+
 tosspayments:
   secret-key: ${TOSS_SECRET_KEY:test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}  # 테스트 시크릿 키 (개발자센터에서 발급)
   client-key: ${TOSS_CLIENT_KEY:test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm}  # 테스트 클라이언트 키
 
-# ========================================
-# Swagger 개발 환경 설정
-# ========================================
+
 springdoc:
   swagger-ui:
     enabled: true

@@ -42,3 +42,4 @@ out/
 .gradle/
 .DS_Store
 *.log
+.env.dev

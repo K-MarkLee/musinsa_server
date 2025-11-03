@@ -51,26 +51,25 @@ public class User extends BaseEntity {
     // OAuth 정보 (같은 애그리거트)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OAuth> oauths = new ArrayList<>();
-    
-    /**
-     * 사용자 생성
-     */
-    public static User create(String userName, String password, String email, UserRole role) {
+
+    public static User create(String userName, String password, String email, UserRole role, String avatarUrl) {
         User user = new User();
         user.userName = userName;
         user.password = password;
         user.userEmail = email;
         user.role = role;
         user.isActive = true;
+        user.avatarUrl = avatarUrl;
         return user;
     }
-    
-    /**
-     * OAuth 추가
-     */
+
     public void addOAuth(OAuth oauth) {
         this.oauths.add(oauth);
         oauth.assignUser(this);
+    }
+
+    public void setAvatarUrl(String avatarUrl){
+        this.avatarUrl = avatarUrl;
     }
 
 }
