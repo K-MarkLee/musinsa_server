@@ -2,6 +2,8 @@ package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -119,6 +121,7 @@ public class Product extends BaseEntity {
         if (productOption == null) {
             return;
         }
+        validateOptionCombination(productOption);
         productOption.setProduct(this);
         this.productOptions.add(productOption);
     }
@@ -215,6 +218,21 @@ public class Product extends BaseEntity {
         }
         if (thumbnailCount > 1) {
             throw new IllegalArgumentException("상품 썸네일은 하나만 등록할 수 있습니다.");
+        }
+    }
+
+    private void validateOptionCombination(ProductOption candidate) {
+        java.util.List<Long> candidateIds = candidate.normalizedOptionValueIds();
+        if (candidateIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 옵션은 최소 1개의 옵션 값을 가져야 합니다.");
+        }
+
+        boolean duplicated = this.productOptions.stream()
+            .map(ProductOption::normalizedOptionValueIds)
+            .anyMatch(existing -> existing.equals(candidateIds));
+
+        if (duplicated) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "동일한 옵션 조합이 이미 등록되어 있습니다.");
         }
     }
 

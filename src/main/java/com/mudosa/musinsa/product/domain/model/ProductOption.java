@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Comparator;
+import java.util.Objects;
 
 // 상품 옵션과 가격, 재고를 관리하는 엔티티이다.
 @Entity
@@ -62,6 +64,7 @@ public class ProductOption extends BaseEntity {
         if (productOptionValues != null) {
             productOptionValues.forEach(this::addOptionValue);
         }
+
     }
 
     // 상품 애그리거트에서만 호출해 양방향 연관을 설정한다.
@@ -113,6 +116,16 @@ public class ProductOption extends BaseEntity {
             || this.inventory.getStockQuantity().getValue() <= 0) {
             throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE);
         }
+    }
+
+    List<Long> normalizedOptionValueIds() {
+        return this.productOptionValues.stream()
+            .map(ProductOptionValue::getOptionValue)
+            .filter(Objects::nonNull)
+            .map(OptionValue::getOptionValueId)
+            .filter(Objects::nonNull)
+            .sorted(Comparator.naturalOrder())
+            .toList();
     }
 
 }

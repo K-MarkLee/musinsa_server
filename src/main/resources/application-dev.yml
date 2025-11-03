@@ -24,7 +24,7 @@ spring:
   # JPA 개발 환경 설정
   jpa:
     hibernate:
-      ddl-auto: none  # 일단 스키마 완벽해질 때까지만 검증 작업 안함
+      ddl-auto: update  # 일단 스키마 완벽해질 때까지만 검증 작업 안함
       naming:
         physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
     show-sql: true  # SQL 콘솔 출력

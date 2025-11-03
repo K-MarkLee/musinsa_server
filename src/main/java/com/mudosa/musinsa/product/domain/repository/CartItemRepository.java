@@ -13,10 +13,32 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
 
     List<CartItem> findAllByUserId(Long userId);
 
+    @Query("""
+        select distinct c from CartItem c
+            join fetch c.productOption po
+            join fetch po.product p
+            left join fetch po.inventory inv
+            left join fetch po.productOptionValues pov
+            left join fetch pov.optionValue ov
+            left join fetch ov.optionName optionName
+        where c.user.id = :userId
+    """)
+    List<CartItem> findAllWithDetailsByUserId(@Param("userId") Long userId);
+
+    @Query("""
+                select c from CartItem c
+                where c.user.id = :userId
+                    and c.productOption.productOptionId = :productOptionId
+        """)
+        Optional<CartItem> findByUserIdAndProductOptionId(
+                        @Param("userId") Long userId,
+                        @Param("productOptionId") Long productOptionId
+        );
+
     @Modifying
     @Query("DELETE FROM CartItem c WHERE c.user.id = :userId AND c.productOption.productOptionId IN :productOptionIds")
     int deleteByUserIdAndProductOptionIdIn(
             @Param("userId") Long userId,
             @Param("productOptionIds") List<Long> productOptionIds
-    );;
+    );
 }
