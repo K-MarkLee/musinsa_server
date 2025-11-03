@@ -25,6 +25,13 @@ spring:
 #        query:
 #          in_clause_parameter_padding: true  # IN 절 파라미터 패딩
 
+  # Spring Batch 설정
+  batch:
+    jdbc:
+      initialize-schema: always  # 배치 메타데이터 테이블 자동 생성
+    job:
+      enabled: false  # 애플리케이션 시작 시 자동 실행 방지 (스케줄러로만 실행)
+
   # MyBatis 공통 설정
   mybatis:
     mapper-locations: classpath:/mappers/**/*.xml

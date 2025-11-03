@@ -50,6 +50,10 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             auth ->
                 auth
+                    .requestMatchers("/ws/**").permitAll()
+                    .requestMatchers("/brand/**").permitAll()
+                    .requestMatchers("/chat/**").permitAll()
+                    .requestMatchers("/api-docs/**").permitAll()
                     // 인증 없이 접근 가능한 경로
                     .requestMatchers(
                             "/api/auth/**",           // 로그인, 회원가입, 토큰 갱신
@@ -63,7 +67,7 @@ public class SecurityConfig {
                             "/swagger-ui/**",         // Swagger UI
                             "/v3/api-docs/**",        // API 문서
                             "/error",                 // 에러 페이지
-                            "/api/notification/**"
+                            "/api/notification/**"    // 알림 페이지(임시)
                     )
                     .permitAll()
                     // 그 외 모든 요청은 인증 필요

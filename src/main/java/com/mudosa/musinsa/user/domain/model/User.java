@@ -63,6 +63,14 @@ public class User extends BaseEntity {
         return user;
     }
 
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
+    }
+
+    public void setCurrentAddress(String currentAddress) {
+        this.currentAddress = currentAddress;
+    }
+
     public void addOAuth(OAuth oauth) {
         this.oauths.add(oauth);
         oauth.assignUser(this);

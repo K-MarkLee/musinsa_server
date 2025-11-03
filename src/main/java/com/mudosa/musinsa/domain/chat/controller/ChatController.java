@@ -5,12 +5,14 @@ import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
 import com.mudosa.musinsa.domain.chat.service.ChatService;
+import com.mudosa.musinsa.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -45,13 +47,12 @@ public class ChatController {
   )
   public ResponseEntity<MessageResponse> sendMessage(
       @PathVariable Long chatId,
-      @RequestParam("userId") Long userId,
+      @AuthenticationPrincipal CustomUserDetails userDetails,
       @RequestParam(value = "parentId", required = false) Long parentId,
       @RequestPart(value = "message", required = false) String message,
       @RequestPart(value = "files", required = false) List<MultipartFile> files
   ) throws FirebaseMessagingException {
-    log.info("채팅 메시지 전송 요청: chatId={}, message={}, files={}",
-        chatId, message, (files != null ? files.size() + "개" : "없음"));
+    Long userId = userDetails.getUserId();
 
     // 메시지와 파일이 모두 없는 경우: 요청 거부
     boolean noMessage = (message == null || message.trim().isEmpty());
@@ -74,13 +75,11 @@ public class ChatController {
   @GetMapping("/{chatId}/messages")
   public ResponseEntity<Page<MessageResponse>> getChatMessages(
       @PathVariable Long chatId,
-
-      @RequestParam Long userId,
+      @AuthenticationPrincipal CustomUserDetails userDetails,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size
   ) {
-    log.info("메시지 목록 조회: chatId={}, userId={}, page={}, size={}",
-        chatId, userId, page, size);
+    Long userId = userDetails.getUserId();
 
     Page<MessageResponse> messages = chatService.getChatMessages(chatId, userId, page, size);
 
@@ -92,7 +91,9 @@ public class ChatController {
    * GET /api/chat/1/info
    */
   @GetMapping("/{chatId}/info")
-  public ResponseEntity<ChatRoomInfoResponse> getChatInfo(@PathVariable Long chatId, @RequestParam Long userId) {
+  public ResponseEntity<ChatRoomInfoResponse> getChatInfo(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    Long userId = userDetails.getUserId();
+
     return ResponseEntity.ok(chatService.getChatRoomInfoByChatId(chatId, userId));
   }
 
@@ -102,7 +103,8 @@ public class ChatController {
    * POST /api/chat/1/participants
    */
   @PostMapping("/{chatId}/participants")
-  public ResponseEntity<ChatPartResponse> addParticipant(@PathVariable Long chatId, @RequestParam Long userId) {
+  public ResponseEntity<ChatPartResponse> addParticipant(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    Long userId = userDetails.getUserId();
     return ResponseEntity.ok(chatService.addParticipant(chatId, userId));
   }
 
@@ -111,7 +113,8 @@ public class ChatController {
    * PATCH /api/chat/1/leave
    */
   @PatchMapping("/{chatId}/leave")
-  public ResponseEntity<List<ChatRoomInfoResponse>> leaveChat(@PathVariable Long chatId, @RequestParam Long userId) {
+  public ResponseEntity<List<ChatRoomInfoResponse>> leaveChat(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    Long userId = userDetails.getUserId();
     chatService.leaveChat(chatId, userId);
     return ResponseEntity.ok(chatService.getChatRoomByUserId(userId));
   }
@@ -121,7 +124,8 @@ public class ChatController {
    * GET /api/chat/1/my
    */
   @GetMapping("/my")
-  public ResponseEntity<List<ChatRoomInfoResponse>> getMyChat(@RequestParam Long userId) {
+  public ResponseEntity<List<ChatRoomInfoResponse>> getMyChat(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    Long userId = userDetails.getUserId();
     return ResponseEntity.ok(chatService.getChatRoomByUserId(userId));
   }
 
