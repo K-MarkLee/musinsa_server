@@ -41,9 +41,12 @@ public class UserAccountService {
                 request.getAvatarUrl()
         );
 
-        if (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank()) {
-            Long seed = user.getId();
-            user.setAvatarUrl("https://api.dicebear.com/9.x/notionists/svg?seed=" + seed);
+        // 연락처와 주소 설정
+        if (request.getContactNumber() != null) {
+            user.setContactNumber(request.getContactNumber());
+        }
+        if (request.getAddress() != null) {
+            user.setCurrentAddress(request.getAddress());
         }
 
         userRepository.save(user);

@@ -54,7 +54,7 @@ class CartServiceTest {
     @Test
     @DisplayName("사용자 장바구니를 조회하면 상품 상세 정보와 함께 반환한다")
     void getCartItems_returnsDetailedResponses() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER);
+        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null);
         ReflectionTestUtils.setField(user, "id", 10L);
 
         Product product = createProduct(true);
@@ -91,7 +91,7 @@ class CartServiceTest {
     @Test
     @DisplayName("새 옵션을 장바구니에 담으면 신규 항목이 생성된다")
     void addCartItem_createsNewItem() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER);
+        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null);
         ReflectionTestUtils.setField(user, "id", 10L);
 
         Product product = createProduct(true);
@@ -123,7 +123,7 @@ class CartServiceTest {
     @Test
     @DisplayName("동일 옵션을 다시 담으면 수량이 누적된다")
     void addCartItem_existingItemIncrementsQuantity() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER);
+        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null);
         ReflectionTestUtils.setField(user, "id", 10L);
 
         Product product = createProduct(true);
@@ -155,7 +155,7 @@ class CartServiceTest {
     @Test
     @DisplayName("장바구니 수량을 수정하면 재고 검증 후 반영된다")
     void updateCartItemQuantity_updatesSuccessfully() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER);
+        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null);
         ReflectionTestUtils.setField(user, "id", 10L);
 
         Product product = createProduct(true);
@@ -184,7 +184,7 @@ class CartServiceTest {
     @Test
     @DisplayName("장바구니 항목을 삭제하면 사용자 소유 항목만 제거된다")
     void deleteCartItem_removesEntry() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER);
+        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null);
         ReflectionTestUtils.setField(user, "id", 10L);
 
         Product product = createProduct(true);
@@ -210,7 +210,7 @@ class CartServiceTest {
     @Test
     @DisplayName("재고를 초과해 장바구니에 담으면 예외가 발생한다")
     void addCartItem_exceedsStock_throwsException() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER);
+        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null);
         ReflectionTestUtils.setField(user, "id", 10L);
 
         Product product = createProduct(true);
@@ -234,7 +234,7 @@ class CartServiceTest {
     @Test
     @DisplayName("판매 중지된 상품 옵션은 장바구니에 담을 수 없다")
     void addCartItem_inactiveProduct_throwsException() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER);
+        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null);
         ReflectionTestUtils.setField(user, "id", 10L);
 
         Product product = createProduct(false);
