@@ -28,9 +28,17 @@ spring:
   # Spring Batch 설정
   batch:
     jdbc:
-      initialize-schema: always  # 배치 메타데이터 테이블 자동 생성
+      initialize-schema: always  # 개발 환경: 자동 스키마 생성
     job:
-      enabled: false  # 애플리케이션 시작 시 자동 실행 방지 (스케줄러로만 실행)
+      enabled: false  # 애플리케이션 시작 시 자동 실행 방지 (외부 스케줄러로 실행)
+
+# ========================================
+# 배치 처리 설정
+# ========================================
+batch:
+  settlement:
+    chunk-size: 10  # 한 번에 처리할 브랜드 수
+    max-skip-count: 100  # 최대 허용 실패 건수
 
   # MyBatis 공통 설정
   mybatis:

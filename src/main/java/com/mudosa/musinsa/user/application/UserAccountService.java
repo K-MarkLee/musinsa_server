@@ -38,16 +38,10 @@ public class UserAccountService {
                 passwordEncoder.encode(request.getPassword()),
                 request.getEmail(),
                 UserRole.USER,
-                request.getAvatarUrl()
+                request.getAvatarUrl(),
+                request.getContactNumber(),
+                request.getAddress()
         );
-
-        // 연락처와 주소 설정
-        if (request.getContactNumber() != null) {
-            user.setContactNumber(request.getContactNumber());
-        }
-        if (request.getAddress() != null) {
-            user.setCurrentAddress(request.getAddress());
-        }
 
         userRepository.save(user);
     }

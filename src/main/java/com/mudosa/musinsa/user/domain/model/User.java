@@ -52,7 +52,15 @@ public class User extends BaseEntity {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OAuth> oauths = new ArrayList<>();
 
-    public static User create(String userName, String password, String email, UserRole role, String avatarUrl) {
+    public static User create(
+        String userName,
+        String password,
+        String email,
+        UserRole role,
+        String avatarUrl,
+        String contactNumber,
+        String currentAddress
+    ) {
         User user = new User();
         user.userName = userName;
         user.password = password;
@@ -60,15 +68,9 @@ public class User extends BaseEntity {
         user.role = role;
         user.isActive = true;
         user.avatarUrl = avatarUrl;
+        user.contactNumber = contactNumber;
+        user.currentAddress = currentAddress;
         return user;
-    }
-
-    public void setContactNumber(String contactNumber) {
-        this.contactNumber = contactNumber;
-    }
-
-    public void setCurrentAddress(String currentAddress) {
-        this.currentAddress = currentAddress;
     }
 
     public void addOAuth(OAuth oauth) {

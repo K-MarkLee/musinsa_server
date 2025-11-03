@@ -22,7 +22,7 @@ public interface BrandRepository extends JpaRepository<Brand, Long> {
   boolean existsByNameKo(String nameKo);
 
   @Query(value = """
-      SELECT 
+      SELECT
         b.brand_id       AS brandId,
         b.name_ko        AS nameKo,
         b.name_en        AS nameEn,
@@ -39,4 +39,8 @@ public interface BrandRepository extends JpaRepository<Brand, Long> {
       WHERE b.brand_id = :brandId
       """, nativeQuery = true)
   Optional<BrandDetailResponseDTO> findWithGroupChatId(@Param("brandId") Long brandId);
+
+  /* 배치) 모든 브랜드 ID 목록 조회 */
+  @Query("SELECT b.brandId FROM Brand b")
+  List<Long> findAllBrandIds();
 }
