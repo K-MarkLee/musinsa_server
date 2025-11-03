@@ -2,10 +2,8 @@ package com.mudosa.musinsa.payment.application.service;
 
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.payment.application.dto.PaymentConfirmRequest;
-import com.mudosa.musinsa.payment.application.dto.PaymentConfirmResponse;
-import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmRequest;
-import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmResponse;
+import com.mudosa.musinsa.payment.application.dto.*;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import lombok.RequiredArgsConstructor;
@@ -41,15 +39,19 @@ public class TossPaymentStrategy implements PaymentStrategy {
 		return PROVIDER_NAME;
 	}
 
-	public PaymentConfirmResponse confirmPayment(PaymentConfirmRequest request) {
+	public PaymentResponseDto confirmPayment(PaymentConfirmRequest request) {
 		TossPaymentConfirmRequest tossRequest = request.toTossRequest();
 
 		TossPaymentConfirmResponse tossResponse = callTossApi(tossRequest);
 
-		return PaymentConfirmResponse.builder()
+		return PaymentResponseDto.builder()
 				.paymentKey(tossResponse.getPaymentKey())
+				.orderNo(tossResponse.getOrderId())
 				.status(tossResponse.getStatus())
+				.method(tossResponse.getMethod())
+				.totalAmount(tossResponse.getTotalAmount())
 				.pgProvider("TOSS")
+				.approvedAt(tossResponse.getApprovedAt())
 				.build();
 	}
 

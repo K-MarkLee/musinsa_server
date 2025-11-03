@@ -91,6 +91,7 @@ public class MemberCouponService {
 
     public List<OrderMemberCoupon> findMemberCoupons(Long userId) {
         return memberCouponRepository.findAllByUserId(userId).stream()
+                .filter(MemberCoupon::isUsuable)
                 .map(mc -> {
                     Coupon coupon = mc.getCoupon();
                     return new OrderMemberCoupon(

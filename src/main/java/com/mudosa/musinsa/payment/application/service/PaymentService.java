@@ -7,10 +7,7 @@ import com.mudosa.musinsa.order.application.OrderService;
 import com.mudosa.musinsa.order.domain.model.OrderProduct;
 import com.mudosa.musinsa.order.domain.model.Orders;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
-import com.mudosa.musinsa.payment.application.dto.OrderValidationResult;
-import com.mudosa.musinsa.payment.application.dto.PaymentConfirmRequest;
-import com.mudosa.musinsa.payment.application.dto.PaymentConfirmResponse;
-import com.mudosa.musinsa.payment.application.dto.PaymentCreationResult;
+import com.mudosa.musinsa.payment.application.dto.*;
 import com.mudosa.musinsa.payment.domain.model.Payment;
 import com.mudosa.musinsa.payment.domain.repository.PaymentRepository;
 import com.mudosa.musinsa.settlement.application.SettlementApplicationService;
@@ -61,12 +58,13 @@ public class PaymentService {
             orderService.completeOrder(orderId);
 
             /* 3. PG 승인 요청 */
-            PaymentConfirmResponse pgResponse = paymentProcessor.processPayment(request);
+            PaymentResponseDto pgResponse = paymentProcessor.processPayment(request);
 
             /* 4. 결제 승인 처리 */
-            approvePayment(paymentId, pgResponse.getPaymentKey(), request.getUserId());
+            approvePayment(paymentId, request.getUserId(), pgResponse);
 
-            return pgResponse;
+            // 성공 시 orderNo만 반환
+            return PaymentConfirmResponse.success(request.getOrderNo());
 
         }catch(BusinessException e){
             log.error("결제 프로세스 실패 - BusinessException: {}", e.getMessage());
@@ -91,7 +89,8 @@ public class PaymentService {
         OrderValidationResult validationResult = orderService.validateAndPrepareOrder(
                 request.getOrderNo(),
                 request.getUserId(),
-                BigDecimal.valueOf(request.getAmount())
+                BigDecimal.valueOf(request.getAmount()),
+                request.getCouponId()
         );
 
         if (validationResult.hasInsufficientStock()) {
@@ -145,19 +144,20 @@ public class PaymentService {
 
     /* PG사 결제 승인 후 결제 상태 변경 및 Settlement 생성 */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void approvePayment(Long paymentId, String pgTransactionId, Long userId) {
+    public void approvePayment(Long paymentId, Long userId, PaymentResponseDto paymentResponseDto) {
         log.info("→ TX3 시작: 결제 승인 트랜잭션 - paymentId={}", paymentId);
 
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        payment.approve(pgTransactionId, userId);
+        String pgTransactionId = paymentResponseDto.getPaymentKey();
+
+        payment.approve(pgTransactionId, userId, paymentResponseDto.getApprovedAt(), paymentResponseDto.getMethod());
         paymentRepository.save(payment);
 
         log.info("← TX3 커밋: 결제 승인 완료 - paymentId={}, pgTxId={}",
                 paymentId, pgTransactionId);
 
-        // Settlement 생성 (OrderProduct별로 브랜드 분리)
         createSettlements(payment, pgTransactionId);
     }
 
@@ -283,5 +283,7 @@ public class PaymentService {
     private boolean isOrderCompleted(Long orderId) {
         return orderService.isOrderCompleted(orderId);
     }
+
+
 
 }

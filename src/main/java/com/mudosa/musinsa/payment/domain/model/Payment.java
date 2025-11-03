@@ -114,14 +114,15 @@ public class Payment extends BaseEntity{
     }
 
     /* 결제 승인 */
-    public void approve(String pgTransactionId, Long userId) {
+    public void approve(String pgTransactionId, Long userId, LocalDateTime approvedAt, String method) {
         if (pgTransactionId == null || pgTransactionId.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_PG_TRANSACTION_ID);
         }
 
         this.status = this.status.transitionTo(PaymentStatus.APPROVED);
         this.pgTransactionId = pgTransactionId;
-        this.approvedAt = LocalDateTime.now();
+        this.approvedAt = approvedAt;
+        this.method = method;
 
         addLog(
                 PaymentEventType.APPROVED,

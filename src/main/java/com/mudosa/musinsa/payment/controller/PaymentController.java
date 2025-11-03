@@ -58,8 +58,6 @@ public class PaymentController {
 					));
 		}
 
-		log.info("[Payment] 결제 승인 완료, userId: {}, status: {}",
-				userId, response.getStatus());
 
 		return ResponseEntity.ok(ApiResponse.success(response));
 	}

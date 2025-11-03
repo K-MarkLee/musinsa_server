@@ -26,6 +26,8 @@ public class PaymentConfirmRequest {
 
     private String pgProvider = "TOSS";  // "TOSS", "KAKAO" 등
 
+    private Long couponId;  // 적용할 쿠폰 ID (선택)
+
     public TossPaymentConfirmRequest toTossRequest() {
         TossPaymentConfirmRequest request = new TossPaymentConfirmRequest();
         request.setPaymentKey(this.paymentKey);

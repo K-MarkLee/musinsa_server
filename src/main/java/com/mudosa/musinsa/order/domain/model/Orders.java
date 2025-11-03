@@ -144,6 +144,11 @@ public class Orders extends BaseEntity {
         return this.couponId != null;
     }
 
+    /* 주문에 쿠폰 적용 */
+    public void addCoupon(Long couponId){
+        this.couponId = couponId;
+    }
+
     /* 재고 복구 */
     public void restoreStock() {
         for (OrderProduct orderProduct : this.orderProducts) {

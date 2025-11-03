@@ -10,6 +10,9 @@ import com.mudosa.musinsa.order.domain.model.StockValidationResult;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
 import com.mudosa.musinsa.order.domain.service.StockValidator;
 import com.mudosa.musinsa.payment.application.dto.OrderValidationResult;
+import com.mudosa.musinsa.payment.application.dto.PaymentDetailDto;
+import com.mudosa.musinsa.payment.application.service.PaymentFetchService;
+import com.mudosa.musinsa.payment.application.service.PaymentService;
 import com.mudosa.musinsa.product.application.CartService;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
@@ -25,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -38,6 +40,7 @@ public class OrderService {
     private final ProductOptionRepository productOptionRepository;
     private final StockValidator stockValidator;
     private final UserRepository userRepository;
+    private final PaymentFetchService paymentService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void completeOrder(Long orderId) {
@@ -138,7 +141,8 @@ public class OrderService {
     public OrderValidationResult validateAndPrepareOrder(
             String orderNo,
             Long userId,
-            BigDecimal requestAmount) {
+            BigDecimal requestAmount,
+            Long couponId) {
 
         log.info("주문 검증 시작 - orderNo: {}, userId: {}, requestAmount: {}",
                 orderNo, userId, requestAmount);
@@ -166,6 +170,8 @@ public class OrderService {
                     stockValidationResult.getInsufficientItems()
             );
         }
+        //5. 적용한 쿠폰 삽입
+        order.addCoupon(couponId);
 
         // 5. 쿠폰 적용 및 최종 금액 계산
         BigDecimal discount = calculateDiscount(order, userId);
@@ -438,4 +444,99 @@ public class OrderService {
 
         return response;
     }
+
+    @Transactional(readOnly = true)
+    public OrderDetailResponse fetchOrderDetail(String orderNo) {
+        log.info("[Order] 주문 상세 조회 시작 - orderNo: {}", orderNo);
+
+        Orders orders = orderRepository.findByOrderNoWithUserAndProducts(orderNo)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        User orderUser = orders.getUser();
+        log.info("[Order] 주문 상태: {}, 사용자: {}", orders.getStatus(), orderUser.getUserName());
+
+        List<Long> productOptionIds = orders.getOrderProducts()
+                .stream()
+                .map(op -> op.getProductOption().getProductOptionId())
+                .toList();
+
+        orderRepository.findProductOptionsWithValues(productOptionIds);
+
+        // 주문 상품 변환
+        List<OrderDetailItem> orderProducts = orders.getOrderProducts()
+                .stream()
+                .map(op -> {
+                    ProductOption productOption = op.getProductOption();
+                    List<ProductOptionValue> optionValues = productOption.getProductOptionValues();
+
+                    // SIZE 옵션 추출
+                    String sizeValue = optionValues.stream()
+                            .filter(pov -> "SIZE".equals(pov.getOptionValue().getOptionName().getOptionName()))
+                            .map(pov -> pov.getOptionValue().getOptionValue())
+                            .findFirst()
+                            .orElse("");
+
+                    // COLOR 옵션 추출
+                    String colorValue = optionValues.stream()
+                            .filter(pov -> "COLOR".equals(pov.getOptionValue().getOptionName().getOptionName()))
+                            .map(pov -> pov.getOptionValue().getOptionValue())
+                            .findFirst()
+                            .orElse("");
+
+                    // imageUrl
+                    String imageUrl = op.getProductOption().getProduct().getImages().stream()
+                            .filter(image -> image.getIsThumbnail())
+                            .map(i -> i.getImageUrl())
+                            .findFirst()
+                            .orElse("");
+
+                    return OrderDetailItem.builder()
+                            .productOptionId(op.getProductOptionId())
+                            .productOptionName(productOption.getProduct().getProductName())
+                            .amount(op.getProductPrice())
+                            .quantity(op.getProductQuantity())
+                            .brandName(productOption.getProduct().getBrandName())
+                            .size(sizeValue)
+                            .color(colorValue)
+                            .imageUrl(imageUrl)
+                            .build();
+                })
+                .toList();
+
+        // 금액 계산
+        BigDecimal discountAmount = orders.getTotalDiscount();
+        BigDecimal totalProductsAmount = orders.getTotalPrice();
+        BigDecimal orderFinalAmount = orders.getFinalPaymentAmount();
+
+        //결제 내역
+        PaymentDetailDto paymentDto = paymentService.fetchPaymentDetail(orders.getId());
+
+        // 응답 생성
+        OrderDetailResponse response = OrderDetailResponse.builder()
+                .orderNo(orders.getOrderNo())
+                .orderStatus(orders.getStatus().name())
+                .userName(orderUser.getUserName())
+                .userAddress(orderUser.getCurrentAddress())
+                .userContactNumber(orderUser.getContactNumber())
+                .orderedAt(orders.getCreatedAt())
+                .completedAt(orders.getUpdatedAt())
+                .orderProducts(orderProducts)
+                .totalProductAmount(paymentDto.getTotalAmount())
+                .discountAmount(discountAmount)
+                .totalProductAmount(totalProductsAmount)
+                .orderFinalAmount(orderFinalAmount)
+                .paymentFinalAmount(paymentDto.getTotalAmount())
+                .paymentMethod(paymentDto.getMethod())
+                .approvedAt(paymentDto.getApprovedAt())
+                .pgProvider(paymentDto.getPgProvider())
+                .paymentStatus(paymentDto.getPaymentStatus())
+                .build();
+
+        log.info("[Order] 주문 상세 조회 완료 - orderNo: {}, 상품 수: {}", 
+                orderNo, orderProducts.size());
+
+        return response;
+    }
+
+    
 }

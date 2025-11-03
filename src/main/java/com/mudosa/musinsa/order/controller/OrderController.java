@@ -5,6 +5,7 @@ import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.OrderService;
 import com.mudosa.musinsa.order.application.dto.OrderCreateRequest;
 import com.mudosa.musinsa.order.application.dto.OrderCreateResponse;
+import com.mudosa.musinsa.order.application.dto.OrderDetailResponse;
 import com.mudosa.musinsa.order.application.dto.PendingOrderResponse;
 import com.mudosa.musinsa.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -75,6 +76,21 @@ public class OrderController {
         log.info("[Order] 주문 조회 요청, userId: {}, orderNo: {}", userId, orderNo);
 
         PendingOrderResponse response = orderService.fetchPendingOrder(orderNo);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(
+            summary = "주문 상세 조회",
+            description = "주문 상세 정보를 조회합니다 (PENDING, COMPLETED 모두 가능)"
+    )
+    @GetMapping("/{orderNo}")
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> fetchOrderDetail(
+            @PathVariable String orderNo
+    ){
+        log.info("[Order] 주문 상세 조회 요청, orderNo: {}", orderNo);
+
+        OrderDetailResponse response = orderService.fetchOrderDetail(orderNo);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }

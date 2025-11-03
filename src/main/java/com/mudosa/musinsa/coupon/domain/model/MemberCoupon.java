@@ -41,6 +41,20 @@ public class MemberCoupon extends BaseEntity {
     @Column(name = "expired_at")
     private LocalDateTime expiredAt;
 
+    public boolean isUsuable() {
+        // 1. 상태 검증
+        if (this.couponStatus != CouponStatus.AVAILABLE) {
+           return false;
+        }
+
+        // 2. 만료일 검증
+        if (isExpired()) {
+           return false;
+        }
+
+        return true;
+    }
+
     public void validateUsable() {
         // 1. 상태 검증
         if (this.couponStatus != CouponStatus.AVAILABLE) {
