@@ -53,14 +53,17 @@ public class SecurityConfig {
                 auth
                     // 인증 없이 접근 가능한 경로
                     .requestMatchers(
-                        "/api/auth/login",
-                            "/api/auth/signup",
-                        "/api/auth/refresh",
-                        "/api/auth/logout",
-                        "/swagger-ui/**",
-                        "/v3/api-docs/**",
-                        "/swagger-resources/**",
-                        "/webjars/**"
+                            "/api/auth/**",           // 로그인, 회원가입, 토큰 갱신
+                            "/api/products/**",       // 상품 조회
+                            "/api/brands/**",         // 브랜드 조회
+                            "/api/events/**",         // 이벤트 조회
+                            "/api/categories/**",     // 카테고리 조회
+                            "/api/payments/confirm",  // 결제 승인
+                            "/api/payments/fail",     // 결제 실패
+                            "/api/orders/pending",    // 주문서 조회 (비로그인 가능)
+                            "/swagger-ui/**",         // Swagger UI
+                            "/v3/api-docs/**",        // API 문서
+                            "/error"                  // 에러 페이지
                     )
                     .permitAll()
                     // 그 외 모든 요청은 인증 필요

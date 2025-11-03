@@ -34,9 +34,9 @@ public class UserAuthService {
                 () -> new BusinessException(ErrorCode.USER_NOT_FOUND)
         );
 
-//        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-//            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
-//        }
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        }
 
         return issueTokens(user);
     }
