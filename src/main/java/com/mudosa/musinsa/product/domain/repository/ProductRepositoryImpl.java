@@ -92,6 +92,9 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
             predicates.add(cb.equal(product.get("brand").get("brandId"), brandId));
         }
 
+        // 항상 판매 가능 상품만 조회한다.
+        predicates.add(cb.isTrue(product.get("isAvailable")));
+
         cq.select(product).distinct(true);
         if (!predicates.isEmpty()) {
             cq.where(cb.and(predicates.toArray(new Predicate[0])));
@@ -103,14 +106,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
     // 상세 조회 시 필요한 컬렉션과 연관 엔티티를 Hibernate.initialize로 강제 로딩한다.
     private void initializeCollections(Product product) {
         Hibernate.initialize(product.getImages());
-        Hibernate.initialize(product.getProductCategories());
         Hibernate.initialize(product.getProductOptions());
-
-        product.getProductCategories().forEach(mapping -> {
-            if (mapping != null) {
-                Hibernate.initialize(mapping.getCategory());
-            }
-        });
 
         product.getProductOptions().forEach(option -> {
             Hibernate.initialize(option.getInventory());

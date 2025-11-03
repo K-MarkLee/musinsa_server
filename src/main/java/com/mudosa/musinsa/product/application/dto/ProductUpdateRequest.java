@@ -3,7 +3,6 @@ package com.mudosa.musinsa.product.application.dto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,23 +22,16 @@ import java.util.List;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductUpdateRequest {
 
-    @NotBlank(message = "상품명은 필수입니다.")
     private String productName;
 
-    @NotBlank(message = "상품 정보는 필수입니다.")
     private String productInfo;
 
-    @NotBlank(message = "상품 성별 타입은 필수입니다.")
     private String productGenderType;
-
-    @NotBlank(message = "카테고리 경로는 필수입니다.")
-    private String categoryPath;
 
     private Boolean isAvailable;
 
     private String brandName;
 
-    @Size(min = 1, message = "상품 이미지는 최소 1장 이상이어야 합니다.")
     @Valid
     private List<ImageUpdateRequest> images;
 
@@ -65,18 +57,47 @@ public class ProductUpdateRequest {
         private Long productOptionId;
         private BigDecimal productPrice;
         private Integer stockQuantity;
-        private Boolean inventoryAvailable;
         private List<Long> optionValueIds;
     }
 
-    @AssertTrue(message = "상품 이미지는 썸네일 1개를 포함해야 합니다.")
+    @AssertTrue(message = "상품 이미지를 수정할 경우 썸네일 1개를 포함해야 합니다.")
     public boolean isValidThumbnailConfiguration() {
         if (images == null || images.isEmpty()) {
-            return false;
+            return true;
         }
         long thumbnailCount = images.stream()
             .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
             .count();
         return thumbnailCount == 1;
+    }
+
+    @AssertTrue(message = "상품명은 비어 있을 수 없습니다.")
+    public boolean isProductNameValid() {
+        return productName == null || !productName.trim().isEmpty();
+    }
+
+    @AssertTrue(message = "상품 정보는 비어 있을 수 없습니다.")
+    public boolean isProductInfoValid() {
+        return productInfo == null || !productInfo.trim().isEmpty();
+    }
+
+    @AssertTrue(message = "상품 성별 타입은 비어 있을 수 없습니다.")
+    public boolean isGenderTypeValid() {
+        return productGenderType == null || !productGenderType.trim().isEmpty();
+    }
+
+    @AssertTrue(message = "브랜드명은 비어 있을 수 없습니다.")
+    public boolean isBrandNameValid() {
+        return brandName == null || !brandName.trim().isEmpty();
+    }
+
+    public boolean hasUpdatableField() {
+        return productName != null
+            || productInfo != null
+            || productGenderType != null
+            || isAvailable != null
+            || brandName != null
+            || (images != null)
+            || (options != null && !options.isEmpty());
     }
 }

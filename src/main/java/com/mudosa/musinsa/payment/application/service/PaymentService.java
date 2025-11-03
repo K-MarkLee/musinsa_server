@@ -1,14 +1,20 @@
 package com.mudosa.musinsa.payment.application.service;
 
+import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.OrderService;
+import com.mudosa.musinsa.order.domain.model.OrderProduct;
+import com.mudosa.musinsa.order.domain.model.Orders;
+import com.mudosa.musinsa.order.domain.repository.OrderRepository;
 import com.mudosa.musinsa.payment.application.dto.OrderValidationResult;
 import com.mudosa.musinsa.payment.application.dto.PaymentConfirmRequest;
 import com.mudosa.musinsa.payment.application.dto.PaymentConfirmResponse;
 import com.mudosa.musinsa.payment.application.dto.PaymentCreationResult;
 import com.mudosa.musinsa.payment.domain.model.Payment;
 import com.mudosa.musinsa.payment.domain.repository.PaymentRepository;
+import com.mudosa.musinsa.settlement.application.SettlementApplicationService;
+import com.mudosa.musinsa.settlement.domain.model.TransactionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,8 +30,10 @@ import java.math.BigDecimal;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final PaymentProcessor paymentProcessor;
+    private final SettlementApplicationService settlementApplicationService;
 
     public PaymentConfirmResponse confirmPaymentAndCompleteOrder(PaymentConfirmRequest request) {
         log.info("결제 승인 시작, orderId: {}, amount: {}",
@@ -135,7 +143,7 @@ public class PaymentService {
         log.warn("결제 실패 처리 완료");
     }
 
-    /* PG사 결제 승인 후 결제 상태 변경 */
+    /* PG사 결제 승인 후 결제 상태 변경 및 Settlement 생성 */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void approvePayment(Long paymentId, String pgTransactionId, Long userId) {
         log.info("→ TX3 시작: 결제 승인 트랜잭션 - paymentId={}", paymentId);
@@ -148,6 +156,68 @@ public class PaymentService {
 
         log.info("← TX3 커밋: 결제 승인 완료 - paymentId={}, pgTxId={}",
                 paymentId, pgTransactionId);
+
+        // Settlement 생성 (OrderProduct별로 브랜드 분리)
+        createSettlements(payment, pgTransactionId);
+    }
+
+    /* OrderProduct별로 Settlement 생성 */
+    // 한 주문에 여러 브랜드 상품이 있을 경우 브랜드별로 분리해서 정산
+    private void createSettlements(Payment payment, String pgTransactionId) {
+        log.info("Settlement 생성 시작 - paymentId={}", payment.getId());
+
+        Orders order = orderRepository.findById(payment.getOrderId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        BigDecimal commissionRate = new BigDecimal("10.0"); // 플랫폼 수수료 10% -> 추후 브랜드별 수수료로 확장
+
+        // 각 OrderProduct별로 Settlement 생성
+        for (OrderProduct orderProduct : order.getOrderProducts()) {
+            Long brandId = orderProduct.getProductOption().getProduct().getBrand().getBrandId();
+            Money transactionAmount = new Money(orderProduct.getProductPrice())
+                    .multiply(orderProduct.getProductQuantity());
+
+            // PG 수수료 계산 (결제수단별)
+            Money pgFeeAmount = calculatePgFee(payment.getMethod(), transactionAmount);
+
+            settlementApplicationService.createSettlementTransaction(
+                    brandId,
+                    payment.getId(),
+                    pgTransactionId,
+                    transactionAmount,
+                    commissionRate,
+                    pgFeeAmount,
+                    TransactionType.ORDER,
+                    "Asia/Seoul"
+            );
+
+            log.info("Settlement 생성 완료 - brandId={}, amount={}, pgFee={}",
+                    brandId, transactionAmount, pgFeeAmount);
+        }
+
+        log.info("모든 Settlement 생성 완료 - paymentId={}, 생성 건수={}",
+                payment.getId(), order.getOrderProducts().size());
+    }
+
+    /* 결제수단별 PG 수수료 계산 */
+    // 카드, 가상계좌, 간편결제, 휴대폰, 계좌이체만 단순 적용
+    private Money calculatePgFee(String paymentMethod, Money transactionAmount) {
+        if (paymentMethod == null) {
+            log.warn("결제수단이 null입니다. 기본 수수료(3.4%) 적용");
+            return transactionAmount.multiply(new BigDecimal("0.034"));
+        }
+
+        return switch (paymentMethod) {
+            case "카드" -> transactionAmount.multiply(new BigDecimal("0.034"));           // 3.4%
+            case "가상계좌" -> new Money(new BigDecimal("400"));                          // 건당 400원
+            case "간편결제" -> transactionAmount.multiply(new BigDecimal("0.034"));        // 3.4%
+            case "휴대폰" -> transactionAmount.multiply(new BigDecimal("0.035"));          // 3.5%
+            case "계좌이체" -> transactionAmount.multiply(new BigDecimal("0.020"));        // 2.0%
+            default -> {
+                log.warn("알 수 없는 결제수단: {}. 기본 수수료(3.4%) 적용", paymentMethod);
+                yield transactionAmount.multiply(new BigDecimal("0.034"));
+            }
+        };
     }
 
     /* 결제 실패 처리 */

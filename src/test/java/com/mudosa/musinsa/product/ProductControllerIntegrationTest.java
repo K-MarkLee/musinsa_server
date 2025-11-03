@@ -42,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@SuppressWarnings("removal")
 class ProductControllerIntegrationTest {
 
     @MockBean
@@ -108,7 +109,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("9900"))
                 .stockQuantity(5)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -129,17 +129,16 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(8)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
 
-        mockMvc.perform(post("/api/products")
+        mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestA)))
             .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/products")
+        mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestB)))
             .andExpect(status().isCreated());
@@ -172,13 +171,13 @@ class ProductControllerIntegrationTest {
             .build());
         OptionValue optionValue = createOptionValue("사이즈", "M");
 
-        ProductCreateRequest request = buildCreateRequest(brand, category, optionValue, true, Collections.singletonList(optionValue.getOptionValueId()));
+        ProductCreateRequest request = buildCreateRequest(brand, category, optionValue, Collections.singletonList(optionValue.getOptionValueId()));
 
-        MvcResult createResult = mockMvc.perform(post("/api/products")
+        MvcResult createResult = mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
-            .andExpect(header().string("Location", Matchers.matchesPattern("/api/products/\\d+")))
+            .andExpect(header().string("Location", Matchers.matchesPattern("/api/brands/" + brand.getBrandId() + "/products/\\d+")))
             .andReturn();
 
         JsonNode createNode = objectMapper.readTree(createResult.getResponse().getContentAsString());
@@ -224,12 +223,11 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(5)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
 
-        mockMvc.perform(post("/api/products")
+    mockMvc.perform(post("/api/brands/999/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isNotFound())
@@ -265,12 +263,11 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("15900"))
                 .stockQuantity(3)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
 
-        mockMvc.perform(post("/api/products")
+    mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest())
@@ -280,8 +277,8 @@ class ProductControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 옵션 값으로 상품 생성 시 500을 반환한다")
-    void createProduct_optionValueNotFound_returnsServerError() throws Exception {
+    @DisplayName("존재하지 않는 옵션 값으로 상품 생성 시 400을 반환한다")
+    void createProduct_optionValueNotFound_returnsBadRequest() throws Exception {
         Brand brand = brandRepository.save(Brand.create("무도사", "MUDOSA", new BigDecimal("10.00")));
         Category category = categoryRepository.save(Category.builder()
             .categoryName("니트")
@@ -305,17 +302,16 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("18900"))
                 .stockQuantity(7)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(999L))
                 .build()))
             .build();
 
-        mockMvc.perform(post("/api/products")
+    mockMvc.perform(post("/api/brands/" + brand.getBrandId() + "/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isInternalServerError())
+            .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.errorCode").value("IllegalArgumentException"))
+            .andExpect(jsonPath("$.errorCode").value("10001"))
             .andExpect(jsonPath("$.message").value(Matchers.containsString("존재하지 않는 옵션 값 ID")));
     }
 
@@ -331,7 +327,7 @@ class ProductControllerIntegrationTest {
 
     @Test
     @DisplayName("썸네일이 중복되면 상품 생성이 실패한다")
-    void createProduct_duplicateThumbnail_returnsServerError() throws Exception {
+    void createProduct_duplicateThumbnail_returnsBadRequest() throws Exception {
         Brand brand = brandRepository.save(Brand.create("무도사", "MUDOSA", new BigDecimal("10.00")));
         Category category = categoryRepository.save(Category.builder()
             .categoryName("코트")
@@ -361,7 +357,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("21900"))
                 .stockQuantity(4)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -369,16 +364,15 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(post("/api/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isInternalServerError())
+            .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.errorCode").value("IllegalArgumentException"))
+            .andExpect(jsonPath("$.errorCode").value("10001"))
             .andExpect(jsonPath("$.message").value(Matchers.containsString("썸네일은 하나만")));
     }
 
     private ProductCreateRequest buildCreateRequest(Brand brand,
                                                     Category category,
                                                     OptionValue optionValue,
-                                                    boolean inventoryAvailable,
                                                     List<Long> optionValueIds) {
         return ProductCreateRequest.builder()
             .brandId(brand.getBrandId())
@@ -396,7 +390,6 @@ class ProductControllerIntegrationTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(10)
-                .inventoryAvailable(inventoryAvailable)
                 .optionValueIds(optionValueIds)
                 .build()))
             .build();

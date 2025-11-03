@@ -2,6 +2,7 @@ package com.mudosa.musinsa.product;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
+import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.notification.domain.service.FcmService;
 import com.mudosa.musinsa.product.application.ProductService;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
@@ -81,7 +82,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(10)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -91,16 +91,16 @@ class ProductCreateServiceTest {
         entityManager.flush();
         entityManager.clear();
 
-    ProductDetailResponse persisted = productService.getProductDetail(productId);
+        ProductDetailResponse persisted = productService.getProductDetail(productId);
 
-    assertThat(persisted.getProductName()).isEqualTo("테스트 상품");
-    assertThat(persisted.getImages()).hasSize(1);
-    assertThat(Boolean.TRUE.equals(persisted.getImages().get(0).getIsThumbnail())).isTrue();
-    assertThat(persisted.getOptions()).hasSize(1);
-    ProductDetailResponse.OptionDetail option = persisted.getOptions().get(0);
-    assertThat(option.getStockQuantity()).isEqualTo(10);
-    assertThat(option.getOptionValues()).hasSize(1);
-    assertThat(persisted.getCategories()).hasSize(1);
+        assertThat(persisted.getProductName()).isEqualTo("테스트 상품");
+        assertThat(persisted.getCategoryPath()).isEqualTo(category.buildPath());
+        assertThat(persisted.getImages()).hasSize(1);
+        assertThat(Boolean.TRUE.equals(persisted.getImages().get(0).getIsThumbnail())).isTrue();
+        assertThat(persisted.getOptions()).hasSize(1);
+        ProductDetailResponse.OptionDetail option = persisted.getOptions().get(0);
+        assertThat(option.getStockQuantity()).isEqualTo(10);
+        assertThat(option.getOptionValues()).hasSize(1);
     }
 
     @Test
@@ -132,7 +132,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("29900"))
                 .stockQuantity(5)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -165,7 +164,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("11900"))
                 .stockQuantity(7)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
@@ -206,13 +204,12 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("19900"))
                 .stockQuantity(5)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
 
-    assertThatThrownBy(() -> productService.createProduct(request, brand, category))
-            .isInstanceOf(IllegalArgumentException.class)
+        assertThatThrownBy(() -> productService.createProduct(request, brand, category))
+            .isInstanceOf(BusinessException.class)
             .hasMessageContaining("브랜드 정보가 일치하지 않습니다");
     }
 
@@ -239,13 +236,12 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(new BigDecimal("15900"))
                 .stockQuantity(8)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();
 
-    assertThatThrownBy(() -> productService.createProduct(request, brand, category))
-            .isInstanceOf(IllegalArgumentException.class)
+        assertThatThrownBy(() -> productService.createProduct(request, brand, category))
+            .isInstanceOf(BusinessException.class)
             .hasMessageContaining("카테고리 경로가 일치하지 않습니다");
     }
 
@@ -267,16 +263,16 @@ class ProductCreateServiceTest {
     void searchProducts_returnsEmptyPage() {
         ProductService.ProductSearchCondition condition = ProductService.ProductSearchCondition.builder()
             .keyword("니트")
-            .categoryIds(Collections.singletonList(1L))
+            .categoryPaths(Collections.singletonList("상의/니트"))
             .gender(ProductGenderType.WOMEN)
             .brandId(1L)
             .pageable(PageRequest.of(0, 20))
             .build();
 
-    ProductSearchResponse response = productService.searchProducts(condition);
+        ProductSearchResponse response = productService.searchProducts(condition);
 
-    assertThat(response.getProducts()).isEmpty();
-    assertThat(response.getTotalElements()).isZero();
+        assertThat(response.getProducts()).isEmpty();
+        assertThat(response.getTotalElements()).isZero();
     }
 
     @Test
@@ -300,13 +296,13 @@ class ProductCreateServiceTest {
         });
 
         ProductService.ProductSearchCondition condition = ProductService.ProductSearchCondition.builder()
-            .categoryIds(List.of(top.getCategoryId()))
+            .categoryPaths(List.of(top.buildPath()))
             .gender(ProductGenderType.MEN)
             .priceSort(ProductService.ProductSearchCondition.PriceSort.LOWEST)
             .pageable(PageRequest.of(0, 10))
             .build();
 
-    ProductSearchResponse response = productService.searchProducts(condition);
+        ProductSearchResponse response = productService.searchProducts(condition);
 
         List<String> expectedNames = IntStream.range(0, 10)
             .filter(i -> i % 2 == 0)
@@ -365,18 +361,16 @@ class ProductCreateServiceTest {
             .brandName(brand.getNameKo())
             .categoryPath(category.buildPath())
             .isAvailable(true)
-            .categories(List.of(category))
             .images(List.of(new ProductService.ProductCreateCommand.ImageSpec("https://cdn.musinsa.com/product/main.jpg", true)))
             .options(List.of(new ProductService.ProductCreateCommand.OptionSpec(
                 new BigDecimal("19900"),
                 3,
-                true,
                 List.of(999L)
             )))
             .build();
 
         assertThatThrownBy(() -> productService.createProduct(command))
-            .isInstanceOf(IllegalArgumentException.class)
+            .isInstanceOf(BusinessException.class)
             .hasMessageContaining("존재하지 않는 옵션 값 ID");
     }
 
@@ -386,7 +380,7 @@ class ProductCreateServiceTest {
         OptionValue optionValue = prepareOptionValue("사이즈", "FREE");
 
     return createProduct(brand, category, optionValue, "샘플 상품", ProductGenderType.ALL,
-            new BigDecimal("9900"), "테스트용");
+        new BigDecimal("9900"), "테스트용");
     }
 
     private Brand prepareBrand() {
@@ -428,7 +422,6 @@ class ProductCreateServiceTest {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(price)
                 .stockQuantity(10)
-                .inventoryAvailable(true)
                 .optionValueIds(List.of(optionValue.getOptionValueId()))
                 .build()))
             .build();

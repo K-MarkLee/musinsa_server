@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Comparator;
+import java.util.Objects;
 
 // 상품 옵션과 가격, 재고를 관리하는 엔티티이다.
 @Entity
@@ -29,7 +31,7 @@ public class ProductOption extends BaseEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "inventory_id", nullable = false, unique = true)
     private Inventory inventory;
 
@@ -62,6 +64,7 @@ public class ProductOption extends BaseEntity {
         if (productOptionValues != null) {
             productOptionValues.forEach(this::addOptionValue);
         }
+
     }
 
     // 상품 애그리거트에서만 호출해 양방향 연관을 설정한다.
@@ -77,6 +80,12 @@ public class ProductOption extends BaseEntity {
         }
         optionValue.attachTo(this);
         this.productOptionValues.add(optionValue);
+    }
+
+    // 상품과의 연관을 제거해 고아 제거가 정상 동작하도록 한다.
+    void detachFromProduct() {
+        this.product = null;
+        this.productOptionValues.forEach(ProductOptionValue::refreshIdentifiers);
     }
 
     // 주문 과정에서 옵션 재고를 차감한다.
@@ -103,9 +112,20 @@ public class ProductOption extends BaseEntity {
 
     // 옵션이 판매 가능한 상태인지 확인한다.
     public void validateAvailable() {
-        if (!Boolean.TRUE.equals(this.inventory.getIsAvailable())) {
+        if (this.inventory.getStockQuantity() == null
+            || this.inventory.getStockQuantity().getValue() <= 0) {
             throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE);
         }
+    }
+
+    List<Long> normalizedOptionValueIds() {
+        return this.productOptionValues.stream()
+            .map(ProductOptionValue::getOptionValue)
+            .filter(Objects::nonNull)
+            .map(OptionValue::getOptionValueId)
+            .filter(Objects::nonNull)
+            .sorted(Comparator.naturalOrder())
+            .toList();
     }
 
 }

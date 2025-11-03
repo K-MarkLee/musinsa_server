@@ -21,7 +21,7 @@ import java.util.Locale;
 public class ProductSearchRequest {
 
     private String keyword;
-    private List<Long> categoryIds = new ArrayList<>();
+    private List<String> categoryPaths = new ArrayList<>();
     private String gender;
     private Long brandId;
     private String priceSort;
@@ -38,7 +38,7 @@ public class ProductSearchRequest {
 
         return ProductService.ProductSearchCondition.builder()
             .keyword(keyword)
-            .categoryIds(categoryIds != null ? categoryIds : Collections.emptyList())
+            .categoryPaths(categoryPaths != null ? categoryPaths : Collections.emptyList())
             .gender(genderType)
             .brandId(brandId)
             .priceSort(sort)
@@ -77,8 +77,8 @@ public class ProductSearchRequest {
         return PageRequest.of(pageNumber, pageSize);
     }
 
-    // 카테고리 ID 목록을 defensive copy하여 저장한다.
-    public void setCategoryIds(List<Long> categoryIds) {
-        this.categoryIds = categoryIds != null ? new ArrayList<>(categoryIds) : new ArrayList<>();
+    // 카테고리 경로 목록을 defensive copy하여 저장한다.
+    public void setCategoryPaths(List<String> categoryPaths) {
+        this.categoryPaths = categoryPaths != null ? new ArrayList<>(categoryPaths) : new ArrayList<>();
     }
 }

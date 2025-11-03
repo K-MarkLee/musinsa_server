@@ -77,17 +77,20 @@ public class EventService {
 
                     ProductOption po = eo.getProductOption();
                     Long productOptionId = null;
+                    Long productId = null;
+
                     if (po != null) {
                         productOptionId = po.getProductOptionId();
-                        optionLabel = null;
+                        optionLabel = null; // 추후에 로직 추가 필요
 
                         if(po.getProduct() != null) {
                             productName = po.getProduct().getProductName();
+                            productId = po.getProduct().getProductId();
 
                         }
                     }
 
-                    return EventOptionResDto.from(eo, productName, optionLabel, productOptionId);
+                    return EventOptionResDto.from(eo, productName, optionLabel, productOptionId, productId);
 
                 })
                 .toList();

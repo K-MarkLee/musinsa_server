@@ -2,6 +2,8 @@ package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -30,10 +32,6 @@ public class Product extends BaseEntity {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private java.util.List<ProductOption> productOptions = new java.util.ArrayList<>();
-
-    // 카테고리 조인 테이블(`product_category`)과 좋아요(`product_like`) 대응
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private java.util.List<ProductCategory> productCategories = new java.util.ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
     private java.util.List<ProductLike> productLikes = new java.util.ArrayList<>();
@@ -123,8 +121,18 @@ public class Product extends BaseEntity {
         if (productOption == null) {
             return;
         }
+        validateOptionCombination(productOption);
         productOption.setProduct(this);
         this.productOptions.add(productOption);
+    }
+
+    // 옵션을 상품과의 연관에서 제거하고 고아 객체로 처리한다.
+    public void removeProductOption(ProductOption productOption) {
+        if (productOption == null) {
+            return;
+        }
+        this.productOptions.remove(productOption);
+        productOption.detachFromProduct();
     }
 
     // 이미지 리스트를 교체 등록하고 썸네일 조건을 확인한다.
@@ -147,27 +155,6 @@ public class Product extends BaseEntity {
         newImages.forEach(this::addImage);
     }
 
-    // 전달받은 카테고리와 상품의 매핑을 생성해 추가한다.
-    public void addCategory(Category category) {
-        if (category == null) {
-            return;
-        }
-        ProductCategory mapping = ProductCategory.builder()
-            .product(this)
-            .category(category)
-            .build();
-        this.productCategories.add(mapping);
-    }
-
-    // 이미 생성된 카테고리 매핑을 재연결할 때 사용한다.
-    public void addProductCategory(ProductCategory productCategory) {
-        if (productCategory == null) {
-            return;
-        }
-        productCategory.assignProduct(this);
-        this.productCategories.add(productCategory);
-    }
-
     // 외부에서 생성된 좋아요 엔티티를 상품에 연결한다.
     public void addProductLike(ProductLike productLike) {
         if (productLike == null) {
@@ -182,33 +169,38 @@ public class Product extends BaseEntity {
         this.isAvailable = available;
     }
 
-    // 상품 기본 정보를 갱신한다. 필수 값 검증은 기존 생성 규칙을 따른다.
-    public void updateBasicInfo(String productName,
-                                String productInfo,
-                                ProductGenderType productGenderType,
-                                String brandName,
-                                String categoryPath) {
-        if (productName == null || productName.trim().isEmpty()) {
-            throw new IllegalArgumentException("상품명은 필수입니다.");
-        }
-        if (productInfo == null || productInfo.trim().isEmpty()) {
-            throw new IllegalArgumentException("상품 정보는 필수입니다.");
-        }
-        if (productGenderType == null) {
-            throw new IllegalArgumentException("상품 성별 타입은 필수입니다.");
-        }
-        if (brandName == null || brandName.trim().isEmpty()) {
-            throw new IllegalArgumentException("브랜드명은 필수입니다.");
-        }
-        if (categoryPath == null || categoryPath.trim().isEmpty()) {
-            throw new IllegalArgumentException("카테고리 경로는 필수입니다.");
+    // 전달된 값이 존재할 때만 갱신하고, 값이 달라졌을 때 true를 반환한다.
+    public boolean updateBasicInfo(String productName,
+                                   String productInfo,
+                                   ProductGenderType productGenderType) {
+        boolean updated = false;
+
+        if (productName != null) {
+            if (productName.trim().isEmpty()) {
+                throw new IllegalArgumentException("상품명은 비어 있을 수 없습니다.");
+            }
+            if (!productName.equals(this.productName)) {
+                this.productName = productName;
+                updated = true;
+            }
         }
 
-        this.productName = productName;
-        this.productInfo = productInfo;
-    this.productGenderType = productGenderType;
-        this.brandName = brandName;
-        this.categoryPath = categoryPath;
+        if (productInfo != null) {
+            if (productInfo.trim().isEmpty()) {
+                throw new IllegalArgumentException("상품 정보는 비어 있을 수 없습니다.");
+            }
+            if (!productInfo.equals(this.productInfo)) {
+                this.productInfo = productInfo;
+                updated = true;
+            }
+        }
+
+        if (productGenderType != null && productGenderType != this.productGenderType) {
+            this.productGenderType = productGenderType;
+            updated = true;
+        }
+
+        return updated;
     }
 
     // 현재 이미지 중 썸네일이 존재하는지 확인한다.
@@ -226,6 +218,21 @@ public class Product extends BaseEntity {
         }
         if (thumbnailCount > 1) {
             throw new IllegalArgumentException("상품 썸네일은 하나만 등록할 수 있습니다.");
+        }
+    }
+
+    private void validateOptionCombination(ProductOption candidate) {
+        java.util.List<Long> candidateIds = candidate.normalizedOptionValueIds();
+        if (candidateIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 옵션은 최소 1개의 옵션 값을 가져야 합니다.");
+        }
+
+        boolean duplicated = this.productOptions.stream()
+            .map(ProductOption::normalizedOptionValueIds)
+            .anyMatch(existing -> existing.equals(candidateIds));
+
+        if (duplicated) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "동일한 옵션 조합이 이미 등록되어 있습니다.");
         }
     }
 

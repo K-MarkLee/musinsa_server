@@ -26,14 +26,8 @@ public class ProductDetailResponse {
     private Boolean isAvailable;
     private String categoryPath;
     private Long likeCount;
-    private List<CategorySummary> categories;
     private List<ImageResponse> images;
     private List<OptionDetail> options;
-
-    // 카테고리 요약 정보를 널 안전하게 반환한다.
-    public List<CategorySummary> getCategories() {
-        return categories != null ? categories : Collections.emptyList();
-    }
 
     // 이미지 응답 목록을 널 안전하게 반환한다.
     public List<ImageResponse> getImages() {
@@ -43,15 +37,6 @@ public class ProductDetailResponse {
     // 옵션 상세 정보 목록을 널 안전하게 반환한다.
     public List<OptionDetail> getOptions() {
         return options != null ? options : Collections.emptyList();
-    }
-
-    @Getter
-    @Builder
-    @NoArgsConstructor(access = AccessLevel.PROTECTED)
-    @AllArgsConstructor(access = AccessLevel.PROTECTED)
-    public static class CategorySummary {
-        private Long categoryId;
-        private String categoryName;
     }
 
     @Getter
@@ -72,7 +57,7 @@ public class ProductDetailResponse {
         private Long optionId;
         private BigDecimal productPrice;
         private Integer stockQuantity;
-        private Boolean inventoryAvailable;
+    private Boolean hasStock;
         private List<OptionValueDetail> optionValues;
 
         // 옵션 값 상세 목록을 NULL 안전하게 반환한다.

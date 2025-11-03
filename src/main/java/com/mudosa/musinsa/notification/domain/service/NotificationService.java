@@ -14,8 +14,8 @@ import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -30,7 +30,6 @@ import java.util.Objects;
  */
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class NotificationService {
     private final NotificationRepository notificationRepository;
@@ -40,6 +39,23 @@ public class NotificationService {
     private final FirebaseTokenService firebaseTokenService;
     private final ProductOptionRepository productOptionRepository;
     private final BrandMemberRepository brandMemberRepository;
+
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            UserRepository userRepository,
+            NotificationMetadataRepository notificationMetadataRepository,
+            @Autowired(required = false) FcmService fcmService,
+            FirebaseTokenService firebaseTokenService,
+            ProductOptionRepository productOptionRepository,
+            BrandMemberRepository brandMemberRepository) {
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
+        this.notificationMetadataRepository = notificationMetadataRepository;
+        this.fcmService = fcmService;
+        this.firebaseTokenService = firebaseTokenService;
+        this.productOptionRepository = productOptionRepository;
+        this.brandMemberRepository = brandMemberRepository;
+    }
 
     public List<NotificationDTO> readNotification(Long userId){
         List<Notification> listResult = notificationRepository.findByUserId(userId);
@@ -79,7 +95,11 @@ public class NotificationService {
                 .build();
         notificationRepository.save(notification);
         //푸시 알림 보내기
-        fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
+        if (fcmService != null) {
+            fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
+        } else {
+            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
+        }
     }
 
     public void createChatNotification(Long userId, String title, String message, Long chatRoomId) throws FirebaseMessagingException {
@@ -98,7 +118,11 @@ public class NotificationService {
                 .notificationUrl("/chat/"+chatRoomId.toString()+"/")
                 .build();
         notificationRepository.save(notification);
-        fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
+        if (fcmService != null) {
+            fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
+        } else {
+            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
+        }
     }
 
     public int updateNotificationState(Long notificationId){
@@ -124,10 +148,14 @@ public class NotificationService {
                 .build();
         notificationRepository.save(notification);
 
-        try{
-            fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(brandMem.getUserId()));
-        }catch (FirebaseMessagingException e){
-            log.error(e.getMessage());
-        };
+        if (fcmService != null) {
+            try{
+                fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(brandMem.getUserId()));
+            }catch (FirebaseMessagingException e){
+                log.error(e.getMessage());
+            }
+        } else {
+            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
+        }
     }
 }

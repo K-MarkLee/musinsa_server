@@ -21,7 +21,7 @@ public class ProductOptionStockResponse {
     private String productName;
     private BigDecimal productPrice;
     private Integer stockQuantity;
-    private Boolean inventoryAvailable;
+    private Boolean hasStock;
     private List<OptionValueSummary> optionValues;
 
     public List<OptionValueSummary> getOptionValues() {

@@ -71,8 +71,7 @@ public class SettlementPerTransaction extends CreatedOnlyEntity {
     @Column(name = "timezone_offset", nullable = false, length = 10)
     private String timezoneOffset = "+09:00";
 
-    /**
-     * 정산 거래 생성
+    /* 정산 거래 생성
      *
      * @param pgFeeAmount PG사 수수료 (Payment 도메인에서 계산된 값)
      */
@@ -105,7 +104,7 @@ public class SettlementPerTransaction extends CreatedOnlyEntity {
             userZoneId = ZoneId.of(timezoneOffset);
             settlement.timezoneOffset = timezoneOffset;
         } catch (DateTimeException e) {
-            log.warn("Invalid timezoneOffset: {}. Defaulting to UTC.", timezoneOffset, e);
+            log.warn("유효하지 않은 타임존 오프셋: {}. UTC로 기본 설정합니다.", timezoneOffset, e);
             settlement.timezoneOffset = "UTC";
             userZoneId = ZoneId.of("UTC");
         }
@@ -127,9 +126,7 @@ public class SettlementPerTransaction extends CreatedOnlyEntity {
         return settlement;
     }
 
-    /**
-     * 최종 정산 금액 계산
-     */
+    /* 최종 정산 금액 계산 */
     public Money calculateFinalSettlementAmount() {
         return transactionAmount
             .subtract(commissionAmount)

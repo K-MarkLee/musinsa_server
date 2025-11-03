@@ -1,21 +1,30 @@
 package com.mudosa.musinsa.product.domain;
 
+import com.mudosa.musinsa.brand.domain.model.Brand;
+import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
 import com.mudosa.musinsa.product.domain.model.Product;
+import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
-import com.mudosa.musinsa.product.domain.vo.ProductGenderType;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.EnumMap;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * ProductGenderType Enum 저장/조회 테스트
- * 
+ *
  * 목적: @Enumerated(EnumType.STRING) 적용 후 정상 동작 확인
  */
 @Slf4j
@@ -24,65 +33,73 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 class ProductGenderTypeTest {
 
-    @Autowired(required = false)
+    @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private BrandRepository brandRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Test
-    @DisplayName("ProductGenderType.ALL이 문자열로 저장되고 조회됨")
-    void testProductGenderTypeString() {
-        if (productRepository == null) {
-            log.info("ProductRepository가 없어 테스트 스킵");
-            return;
-        }
+    @DisplayName("ProductGenderType는 문자열로 저장되고 조회된다")
+    void persistsEnumAsString() {
+        Brand brand = createBrand();
+        Product saved = productRepository.save(createProduct(brand, ProductGenderType.ALL, "ALL"));
 
-        // Given: ALL 타입을 가진 상품 조회
-        Product product = productRepository.findAll().stream()
-                .filter(p -> p.getProductGenderType() != null)
-                .filter(p -> p.getProductGenderType().getValue() == ProductGenderType.Type.ALL)
-                .findFirst()
-                .orElse(null);
+        entityManager.flush();
+        entityManager.clear();
 
-        if (product == null) {
-            log.info("ALL 타입 상품이 없어 테스트 스킵");
-            return;
-        }
+        Product reloaded = productRepository.findById(saved.getProductId())
+            .orElseThrow();
 
-        // When: 상품 조회
-        log.info("조회된 상품 ID: {}", product.getProductId());
-        log.info("상품 성별 타입: {}", product.getProductGenderType().getValue());
+        assertThat(reloaded.getProductGenderType()).isEqualTo(ProductGenderType.ALL);
 
-        // Then: ALL 타입이 정상적으로 조회됨
-        assertThat(product.getProductGenderType().getValue())
-                .isEqualTo(ProductGenderType.Type.ALL);
-
-        log.info("✅ ProductGenderType.ALL 정상 조회 성공");
+        String rawValue = jdbcTemplate.queryForObject(
+            "select product_gender_type from product where product_id = ?",
+            String.class,
+            saved.getProductId()
+        );
+        assertThat(rawValue).isEqualTo("ALL");
     }
 
     @Test
-    @DisplayName("모든 ProductGenderType 값이 정상 조회됨")
-    void testAllProductGenderTypes() {
-        if (productRepository == null) {
-            log.info("ProductRepository가 없어 테스트 스킵");
-            return;
+    @DisplayName("모든 ProductGenderType 값을 영속화해도 정상 조회된다")
+    void persistsAllEnumValues() {
+        Brand brand = createBrand();
+
+        EnumMap<ProductGenderType, Long> productIds = new EnumMap<>(ProductGenderType.class);
+        for (ProductGenderType genderType : ProductGenderType.values()) {
+            Product product = productRepository.save(createProduct(brand, genderType, genderType.name()));
+            productIds.put(genderType, product.getProductId());
         }
 
-        // Given: 모든 상품 조회
-        var products = productRepository.findAll();
+        entityManager.flush();
+        entityManager.clear();
 
-        log.info("전체 상품 수: {}", products.size());
+        List<Product> found = productRepository.findAllById(productIds.values());
 
-        // When & Then: 각 타입별로 확인
-        for (ProductGenderType.Type type : ProductGenderType.Type.values()) {
-            long count = products.stream()
-                    .filter(p -> p.getProductGenderType() != null)
-                    .filter(p -> p.getProductGenderType().getValue() == type)
-                    .count();
+        assertThat(found)
+            .extracting(Product::getProductGenderType)
+            .containsExactlyInAnyOrder(ProductGenderType.values());
+    }
 
-            log.info("{} 타입 상품 수: {}", type, count);
-        }
+    private Brand createBrand() {
+        return brandRepository.save(Brand.create("테스트 브랜드", "Test Brand", new BigDecimal("10.00")));
+    }
 
-        // 에러 없이 모든 상품 조회 성공
-        assertThat(products).isNotNull();
-        log.info("✅ 모든 ProductGenderType 정상 조회 성공");
+    private Product createProduct(Brand brand, ProductGenderType genderType, String suffix) {
+        return Product.builder()
+            .brand(brand)
+            .productName("테스트 상품-" + suffix)
+            .productInfo("상세 설명")
+            .productGenderType(genderType)
+            .brandName(brand.getNameKo())
+            .categoryPath("상의/티셔츠")
+            .build();
     }
 }

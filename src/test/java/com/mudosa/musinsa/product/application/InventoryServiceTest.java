@@ -30,20 +30,19 @@ class InventoryServiceTest {
     private InventoryService inventoryService;
 
     @Test
-    @DisplayName("재고 수량을 추가하면 값과 가용 상태가 갱신된다")
+    @DisplayName("재고 수량을 추가하면 값이 증가한다")
     void addStock_increaseQuantity() {
         Inventory inventory = Inventory.builder()
             .stockQuantity(new StockQuantity(5))
-            .isAvailable(true)
             .build();
 
         when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
             .thenReturn(Optional.of(inventory));
 
-        inventoryService.addStock(1L, 3);
+    Inventory result = inventoryService.addStock(1L, 3);
 
-        assertThat(inventory.getStockQuantity().getValue()).isEqualTo(8);
-        assertThat(inventory.getIsAvailable()).isTrue();
+    assertThat(inventory.getStockQuantity().getValue()).isEqualTo(8);
+    assertThat(result.getStockQuantity().getValue()).isEqualTo(8);
         verify(inventoryRepository).save(inventory);
     }
 
@@ -57,37 +56,45 @@ class InventoryServiceTest {
     }
 
     @Test
-    @DisplayName("재고 수량을 덮어쓰면 새로운 값이 저장되고 가용 상태가 갱신된다")
-    void overrideStock_updatesQuantity() {
+    @DisplayName("재고 수량을 차감하면 값이 감소한다")
+    void subtractStock_decreaseQuantity() {
         Inventory inventory = Inventory.builder()
-            .stockQuantity(new StockQuantity(10))
-            .isAvailable(true)
+            .stockQuantity(new StockQuantity(5))
             .build();
 
         when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
             .thenReturn(Optional.of(inventory));
 
-        inventoryService.overrideStock(1L, 0);
+    Inventory result = inventoryService.subtractStock(1L, 2);
 
-        assertThat(inventory.getStockQuantity().getValue()).isEqualTo(0);
-        assertThat(inventory.getIsAvailable()).isFalse();
+        assertThat(inventory.getStockQuantity().getValue()).isEqualTo(3);
+    assertThat(result.getStockQuantity().getValue()).isEqualTo(3);
         verify(inventoryRepository).save(inventory);
     }
 
     @Test
-    @DisplayName("재고 판매 가능 전환 시 기본 검증을 수행한다")
-    void changeAvailability_validatesQuantity() {
+    @DisplayName("음수나 0을 차감하면 예외가 발생한다")
+    void subtractStock_invalidQuantity() {
+        assertThatThrownBy(() -> inventoryService.subtractStock(1L, -1))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.VALIDATION_ERROR);
+    }
+
+    @Test
+    @DisplayName("보유 재고보다 많이 차감하면 예외가 발생한다")
+    void subtractStock_insufficientQuantity() {
         Inventory inventory = Inventory.builder()
-            .stockQuantity(new StockQuantity(0))
-            .isAvailable(false)
+            .stockQuantity(new StockQuantity(1))
             .build();
 
         when(inventoryRepository.findByProductOptionIdWithLock(anyLong()))
             .thenReturn(Optional.of(inventory));
 
-        assertThatThrownBy(() -> inventoryService.changeAvailability(1L, true))
+        assertThatThrownBy(() -> inventoryService.subtractStock(1L, 2))
             .isInstanceOf(BusinessException.class)
             .extracting("errorCode")
-            .isEqualTo(ErrorCode.VALIDATION_ERROR);
+            .isEqualTo(ErrorCode.INSUFFICIENT_STOCK);
     }
+
 }

@@ -4,6 +4,7 @@ import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
+import com.mudosa.musinsa.product.application.dto.ProductOptionCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
 import com.mudosa.musinsa.product.domain.model.Category;
@@ -15,12 +16,10 @@ import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.model.ProductLike;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
-import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
-import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.EntityNotFoundException;
@@ -54,8 +53,6 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final OptionValueRepository optionValueRepository;
     private final ProductLikeRepository productLikeRepository;
-    private final CategoryRepository categoryRepository;
-    private final BrandMemberRepository brandMemberRepository;
 
     // ProductCreateCommand를 기반으로 상품과 연관 엔티티를 한 번에 저장한다.
     @Transactional
@@ -70,8 +67,6 @@ public class ProductService {
             .isAvailable(command.getIsAvailable())
             .build();
 
-        command.getCategories().forEach(product::addCategory);
-
         List<Product.ImageRegistration> imageRegistrations = command.getImages().stream()
             .map(imageSpec -> new Product.ImageRegistration(imageSpec.imageUrl(), imageSpec.isThumbnail()))
             .collect(Collectors.toList());
@@ -82,7 +77,6 @@ public class ProductService {
         command.getOptions().forEach(optionSpec -> {
             Inventory inventory = Inventory.builder()
                 .stockQuantity(new StockQuantity(optionSpec.stockQuantity()))
-                .isAvailable(optionSpec.inventoryAvailable())
                 .build();
 
             ProductOption productOption = ProductOption.builder()
@@ -128,7 +122,6 @@ public class ProductService {
             .map(option -> new ProductCreateCommand.OptionSpec(
                 option.getProductPrice(),
                 option.getStockQuantity(),
-                option.getInventoryAvailable(),
                 option.getOptionValueIds()))
             .collect(Collectors.toList());
 
@@ -142,7 +135,6 @@ public class ProductService {
             .isAvailable(request.getIsAvailable())
             .images(imageSpecs)
             .options(optionSpecs)
-            .categories(category != null ? List.of(category) : Collections.emptyList())
             .build();
 
         return createProduct(command);
@@ -153,11 +145,13 @@ public class ProductService {
                                             Brand brand,
                                             Category category) {
         if (!brand.getNameKo().equals(request.getBrandName())) {
-            throw new IllegalArgumentException("브랜드 정보가 일치하지 않습니다. brandId=" + brand.getBrandId());
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                "브랜드 정보가 일치하지 않습니다. brandId=" + brand.getBrandId());
         }
 
         if (category == null || !category.buildPath().equals(request.getCategoryPath())) {
-            throw new IllegalArgumentException("카테고리 경로가 일치하지 않습니다. categoryPath=" + request.getCategoryPath());
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                "카테고리 경로가 일치하지 않습니다. categoryPath=" + request.getCategoryPath());
         }
     }
 
@@ -171,18 +165,31 @@ public class ProductService {
         if (optionValueIds.isEmpty()) {
             return Collections.emptyMap();
         }
+        return loadOptionValuesByIds(new ArrayList<>(optionValueIds));
+    }
 
-            Map<Long, OptionValue> optionValueMap = optionValueRepository.findAllByOptionValueIdIn(new ArrayList<>(optionValueIds))
+    private Map<Long, OptionValue> loadOptionValuesByIds(List<Long> optionValueIds) {
+        if (optionValueIds == null || optionValueIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Set<Long> uniqueOptionValueIds = new HashSet<>(optionValueIds);
+        if (uniqueOptionValueIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Long, OptionValue> optionValueMap = optionValueRepository.findAllByOptionValueIdIn(new ArrayList<>(uniqueOptionValueIds))
             .stream()
-                .collect(Collectors.toMap(OptionValue::getOptionValueId, Function.identity()));
+            .collect(Collectors.toMap(OptionValue::getOptionValueId, Function.identity()));
 
-            if (optionValueMap.size() != optionValueIds.size()) {
-                Set<Long> missingIds = new HashSet<>(optionValueIds);
-                missingIds.removeAll(optionValueMap.keySet());
-                throw new IllegalArgumentException("존재하지 않는 옵션 값 ID가 포함되어 있습니다: " + missingIds);
-            }
+        if (optionValueMap.size() != uniqueOptionValueIds.size()) {
+            Set<Long> missingIds = new HashSet<>(uniqueOptionValueIds);
+            missingIds.removeAll(optionValueMap.keySet());
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                "존재하지 않는 옵션 값 ID가 포함되어 있습니다: " + missingIds);
+        }
 
-            return optionValueMap;
+        return optionValueMap;
     }
 
     // 상세 화면에 필요한 연관 정보를 로딩하고 응답 DTO로 변환한다.
@@ -204,48 +211,8 @@ public class ProductService {
                 .build())
             .collect(Collectors.toList());
 
-        List<ProductDetailResponse.CategorySummary> categorySummaries = product.getProductCategories().stream()
-            .map(mapping -> {
-                Category category = mapping.getCategory();
-                return ProductDetailResponse.CategorySummary.builder()
-                    .categoryId(category != null ? category.getCategoryId() : null)
-                    .categoryName(category != null ? category.getCategoryName() : null)
-                    .build();
-            })
-            .collect(Collectors.toList());
-
         List<ProductDetailResponse.OptionDetail> optionDetails = product.getProductOptions().stream()
-            .map(option -> {
-                List<ProductDetailResponse.OptionDetail.OptionValueDetail> optionValueDetails = option.getProductOptionValues().stream()
-                    .map(mapping -> {
-                        OptionValue optionValue = mapping.getOptionValue();
-                        OptionName optionName = optionValue != null ? optionValue.getOptionName() : null;
-                        return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
-                            .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-                            .optionNameId(optionName != null ? optionName.getOptionNameId() : null)
-                            .optionName(optionName != null ? optionName.getOptionName() : null)
-                            .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
-                            .build();
-                    })
-                    .collect(Collectors.toList());
-
-                Integer stockQuantity = null;
-                Boolean inventoryAvailable = null;
-                if (option.getInventory() != null && option.getInventory().getStockQuantity() != null) {
-                    stockQuantity = option.getInventory().getStockQuantity().getValue();
-                    inventoryAvailable = option.getInventory().getIsAvailable();
-                } else if (option.getInventory() != null) {
-                    inventoryAvailable = option.getInventory().getIsAvailable();
-                }
-
-                return ProductDetailResponse.OptionDetail.builder()
-                    .optionId(option.getProductOptionId())
-                    .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
-                    .stockQuantity(stockQuantity)
-                    .inventoryAvailable(inventoryAvailable)
-                    .optionValues(optionValueDetails)
-                    .build();
-            })
+            .map(this::mapToOptionDetail)
             .collect(Collectors.toList());
 
         return ProductDetailResponse.builder()
@@ -260,9 +227,38 @@ public class ProductService {
             .isAvailable(product.getIsAvailable())
             .categoryPath(product.getCategoryPath())
             .likeCount(likeCount)
-            .categories(categorySummaries)
             .images(imageResponses)
             .options(optionDetails)
+            .build();
+    }
+
+    private ProductDetailResponse.OptionDetail mapToOptionDetail(ProductOption option) {
+        List<ProductDetailResponse.OptionDetail.OptionValueDetail> optionValueDetails = option.getProductOptionValues().stream()
+            .map(mapping -> {
+                OptionValue optionValue = mapping.getOptionValue();
+                OptionName optionName = optionValue != null ? optionValue.getOptionName() : null;
+                return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
+                    .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
+                    .optionNameId(optionName != null ? optionName.getOptionNameId() : null)
+                    .optionName(optionName != null ? optionName.getOptionName() : null)
+                    .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+                    .build();
+            })
+            .collect(Collectors.toList());
+
+        Integer stockQuantity = null;
+        Boolean hasStock = null;
+        if (option.getInventory() != null && option.getInventory().getStockQuantity() != null) {
+            stockQuantity = option.getInventory().getStockQuantity().getValue();
+            hasStock = stockQuantity > 0;
+        }
+
+        return ProductDetailResponse.OptionDetail.builder()
+            .optionId(option.getProductOptionId())
+            .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
+            .stockQuantity(stockQuantity)
+            .hasStock(hasStock)
+            .optionValues(optionValueDetails)
             .build();
     }
 
@@ -270,13 +266,12 @@ public class ProductService {
     public ProductSearchResponse searchProducts(ProductSearchCondition condition) {
         Pageable pageable = condition != null ? condition.getPageable() : Pageable.unpaged();
 
-        List<Long> categoryIds = condition != null ? condition.getCategoryIds() : Collections.emptyList();
-    ProductGenderType gender = condition != null ? condition.getGender() : null;
+        ProductGenderType gender = condition != null ? condition.getGender() : null;
         String keyword = condition != null ? condition.getKeyword() : null;
         Long brandId = condition != null ? condition.getBrandId() : null;
         ProductSearchCondition.PriceSort priceSort = condition != null ? condition.getPriceSort() : null;
 
-        List<String> categoryPaths = resolveCategoryPaths(categoryIds);
+        List<String> categoryPaths = condition != null ? condition.getCategoryPaths() : Collections.emptyList();
         List<Product> products = new ArrayList<>(productRepository.findAllByFilters(categoryPaths, gender, keyword, brandId));
 
         if (priceSort != null) {
@@ -326,39 +321,56 @@ public class ProductService {
         return productLikeRepository.countByProduct(product);
     }
 
-    // 브랜드 멤버 검증 후 상품 기본 정보를 갱신한다.
+    // 상품 기본 정보를 갱신한다.
     @Transactional
     public ProductDetailResponse updateProduct(Long productId,
-                                               Long userId,
                                                ProductUpdateRequest request) {
-        if (userId == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_USER);
-        }
-
         Product product = productRepository.findDetailById(productId)
             .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        return updateProduct(product, request);
+    }
 
-        verifyBrandMember(product, userId);
+    @Transactional
+    public ProductDetailResponse updateProductForBrand(Long brandId,
+                                                       Long productId,
+                                                       ProductUpdateRequest request) {
+        Product product = productRepository.findDetailById(productId)
+            .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        validateBrandOwnership(product, brandId);
+        return updateProduct(product, request);
+    }
 
-    ProductGenderType genderType = parseGenderType(request.getProductGenderType());
+    private ProductDetailResponse updateProduct(Product product,
+                                                ProductUpdateRequest request) {
+        if (!request.hasUpdatableField()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "변경할 데이터가 없습니다.");
+        }
 
-        String brandName = request.getBrandName() != null
-            ? request.getBrandName()
-            : product.getBrandName();
+        ProductGenderType genderType = request.getProductGenderType() != null
+            ? parseGenderType(request.getProductGenderType())
+            : null;
 
-        product.updateBasicInfo(
+        if (request.getBrandName() != null && !request.getBrandName().equals(product.getBrandName())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "브랜드명은 수정할 수 없습니다.");
+        }
+
+        boolean changed = product.updateBasicInfo(
             request.getProductName(),
             request.getProductInfo(),
-            genderType,
-            brandName,
-            request.getCategoryPath()
+            genderType
         );
 
         if (request.getIsAvailable() != null) {
-            product.changeAvailability(request.getIsAvailable());
+            if (!Objects.equals(product.getIsAvailable(), request.getIsAvailable())) {
+                product.changeAvailability(request.getIsAvailable());
+                changed = true;
+            }
         }
 
-        if (request.getImages() != null && !request.getImages().isEmpty()) {
+        if (request.getImages() != null) {
+            if (request.getImages().isEmpty()) {
+                throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 이미지는 최소 1장 이상 등록해야 합니다.");
+            }
             List<Product.ImageRegistration> registrations = request.getImages().stream()
                 .map(image -> new Product.ImageRegistration(
                     image.getImageUrl(),
@@ -366,26 +378,88 @@ public class ProductService {
                 ))
                 .collect(Collectors.toList());
             product.registerImages(registrations);
+            changed = true;
         }
 
         // TODO 옵션 가격/재고 수정은 정책 확정 후 구현한다.
+
+        if (!changed) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "변경된 항목이 없습니다.");
+        }
 
         long likeCount = productLikeRepository.countByProduct(product);
         return mapToDetailResponse(product, likeCount);
     }
 
-    // 상품을 비활성화해 소프트 삭제 상태로 전환한다.
     @Transactional
-    public void disableProduct(Long productId, Long userId) {
-        if (userId == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_USER);
+    public ProductDetailResponse.OptionDetail addProductOption(Long brandId,
+                                                               Long productId,
+                                                               ProductOptionCreateRequest request) {
+        Product product = productRepository.findDetailById(productId)
+            .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        validateBrandOwnership(product, brandId);
+
+        if (request == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "옵션 정보가 필요합니다.");
+        }
+        if (request.getProductPrice() == null || request.getStockQuantity() == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "옵션 가격과 재고는 필수입니다.");
+        }
+        if (request.getOptionValueIds() == null || request.getOptionValueIds().isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "옵션 값 ID는 최소 1개 이상이어야 합니다.");
         }
 
-        Product product = productRepository.findById(productId)
-            .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        Map<Long, OptionValue> optionValueMap = loadOptionValuesByIds(request.getOptionValueIds());
 
-        verifyBrandMember(product, userId);
-        product.changeAvailability(false);
+        Inventory inventory = Inventory.builder()
+            .stockQuantity(new StockQuantity(request.getStockQuantity()))
+            .build();
+
+        ProductOption productOption = ProductOption.builder()
+            .product(product)
+            .productPrice(new Money(request.getProductPrice()))
+            .inventory(inventory)
+            .build();
+
+        request.getOptionValueIds().forEach(optionValueId -> {
+            OptionValue optionValue = optionValueMap.get(optionValueId);
+            productOption.addOptionValue(ProductOptionValue.builder()
+                .productOption(productOption)
+                .optionValue(optionValue)
+                .build());
+        });
+
+        product.addProductOption(productOption);
+        productRepository.flush();
+        return mapToOptionDetail(productOption);
+    }
+
+    @Transactional
+    public void removeProductOption(Long brandId,
+                                    Long productId,
+                                    Long productOptionId) {
+        Product product = productRepository.findDetailById(productId)
+            .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        validateBrandOwnership(product, brandId);
+
+        ProductOption targetOption = product.getProductOptions().stream()
+            .filter(option -> Objects.equals(option.getProductOptionId(), productOptionId))
+            .findFirst()
+            .orElseThrow(() -> new EntityNotFoundException("Product option not found: " + productOptionId));
+
+        product.removeProductOption(targetOption);
+        productRepository.flush();
+    }
+
+    private void validateBrandOwnership(Product product, Long brandId) {
+        if (brandId == null) {
+            return;
+        }
+        if (product.getBrand() == null
+            || product.getBrand().getBrandId() == null
+            || !Objects.equals(product.getBrand().getBrandId(), brandId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "해당 브랜드의 상품이 아닙니다.");
+        }
     }
 
     // 서비스 내부에서 상품 생성 파라미터를 묶어 전달하기 위한 커맨드 객체이다.
@@ -400,7 +474,6 @@ public class ProductService {
         private final Boolean isAvailable;
         private final List<ImageSpec> images;
         private final List<OptionSpec> options;
-        private final List<Category> categories;
 
         @Builder
         public ProductCreateCommand(Brand brand,
@@ -411,8 +484,7 @@ public class ProductService {
                                     String categoryPath,
                                     Boolean isAvailable,
                                     List<ImageSpec> images,
-                                    List<OptionSpec> options,
-                                    List<Category> categories) {
+                                    List<OptionSpec> options) {
             this.brand = brand;
             this.productName = productName;
             this.productInfo = productInfo;
@@ -422,14 +494,12 @@ public class ProductService {
             this.isAvailable = isAvailable;
             this.images = images != null ? images : Collections.emptyList();
             this.options = options != null ? options : Collections.emptyList();
-            this.categories = categories != null ? categories : Collections.emptyList();
         }
 
         public record ImageSpec(String imageUrl, boolean isThumbnail) {}
 
         public record OptionSpec(BigDecimal productPrice,
                                  int stockQuantity,
-                                 Boolean inventoryAvailable,
                                  List<Long> optionValueIds) {}
     }
 
@@ -438,8 +508,8 @@ public class ProductService {
     @Builder
     public static class ProductSearchCondition {
         private final String keyword;
-        private final List<Long> categoryIds;
-    private final ProductGenderType gender;
+        private final List<String> categoryPaths;
+        private final ProductGenderType gender;
         private final Long brandId;
         private final Pageable pageable;
         private final PriceSort priceSort;
@@ -449,9 +519,9 @@ public class ProductService {
             return pageable != null ? pageable : Pageable.unpaged();
         }
 
-        // 카테고리 ID 리스트를 널 안전하게 반환한다.
-        public List<Long> getCategoryIds() {
-            return categoryIds != null ? categoryIds : Collections.emptyList();
+        // 카테고리 경로 리스트를 널 안전하게 반환한다.
+        public List<String> getCategoryPaths() {
+            return categoryPaths != null ? categoryPaths : Collections.emptyList();
         }
 
         public enum PriceSort {
@@ -460,21 +530,25 @@ public class ProductService {
         }
     }
 
-    // 전달받은 카테고리 ID 목록을 경로 문자열 집합으로 변환한다.
-    private List<String> resolveCategoryPaths(List<Long> categoryIds) {
-        if (categoryIds == null || categoryIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return categoryRepository.findAllById(categoryIds).stream()
-            .map(Category::buildPath)
-            .filter(Objects::nonNull)
-            .distinct()
-            .collect(Collectors.toList());
-    }
-
     // 상품 옵션 중 최저 가격을 계산해 정렬 및 요약 정보에 활용한다.
     private BigDecimal extractLowestPrice(Product product) {
+        BigDecimal lowestAvailablePrice = product.getProductOptions().stream()
+            .filter(option -> {
+                Inventory inventory = option.getInventory();
+                return inventory != null
+                    && inventory.getStockQuantity() != null
+                    && inventory.getStockQuantity().getValue() > 0;
+            })
+            .map(ProductOption::getProductPrice)
+            .filter(Objects::nonNull)
+            .map(Money::getAmount)
+            .min(BigDecimal::compareTo)
+            .orElse(null);
+
+        if (lowestAvailablePrice != null) {
+            return lowestAvailablePrice;
+        }
+
         return product.getProductOptions().stream()
             .map(ProductOption::getProductPrice)
             .filter(Objects::nonNull)
@@ -502,7 +576,8 @@ public class ProductService {
         boolean hasStock = product.getProductOptions().stream()
             .map(ProductOption::getInventory)
             .filter(Objects::nonNull)
-            .anyMatch(inventory -> Boolean.TRUE.equals(inventory.getIsAvailable()));
+            .anyMatch(inventory -> inventory.getStockQuantity() != null
+                && inventory.getStockQuantity().getValue() > 0);
 
         String thumbnailUrl = product.getImages().stream()
             .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
@@ -525,18 +600,6 @@ public class ProductService {
             .thumbnailUrl(thumbnailUrl)
             .categoryPath(product.getCategoryPath())
             .build();
-    }
-
-    private void verifyBrandMember(Product product, Long userId) {
-        Brand brand = product.getBrand();
-        if (brand == null || brand.getBrandId() == null) {
-            throw new BusinessException(ErrorCode.BRAND_NOT_FOUND);
-        }
-
-        boolean member = brandMemberRepository.existsByBrand_BrandIdAndUserId(brand.getBrandId(), userId);
-        if (!member) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
     }
 
     private ProductGenderType parseGenderType(String gender) {

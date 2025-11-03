@@ -59,10 +59,12 @@ public class SettlementNumberGenerator {
     }
 
     /**
-     * DB 시퀀스에서 다음 값 조회
+     * DB 시퀀스에서 다음 값 조회 (MySQL용 - AUTO_INCREMENT 시뮬레이션)
+     * 간단한 타임스탬프 기반 번호 생성으로 대체
      */
     private Long getNextSequence(String sequenceName) {
-        String sql = String.format("SELECT nextval('%s')", sequenceName);
-        return ((Number) entityManager.createNativeQuery(sql).getSingleResult()).longValue();
+        // MySQL에는 시퀀스가 없으므로 간단히 현재 시간 밀리초 사용
+        // 고도화 단계에서는 별도 시퀀스 테이블 또는 Redis 등 사용 예정
+        return System.currentTimeMillis() % 100000; // 5자리 숫자
     }
 }

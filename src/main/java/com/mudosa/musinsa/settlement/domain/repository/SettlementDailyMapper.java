@@ -2,15 +2,18 @@ package com.mudosa.musinsa.settlement.domain.repository;
 
 import com.mudosa.musinsa.settlement.domain.dto.MonthlyAggregationDto;
 import com.mudosa.musinsa.settlement.domain.dto.WeeklyAggregationDto;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 집계 Repository 인터페이스
- * 일 -> 주/월
+ * SettlementDaily MyBatis Mapper
+ * 일일 정산 데이터를 주간/월간으로 집계
  */
-public interface SettlementDailyAggregationRepository {
+@Mapper
+public interface SettlementDailyMapper {
 
     /**
      * 주간 집계 쿼리
@@ -21,9 +24,9 @@ public interface SettlementDailyAggregationRepository {
      * @return 주별 집계 결과
      */
     List<WeeklyAggregationDto> aggregateByWeekly(
-        Long brandId,
-        LocalDate startDate,
-        LocalDate endDate
+        @Param("brandId") Long brandId,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate
     );
 
     /**
@@ -35,8 +38,8 @@ public interface SettlementDailyAggregationRepository {
      * @return 월별 집계 결과
      */
     List<MonthlyAggregationDto> aggregateByMonthly(
-        Long brandId,
-        LocalDate startDate,
-        LocalDate endDate
+        @Param("brandId") Long brandId,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate
     );
 }

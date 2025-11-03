@@ -1,13 +1,9 @@
 package com.mudosa.musinsa.settlement.domain.model;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
-/**
- * 정산 상태
- */
+/* 정산 상태 */
 @Getter
-@RequiredArgsConstructor
 public enum SettlementStatus {
 
     PENDING("대기중"),
@@ -16,5 +12,9 @@ public enum SettlementStatus {
     FAILED("실패");
 
     private final String description;
+
+    SettlementStatus(String description) {
+        this.description = description;
+    }
 
 }
