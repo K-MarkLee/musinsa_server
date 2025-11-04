@@ -19,16 +19,15 @@ public class OptionValue extends BaseEntity {
     @Column(name = "option_value_id")
     private Long optionValueId;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "option_name_id", nullable = false)
-    private OptionName optionName;
+    @Column(name = "option_name", nullable = false)
+    private String optionName;
     
     @Column(name = "option_value", nullable = false, length = 50)
     private String optionValue;
     
     // 옵션 값을 생성하며 필수 요소를 검증한다.
     @Builder
-    public OptionValue(OptionName optionName, String optionValue) {
+    public OptionValue(String optionName, String optionValue) {
         // 필수 파라미터를 확인해 무결성을 보장한다.
         if (optionName == null) {
             throw new IllegalArgumentException("옵션명은 필수입니다.");
@@ -47,7 +46,7 @@ public class OptionValue extends BaseEntity {
     }
     
     // 지정된 옵션명과 연관되어 있는지 확인한다.
-    public boolean belongsTo(OptionName optionName) {
+    public boolean belongsTo(String optionName) {
         return this.optionName != null && this.optionName.equals(optionName);
     }
 }
