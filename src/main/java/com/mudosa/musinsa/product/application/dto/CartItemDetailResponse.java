@@ -90,8 +90,8 @@ public class CartItemDetailResponse {
             })
             .collect(Collectors.toList());
 
-        BigDecimal unitAmount = cartItem.getUnitPrice() != null
-            ? cartItem.getUnitPrice().getAmount()
+        BigDecimal unitAmount = productOption.getProductPrice() != null
+            ? productOption.getProductPrice().getAmount()
             : null;
 
         return CartItemDetailResponse.builder()

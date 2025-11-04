@@ -140,7 +140,6 @@ public class CartService {
             .user(user)
             .productOption(productOption)
             .quantity(quantity)
-            .unitPrice(productOption.getProductPrice())
             .build();
     }
 
