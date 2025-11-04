@@ -6,7 +6,6 @@ import com.mudosa.musinsa.brand.domain.dto.BrandRequestDTO;
 import com.mudosa.musinsa.brand.domain.dto.BrandResponseDTO;
 import com.mudosa.musinsa.brand.domain.service.BrandService;
 import com.mudosa.musinsa.common.dto.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -20,7 +19,6 @@ import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
-@Tag(name = "Brand API", description = "브랜드 API")
 @Slf4j
 @RequestMapping("/api/brand")
 @RequiredArgsConstructor
