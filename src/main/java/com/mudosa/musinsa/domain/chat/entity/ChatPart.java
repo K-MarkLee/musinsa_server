@@ -9,10 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-    name = "chat_part",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_chat_user", columnNames = {"chat_id", "user_id"})
-    }
+    name = "chat_part"
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -38,10 +35,10 @@ public class ChatPart {
   @Column(name = "role", nullable = false, length = 20)
   private ChatPartRole role; // USER, BRAND_ADMIN
 
-  @Column(name = "joined_at", nullable = false, insertable = false, updatable = false,
+  @Column(name = "created_at", nullable = false, insertable = false, updatable = false,
       columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
-  private LocalDateTime joinedAt;
+  private LocalDateTime createdAt;
 
-  @Column(name = "left_at")
-  private LocalDateTime leftAt;
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
 }

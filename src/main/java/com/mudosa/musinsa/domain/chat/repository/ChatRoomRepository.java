@@ -8,6 +8,6 @@ import java.util.List;
 
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
-  
-  List<ChatRoom> findDistinctByParts_User_IdAndParts_LeftAtIsNull(Long userId);
+
+  List<ChatRoom> findDistinctByParts_User_IdAndParts_DeletedAtIsNull(Long userId);
 }
