@@ -83,7 +83,10 @@ logging:
     com.zaxxer.hikari.pool.HikariPool: info
     com.zaxxer.hikari.pool.PoolBase: info
 
-
+jwt:
+  secret: ${JWT_SECRET}                       # .env의 JWT_SECRET
+  expiration: ${JWT_ACCESS_EXPIRATION:1800000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
 tosspayments:
   secret-key: ${TOSS_SECRET_KEY:test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}  # 테스트 시크릿 키 (개발자센터에서 발급)
