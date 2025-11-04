@@ -47,7 +47,7 @@ public class ChatRoom {
   // ==== 연관관계 ====
   @OneToMany(mappedBy = "chatRoom", orphanRemoval = false)
   @Builder.Default
-  @Where(clause = "left_at IS NULL")
+  @Where(clause = "deleted_at IS NULL")
   private List<ChatPart> parts = new ArrayList<>();
 
   @OneToMany(mappedBy = "chatRoom", orphanRemoval = false)
