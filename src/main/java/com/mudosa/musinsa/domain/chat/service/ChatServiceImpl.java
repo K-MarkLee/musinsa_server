@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.domain.chat.service;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.domain.chat.dto.*;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
@@ -14,7 +13,7 @@ import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
-import com.mudosa.musinsa.notification.domain.service.NotificationService;
+import com.mudosa.musinsa.notification.domain.event.NotificationRequiredEvent;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -54,7 +53,6 @@ public class ChatServiceImpl implements ChatService {
   private final ApplicationEventPublisher eventPublisher;
   private final UserRepository userRepository;
   private final BrandMemberRepository brandMemberRepository;
-  private final NotificationService notificationService;
 
 
   @Override
@@ -81,7 +79,7 @@ public class ChatServiceImpl implements ChatService {
    */
   @Override
   @Transactional
-  public MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files) throws FirebaseMessagingException {
+  public MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files) {
 
     // 1) 채팅방 & 참여자 존재 여부 확인
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
@@ -172,10 +170,12 @@ public class ChatServiceImpl implements ChatService {
        * 2. 뽑은 유저 정보를 가지고 메세지 내용을 담아서, 혹은 담지 않고 알림을 저장한다.
        * 3. 알림을 푸시로 보낸다.
        */
-      List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(userId, chatId);
-      for(ChatPart cp : chatPartList){
-          notificationService.createChatNotification(cp.getUser().getId(),cp.getChatRoom().getBrand().getNameKo(),message.getContent(),cp.getChatRoom().getChatId());
-      }
+
+    eventPublisher.publishEvent(new NotificationRequiredEvent(userId, chatId, message.getContent()));
+//      List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(userId, chatId);
+//      for(ChatPart cp : chatPartList){
+//          notificationService.createChatNotification(cp.getUser().getId(),cp.getChatRoom().getBrand().getNameKo(),message.getContent(),cp.getChatRoom().getChatId());
+//      }
 
 
     return dto;

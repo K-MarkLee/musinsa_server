@@ -158,4 +158,24 @@ public class NotificationService {
             log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
         }
     }
+
+    public void createNotificationFromDTO (NotificationDTO dto){
+        Notification note = Notification.builder()
+                .user(userRepository.findById(dto.getUserId()).orElseThrow(()->new NoSuchElementException("User not found")))
+                .notificationMetadata(notificationMetadataRepository.findByNotificationCategory("CHAT").orElseThrow(()->new NoSuchElementException("Notification Metadata not found")))
+                .notificationTitle(dto.getNotificationTitle())
+                .notificationMessage(dto.getNotificationMessage())
+                .notificationUrl(dto.getNotificationUrl())
+                .build();
+        notificationRepository.save(note);
+        if (fcmService != null) {
+            try{
+                fcmService.sendMessageByToken(note.getNotificationTitle(),note.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(dto.getUserId()));
+            } catch (FirebaseMessagingException e){
+                log.error(e.getMessage());
+            }
+        } else {
+            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
+        }
+    }
 }

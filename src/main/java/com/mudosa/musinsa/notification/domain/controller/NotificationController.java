@@ -23,4 +23,10 @@ public class NotificationController {
         return notificationService.updateNotificationState(notificationDTO.getNotificationId());
     }
 
+    @PostMapping("/create/test")
+    public NotificationDTO createNotification(@RequestBody NotificationDTO notificationDTO) {
+        notificationService.createNotificationFromDTO(notificationDTO);
+        return notificationDTO;
+    }
+
 }
