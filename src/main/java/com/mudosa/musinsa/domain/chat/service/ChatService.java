@@ -37,11 +37,34 @@ public interface ChatService {
    */
   Page<MessageResponse> getChatMessages(Long chatId, Long userId, int page, int size);
 
+  /**
+   * 특정 채팅방의 정보 조회
+   *
+   * @param chatId 채팅방 ID
+   * @param userId 조회 사용자 ID(참여 여부 검증용)
+   */
   ChatRoomInfoResponse getChatRoomInfoByChatId(Long chatId, Long userId);
 
+  /**
+   * 채팅방 참여
+   *
+   * @param chatId 채팅방 ID
+   * @param userId 사용자 ID
+   */
   ChatPartResponse addParticipant(Long chatId, Long userId);
 
+  /**
+   * 채팅방 떠나기
+   *
+   * @param chatId 채팅방 ID
+   * @param userId 사용자 ID
+   */
   void leaveChat(Long chatId, Long userId);
 
+  /**
+   * 유저 참여 채팅방 목록 조회
+   *
+   * @param userId 사용자 ID
+   */
   List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId);
 }

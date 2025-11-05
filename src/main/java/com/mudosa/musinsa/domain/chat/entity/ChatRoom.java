@@ -16,7 +16,6 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@Setter
 public class ChatRoom {
 
   @Id
@@ -27,7 +26,8 @@ public class ChatRoom {
   @Enumerated(EnumType.STRING)
   @Column(name = "type", nullable = false, length = 10)
   private ChatRoomType type; // GROUP, DM
-
+  
+  @Setter
   @Column(name = "last_message_at")
   private LocalDateTime lastMessageAt;
 

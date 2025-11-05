@@ -2,36 +2,43 @@ package com.mudosa.musinsa.domain.chat.dto;
 
 import com.mudosa.musinsa.domain.chat.entity.Message;
 import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
-import com.mudosa.musinsa.domain.chat.enums.MessageType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
-@Builder
-@AllArgsConstructor
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Schema(description = "Message Response Dto")
 public class MessageResponse {
-
+  @Schema(description = "메시지 id", example = "1")
   private Long messageId;
+  @Schema(description = "채팅 id", example = "1")
   private Long chatId;
+  @Schema(description = "참여 id", example = "1")
   private Long chatPartId;
+  @Schema(description = "유저 id", example = "1")
   private Long userId;
+  @Schema(description = "유저 이름", example = "홍길동")
   private String userName;
-  private MessageType type;
+  @Schema(description = "메시지 내용", example = "안녕하세요!")
   private String content;
+  @Schema(description = "메시지 내 첨부파일 리스트")
   private List<AttachmentResponse> attachments;
+  @Schema(description = "보낸 시간", example = "2025-11-04T13:56:25.623Z")
   private LocalDateTime createdAt;
+  @Schema(description = "삭제 여부", example = "false")
   private boolean isDeleted;
 
+  @Schema(description = "답장 메시지")
   private ParentMessageResponse parent;
 
+  @Schema(description = "매니저 여부", example = "false")
   private boolean isManager;
-//  private ChatPartRole role;
 
   public static MessageResponse from(Message message, List<MessageAttachment> attachments) {
     // 1) 부모 메시지 취득 (없을 수 있음)
@@ -77,7 +84,6 @@ public class MessageResponse {
         .chatPartId(chatPartId)
         .userId(userId)
         .userName(userName)
-        .type(message.getType())
         .content(message.getContent())
         .attachments(attachmentDtos)
         .createdAt(message.getCreatedAt())

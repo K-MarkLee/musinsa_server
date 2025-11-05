@@ -8,30 +8,34 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
-
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
   /**
    * 채팅방의 메시지 페이징 조회 (최신순)
    */
-  @Query("SELECT m FROM Message m " +
-      "WHERE m.chatRoom.chatId = :chatId " +
-      "ORDER BY m.createdAt DESC")
-  Page<Message> findByChatIdOrderByCreatedAtDesc(
+
+  @Query(
+      value = """
+          select m
+          from Message m
+          join fetch m.chatRoom cr
+          left join fetch m.chatPart cp
+          left join fetch cp.user u
+          left join fetch m.parent pm
+          left join fetch pm.chatPart pmcp
+          left join fetch pmcp.user pmu
+          where cr.chatId = :chatId
+          order by m.createdAt desc
+          """,
+      countQuery = """
+          select count(m)
+          from Message m
+          where m.chatRoom.chatId = :chatId
+          """
+  )
+  Page<Message> findPageWithRelationsByChatId(
       @Param("chatId") Long chatId,
       Pageable pageable
   );
-  
-  /**
-   * 특정 메시지의 답장(스레드) 조회
-   */
-  List<Message> findByParent_MessageIdOrderByCreatedAtAsc(Long parentId);
-
-  /**
-   * 채팅방의 마지막 메시지 조회
-   */
-  Optional<Message> findFirstByChatRoom_ChatIdOrderByCreatedAtDesc(Long chatId);
 }

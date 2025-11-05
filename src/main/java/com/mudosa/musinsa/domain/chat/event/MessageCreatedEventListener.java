@@ -14,10 +14,10 @@ public class MessageCreatedEventListener {
 
   private final SimpMessagingTemplate messagingTemplate;
 
-  // ✅ 트랜잭션 커밋 후 실행 (DB 롤백 시 실행되지 않음)
+  // 트랜잭션 커밋 후 실행 (DB 롤백 시 실행되지 않음)
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void handle(MessageCreatedEvent event) {
-    //
+    //확인
     log.info("WebSocket broadcast -> chatId={}, message={}", event.messageResponse().getChatId(), event.messageResponse());
     //websocket으로 전송
     messagingTemplate.convertAndSend("/topic/chat/" + event.messageResponse().getChatId(), event.messageResponse());

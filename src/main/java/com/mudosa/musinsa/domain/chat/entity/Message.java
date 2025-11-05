@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.domain.chat.entity;
 
-import com.mudosa.musinsa.domain.chat.enums.MessageType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -42,11 +41,7 @@ public class Message {
   @OneToMany(mappedBy = "parent", orphanRemoval = false)
   @Builder.Default
   private List<Message> children = new ArrayList<>();
-
-  @Enumerated(EnumType.STRING)
-  @Column(name = "type", nullable = false, length = 10)
-  private MessageType type; // TEXT, IMAGE, FILE, LINK
-
+  
   @Column(name = "content", columnDefinition = "TEXT")
   private String content;
 
