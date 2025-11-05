@@ -29,7 +29,9 @@ public class CartItemResponse {
                 ? cartItem.getProductOption().getProductOptionId()
                 : null)
             .quantity(cartItem.getQuantity())
-            .unitPrice(cartItem.getUnitPrice() != null ? cartItem.getUnitPrice().getAmount() : null)
+            .unitPrice(cartItem.getProductOption() != null && cartItem.getProductOption().getProductPrice() != null
+                ? cartItem.getProductOption().getProductPrice().getAmount()
+                : null)
             .build();
     }
 }

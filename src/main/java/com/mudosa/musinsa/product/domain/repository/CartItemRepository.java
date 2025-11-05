@@ -20,7 +20,6 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
             left join fetch po.inventory inv
             left join fetch po.productOptionValues pov
             left join fetch pov.optionValue ov
-            left join fetch ov.optionName optionName
         where c.user.id = :userId
     """)
     List<CartItem> findAllWithDetailsByUserId(@Param("userId") Long userId);

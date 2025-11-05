@@ -2,6 +2,7 @@ package com.mudosa.musinsa.product.application.dto;
 
 import com.mudosa.musinsa.product.domain.model.CartItem;
 import com.mudosa.musinsa.product.domain.model.Image;
+
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
@@ -81,19 +82,16 @@ public class CartItemDetailResponse {
             .stream()
             .map(mapping -> {
                 OptionValue optionValue = mapping.getOptionValue();
-                String optionName = optionValue != null
-                    ? optionValue.getOptionName()
-                    : null;
                 return OptionValueSummary.builder()
                     .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-                    .optionName(optionName != null ? optionName : null)
+                    .optionName(optionValue != null ? optionValue.getOptionName() : null)
                     .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
                     .build();
             })
             .collect(Collectors.toList());
 
-        BigDecimal unitAmount = cartItem.getUnitPrice() != null
-            ? cartItem.getUnitPrice().getAmount()
+        BigDecimal unitAmount = productOption.getProductPrice() != null
+            ? productOption.getProductPrice().getAmount()
             : null;
 
         return CartItemDetailResponse.builder()
@@ -103,7 +101,7 @@ public class CartItemDetailResponse {
             .productOptionId(productOption != null ? productOption.getProductOptionId() : null)
             .productName(product != null ? product.getProductName() : null)
             .productInfo(product != null ? product.getProductInfo() : null)
-            .brandName(product != null ? product.getBrand().getNameKo() : null)
+            .brandName(product != null ? product.getBrandName() : null)
             .quantity(cartItem.getQuantity())
             .unitPrice(unitAmount)
             .stockQuantity(stockQuantity)

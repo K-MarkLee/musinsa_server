@@ -7,6 +7,7 @@ import com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
 import com.mudosa.musinsa.product.domain.model.Inventory;
+
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
@@ -165,10 +166,9 @@ public class ProductInventoryService {
 
     private ProductOptionStockResponse.OptionValueSummary mapToOptionValueSummary(ProductOptionValue mapping) {
         OptionValue optionValue = mapping.getOptionValue();
-        String optionName = optionValue != null ? optionValue.getOptionName() : null;
         return ProductOptionStockResponse.OptionValueSummary.builder()
             .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-            .optionName(optionName != null ? optionName : null)
+            .optionName(optionValue != null ? optionValue.getOptionName() : null)
             .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
             .build();
     }

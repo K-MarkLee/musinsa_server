@@ -9,7 +9,7 @@ import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.domain.model.Category;
-import com.mudosa.musinsa.product.domain.model.OptionName;
+
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
@@ -430,13 +430,8 @@ class ProductCreateServiceTest {
     }
 
     private OptionValue prepareOptionValue(String optionNameLabel, String optionValueLabel) {
-        OptionName optionName = OptionName.builder()
-            .optionName(optionNameLabel)
-            .build();
-        entityManager.persist(optionName);
-
         OptionValue optionValue = OptionValue.builder()
-            .optionName(optionName)
+            .optionName(optionNameLabel)
             .optionValue(optionValueLabel)
             .build();
         entityManager.persist(optionValue);

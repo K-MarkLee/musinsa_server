@@ -9,7 +9,7 @@ import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
 import com.mudosa.musinsa.product.domain.model.Inventory;
-import com.mudosa.musinsa.product.domain.model.OptionName;
+
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
@@ -84,13 +84,8 @@ class ProductInventoryServiceTest {
             .build();
         ReflectionTestUtils.setField(productOption, "productOptionId", 200L);
 
-        OptionName optionName = OptionName.builder()
-            .optionName("사이즈")
-            .build();
-        ReflectionTestUtils.setField(optionName, "optionNameId", 300L);
-
         OptionValue optionValue = OptionValue.builder()
-            .optionName(optionName)
+            .optionName("사이즈")
             .optionValue("M")
             .build();
         ReflectionTestUtils.setField(optionValue, "optionValueId", 400L);

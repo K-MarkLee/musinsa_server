@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.domain.chat.service;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.domain.chat.dto.*;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
@@ -14,7 +13,7 @@ import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
-import com.mudosa.musinsa.notification.domain.service.NotificationService;
+import com.mudosa.musinsa.notification.domain.event.NotificationRequiredEvent;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -54,12 +53,11 @@ public class ChatServiceImpl implements ChatService {
   private final ApplicationEventPublisher eventPublisher;
   private final UserRepository userRepository;
   private final BrandMemberRepository brandMemberRepository;
-  private final NotificationService notificationService;
 
 
   @Override
   public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
-    List<ChatRoom> chatRooms = chatRoomRepository.findDistinctByParts_User_IdAndParts_LeftAtIsNull(userId);
+    List<ChatRoom> chatRooms = chatRoomRepository.findDistinctByParts_User_IdAndParts_DeletedAtIsNull(userId);
 
     return chatRooms.stream()
         .map(room -> ChatRoomInfoResponse.builder()
@@ -81,13 +79,13 @@ public class ChatServiceImpl implements ChatService {
    */
   @Override
   @Transactional
-  public MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files) throws FirebaseMessagingException {
+  public MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files) {
 
     // 1) 채팅방 & 참여자 존재 여부 확인
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
         .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
 
-    ChatPart chatPart = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndLeftAtIsNull(chatId, userId)
+    ChatPart chatPart = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(chatId, userId)
         .orElseThrow(() -> new EntityNotFoundException(
             "ChatPart not found: chatId=" + chatId + ", userId=" + userId));
 
@@ -120,7 +118,7 @@ public class ChatServiceImpl implements ChatService {
     Message createdMessage = messageRepository.save(message);
 
     chatRoom.setLastMessageAt(LocalDateTime.now());
-    
+
     // 4) 첨부 저장
     List<MessageAttachment> savedAttachments = new ArrayList<>();
     if (hasFiles) {
@@ -166,16 +164,18 @@ public class ChatServiceImpl implements ChatService {
     // 6) AFTER_COMMIT에만 브로드캐스트 (도메인 이벤트 발행)
     eventPublisher.publishEvent(new MessageCreatedEvent(dto));
 
-      /**
-       * 허승돈 작성
-       * 1. 채팅방의 발신자를 제외한 모든 참여자의 아이디를 쿼리로 뽑는다.
-       * 2. 뽑은 유저 정보를 가지고 메세지 내용을 담아서, 혹은 담지 않고 알림을 저장한다.
-       * 3. 알림을 푸시로 보낸다.
-       */
-      List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(userId, chatId);
-      for(ChatPart cp : chatPartList){
-          notificationService.createChatNotification(cp.getUser().getId(),cp.getChatRoom().getBrand().getNameKo(),message.getContent(),cp.getChatRoom().getChatId());
-      }
+    /**
+     * 허승돈 작성
+     * 1. 채팅방의 발신자를 제외한 모든 참여자의 아이디를 쿼리로 뽑는다.
+     * 2. 뽑은 유저 정보를 가지고 메세지 내용을 담아서, 혹은 담지 않고 알림을 저장한다.
+     * 3. 알림을 푸시로 보낸다.
+     */
+
+    eventPublisher.publishEvent(new NotificationRequiredEvent(userId, chatId, message.getContent()));
+//      List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(userId, chatId);
+//      for(ChatPart cp : chatPartList){
+//          notificationService.createChatNotification(cp.getUser().getId(),cp.getChatRoom().getBrand().getNameKo(),message.getContent(),cp.getChatRoom().getChatId());
+//      }
 
 
     return dto;
@@ -263,7 +263,7 @@ public class ChatServiceImpl implements ChatService {
     ChatRoom chatRoom = chatRoomRepository.findById(chatId)
         .orElseThrow(() -> new EntityNotFoundException("ChatRoom not found: " + chatId));
 
-    boolean isParticipate = chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndLeftAtIsNull(chatId, userId);
+    boolean isParticipate = chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndDeletedAtIsNull(chatId, userId);
 
     return ChatRoomInfoResponse.builder()
         .brandId(chatRoom.getBrand().getBrandId())
@@ -287,7 +287,7 @@ public class ChatServiceImpl implements ChatService {
         .orElseThrow(() -> new EntityNotFoundException("ChatRoom nosaveMessaget found: " + chatId));
 
     // 2️⃣ 이미 참여 중인지 확인 (중복 방지)
-    if (chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndLeftAtIsNull(chatId, userId)) {
+    if (chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndDeletedAtIsNull(chatId, userId)) {
       throw new IllegalStateException("User already joined this chat room.");
     }
     User user = userRepository.getById(userId);
@@ -305,7 +305,7 @@ public class ChatServiceImpl implements ChatService {
         .chatPartId(chatPart.getChatPartId())
         .userId(chatPart.getUser().getId())
         .userName(chatPart.getUser().getUserName())
-        .joinedAt(chatPart.getJoinedAt())
+        .createdAt(chatPart.getCreatedAt())
         .build();
   }
 
@@ -314,11 +314,11 @@ public class ChatServiceImpl implements ChatService {
   public void leaveChat(Long chatId, Long userId) {
     // 활성 상태의 참여 기록 조회
     ChatPart chatPart = chatPartRepository
-        .findByChatRoom_ChatIdAndUserIdAndLeftAtIsNull(chatId, userId)
+        .findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(chatId, userId)
         .orElseThrow(() -> new IllegalStateException("참여 중인 채팅방이 존재하지 않습니다."));
 
-    // 이미 나갔는지 확인할 필요 없음 (조건상 leftAt IS NULL 보장됨)
-    chatPart.setLeftAt(LocalDateTime.now());
+    // 이미 나갔는지 확인할 필요 없음 (조건상 DeletedAt IS NULL 보장됨)
+    chatPart.setDeletedAt(LocalDateTime.now());
   }
 
 }

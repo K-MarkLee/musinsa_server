@@ -7,10 +7,8 @@ import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
 import com.mudosa.musinsa.notification.domain.service.FcmService;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.domain.model.Category;
-import com.mudosa.musinsa.product.domain.model.OptionName;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
-import com.mudosa.musinsa.product.domain.repository.OptionNameRepository;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
@@ -61,9 +59,6 @@ class ProductControllerIntegrationTest {
     private CategoryRepository categoryRepository;
 
     @Autowired
-    private OptionNameRepository optionNameRepository;
-
-    @Autowired
     private OptionValueRepository optionValueRepository;
 
     @Autowired
@@ -77,7 +72,6 @@ class ProductControllerIntegrationTest {
         productLikeRepository.deleteAll();
         productRepository.deleteAll();
         optionValueRepository.deleteAll();
-        optionNameRepository.deleteAll();
         categoryRepository.deleteAll();
         brandRepository.deleteAll();
     }
@@ -396,12 +390,8 @@ class ProductControllerIntegrationTest {
     }
 
     private OptionValue createOptionValue(String optionNameLabel, String optionValueLabel) {
-        OptionName optionName = optionNameRepository.save(OptionName.builder()
-            .optionName(optionNameLabel)
-            .build());
-
         return optionValueRepository.save(OptionValue.builder()
-            .optionName(optionName)
+            .optionName(optionNameLabel)
             .optionValue(optionValueLabel)
             .build());
     }
