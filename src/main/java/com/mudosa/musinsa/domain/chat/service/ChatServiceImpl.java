@@ -8,6 +8,7 @@ import com.mudosa.musinsa.domain.chat.entity.Message;
 import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
 import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
 import com.mudosa.musinsa.domain.chat.event.MessageEventPublisher;
+import com.mudosa.musinsa.domain.chat.file.FileStore;
 import com.mudosa.musinsa.domain.chat.mapper.ChatRoomMapper;
 import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
@@ -20,8 +21,8 @@ import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,9 +32,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -58,6 +56,8 @@ public class ChatServiceImpl implements ChatService {
   private final UserRepository userRepository;
   private final BrandMemberRepository brandMemberRepository;
   private final ChatRoomMapper chatRoomMapper;
+  
+  private final @Qualifier("localFileStore") FileStore fileStore;
 
   @Override
   public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
@@ -409,36 +409,19 @@ public class ChatServiceImpl implements ChatService {
                                                   Long messageId,
                                                   List<MultipartFile> files,
                                                   Message message) {
-    //파일 없으면 빈 배열 반환
     if (files == null || files.isEmpty()) {
-      log.debug("[chatId={}][messageId={}] 첨부파일 없음", chatId, messageId);
       return List.of();
     }
-    //저장 결과 배열
-    List<MessageAttachment> result = new ArrayList<>();
 
-    //모든 파일에 대하여
+    List<MessageAttachment> result = new ArrayList<>();
     for (MultipartFile file : files) {
-      //없으면 pass
       if (file == null || file.isEmpty()) continue;
 
-      //저장
       try {
         //TODO: 파일 처리 분리 필요!
         // === 실제 경로 생성 ===
-        String uploadDir = new ClassPathResource("static/").getFile().getAbsolutePath()
-            + "/chat/" + chatId + "/message/" + messageId;
-        Files.createDirectories(Paths.get(uploadDir));
+        String storedUrl = fileStore.storeMessageFile(chatId, messageId, file);
 
-        String original = Objects.requireNonNullElse(file.getOriginalFilename(), "unknown");
-        String safeName = UUID.randomUUID() + "_" + org.springframework.util.StringUtils.cleanPath(original);
-
-        Path targetPath = Paths.get(uploadDir, safeName).toAbsolutePath().normalize();
-        file.transferTo(targetPath.toFile());
-
-        String storedUrl = "/chat/" + chatId + "/message/" + messageId + "/" + safeName;
-
-        //메시지 첨부 파일 객체 생성
         MessageAttachment att = MessageAttachment.builder()
             .attachmentUrl(storedUrl)
             .message(message)
@@ -446,17 +429,12 @@ public class ChatServiceImpl implements ChatService {
             .sizeBytes(file.getSize())
             .build();
 
-        //저장
         result.add(attachmentRepository.save(att));
-        log.debug("[chatId={}][messageId={}] 파일 업로드 성공: {}", chatId, messageId, storedUrl);
 
       } catch (IOException e) {
-        // 저장 실패시 오류
-        log.error("[chatId={}][messageId={}] 파일 업로드 중 오류가 발생했습니다.", chatId, messageId, e);
         throw new BusinessException(ErrorCode.FILE_SAVE_FAILED);
       }
     }
-    //저장된 첨부파일 리스트 반환
     return result;
   }
 
