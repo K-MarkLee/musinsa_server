@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.domain.chat.controller;
 
 import com.google.firebase.messaging.FirebaseMessagingException;
+import com.mudosa.musinsa.common.dto.ApiResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
@@ -10,7 +11,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,7 +40,7 @@ public interface ChatController {
       description = "특정 채팅방에 텍스트 또는 이미지를 전송합니다. "
           + "텍스트 메시지(`message`)와 이미지 파일(`files`)은 모두 선택적으로 포함 가능합니다."
   )
-  ResponseEntity<MessageResponse> sendMessage(
+  ApiResponse<MessageResponse> sendMessage(
       @Parameter(description = "채팅방 ID", example = "1", required = true)
       @PathVariable Long chatId,
 
@@ -65,7 +65,7 @@ public interface ChatController {
       summary = "메시지 조회",
       description = "특정 채팅방의 메시지를 조회합니다. (페이지 처리)"
   )
-  ResponseEntity<Page<MessageResponse>> getChatMessages(
+  ApiResponse<Page<MessageResponse>> getChatMessages(
       @Parameter(description = "채팅방 ID", example = "1", required = true)
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -83,7 +83,7 @@ public interface ChatController {
       summary = "채팅방 정보 조회",
       description = "특정 채팅방의 정보를 조회합니다"
   )
-  ResponseEntity<ChatRoomInfoResponse> getChatInfo(
+  ApiResponse<ChatRoomInfoResponse> getChatInfo(
       @Parameter(description = "채팅방 ID", example = "1", required = true)
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails
@@ -98,7 +98,7 @@ public interface ChatController {
       summary = "채팅방 참가",
       description = "특정 채팅방에 참여합니다."
   )
-  ResponseEntity<ChatPartResponse> addParticipant(
+  ApiResponse<ChatPartResponse> addParticipant(
       @Parameter(description = "채팅방 ID", example = "1", required = true)
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails);
@@ -111,7 +111,7 @@ public interface ChatController {
       summary = "채팅방 나가기",
       description = "특정 채팅방에서 퇴장합니다."
   )
-  ResponseEntity<List<ChatRoomInfoResponse>> leaveChat(
+  ApiResponse<List<ChatRoomInfoResponse>> leaveChat(
       @Parameter(description = "채팅방 ID", example = "1", required = true)
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails);
@@ -125,7 +125,7 @@ public interface ChatController {
       description = "특정 채팅방에서 퇴장합니다."
   )
   @GetMapping("/my")
-  ResponseEntity<List<ChatRoomInfoResponse>> getMyChat(
+  ApiResponse<List<ChatRoomInfoResponse>> getMyChat(
       @AuthenticationPrincipal CustomUserDetails userDetails);
 
 
