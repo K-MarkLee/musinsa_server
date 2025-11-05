@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class NotificationDTO {
     private Long notificationId;
     private Long userId;
-    private Long nMetadataId;
+    private Integer nMetadataId;
     private String notificationTitle;
     private String notificationMessage;
     private String notificationUrl;

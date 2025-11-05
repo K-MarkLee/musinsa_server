@@ -18,7 +18,7 @@ public class NotificationMetadata extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long nMetadataId;
+    private Integer nMetadataId;
 
     private String notificationTitle;
     private String notificationMessage;
