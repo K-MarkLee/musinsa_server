@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class NoteMetaDTO {
-    private Long nMetadataId;
+    private Integer nMetadataId;
     private String notificationTitle;
     private String notificationMessage;
     private String notificationType;
