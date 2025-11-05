@@ -12,7 +12,6 @@ import com.mudosa.musinsa.order.domain.service.StockValidator;
 import com.mudosa.musinsa.payment.application.dto.OrderValidationResult;
 import com.mudosa.musinsa.payment.application.dto.PaymentDetailDto;
 import com.mudosa.musinsa.payment.application.service.PaymentFetchService;
-import com.mudosa.musinsa.payment.application.service.PaymentService;
 import com.mudosa.musinsa.product.application.CartService;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
@@ -33,7 +32,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class OrderService {
-    
+
     private final OrderRepository orderRepository;
     private final CartService cartService;
     private final MemberCouponService memberCouponService;
@@ -76,7 +75,7 @@ public class OrderService {
 
         /* 쿠폰을 사용한 주문이라면 MemberCoupon 사용 처리 */
         useCouponIfExists(orders);
-        
+
         log.info("주문 완료 처리 성공 - orderId: {}", orderId);
     }
 
@@ -115,7 +114,7 @@ public class OrderService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void rollbackOrder(Long orderId) {
         log.warn("주문 롤백 시작 - orderId: {}", orderId);
-        
+
         /* 재고 복구 */
         Orders orders = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
@@ -374,7 +373,7 @@ public class OrderService {
         orders.validatePending();
 
         User orderUser = orders.getUser();
-        log.info("[Order] 사용자 정보 조회 완료 - userId: {}, userName: {}", 
+        log.info("[Order] 사용자 정보 조회 완료 - userId: {}, userName: {}",
                 orderUser.getId(), orderUser.getUserName());
 
         List<Long> productOptionIds = orders.getOrderProducts()
@@ -383,7 +382,7 @@ public class OrderService {
                 .toList();
 
         orderRepository.findProductOptionsWithValues(productOptionIds);
-        
+
         log.info("[Order] ProductOption 옵션 값 조회 완료 - productOptionIds: {}", productOptionIds);
 
         List<PendingOrderItem> orderProducts = orders.getOrderProducts()
@@ -394,14 +393,14 @@ public class OrderService {
 
                     // SIZE 옵션 추출
                     String sizeValue = optionValues.stream()
-                            .filter(pov -> "SIZE".equals(pov.getOptionValue().getOptionName().getOptionName()))
+                            .filter(pov -> "SIZE".equals(pov.getOptionValue().getOptionName()))
                             .map(pov -> pov.getOptionValue().getOptionValue())
                             .findFirst()
                             .orElse("");
 
                     // COLOR 옵션 추출
                     String colorValue = optionValues.stream()
-                            .filter(pov -> "COLOR".equals(pov.getOptionValue().getOptionName().getOptionName()))
+                            .filter(pov -> "COLOR".equals(pov.getOptionValue().getOptionName()))
                             .map(pov -> pov.getOptionValue().getOptionValue())
                             .findFirst()
                             .orElse("");
@@ -415,7 +414,7 @@ public class OrderService {
                             .productOptionName(productOption.getProduct().getProductName())
                             .amount(op.getProductPrice())
                             .quantity(op.getProductQuantity())
-                            .brandName(productOption.getProduct().getBrandName())
+                            .brandName(productOption.getProduct().getBrand().getNameKo())
                             .size(sizeValue)
                             .imageUrl(imageUrl)
                             .color(colorValue)
@@ -439,7 +438,7 @@ public class OrderService {
                 .coupons(coupons)
                 .build();
 
-        log.info("[Order] 주문서 조회 완료 - orderNo: {}, 상품 수: {}, 쿠폰 수: {}", 
+        log.info("[Order] 주문서 조회 완료 - orderNo: {}, 상품 수: {}, 쿠폰 수: {}",
                 orderNo, orderProducts.size(), coupons.size());
 
         return response;
@@ -460,7 +459,6 @@ public class OrderService {
                 .map(op -> op.getProductOption().getProductOptionId())
                 .toList();
 
-        orderRepository.findProductOptionsWithValues(productOptionIds);
 
         // 주문 상품 변환
         List<OrderDetailItem> orderProducts = orders.getOrderProducts()
@@ -471,14 +469,14 @@ public class OrderService {
 
                     // SIZE 옵션 추출
                     String sizeValue = optionValues.stream()
-                            .filter(pov -> "SIZE".equals(pov.getOptionValue().getOptionName().getOptionName()))
+                            .filter(pov -> "SIZE".equals(pov.getOptionValue().getOptionName()))
                             .map(pov -> pov.getOptionValue().getOptionValue())
                             .findFirst()
                             .orElse("");
 
                     // COLOR 옵션 추출
                     String colorValue = optionValues.stream()
-                            .filter(pov -> "COLOR".equals(pov.getOptionValue().getOptionName().getOptionName()))
+                            .filter(pov -> "COLOR".equals(pov.getOptionValue().getOptionName()))
                             .map(pov -> pov.getOptionValue().getOptionValue())
                             .findFirst()
                             .orElse("");
@@ -495,7 +493,7 @@ public class OrderService {
                             .productOptionName(productOption.getProduct().getProductName())
                             .amount(op.getProductPrice())
                             .quantity(op.getProductQuantity())
-                            .brandName(productOption.getProduct().getBrandName())
+                            .brandName(productOption.getProduct().getBrand().getNameKo())
                             .size(sizeValue)
                             .color(colorValue)
                             .imageUrl(imageUrl)
@@ -506,7 +504,6 @@ public class OrderService {
         // 금액 계산
         BigDecimal discountAmount = orders.getTotalDiscount();
         BigDecimal totalProductsAmount = orders.getTotalPrice();
-        BigDecimal orderFinalAmount = orders.getFinalPaymentAmount();
 
         //결제 내역
         PaymentDetailDto paymentDto = paymentService.fetchPaymentDetail(orders.getId());
@@ -524,7 +521,6 @@ public class OrderService {
                 .totalProductAmount(paymentDto.getTotalAmount())
                 .discountAmount(discountAmount)
                 .totalProductAmount(totalProductsAmount)
-                .orderFinalAmount(orderFinalAmount)
                 .paymentFinalAmount(paymentDto.getTotalAmount())
                 .paymentMethod(paymentDto.getMethod())
                 .approvedAt(paymentDto.getApprovedAt())
@@ -532,11 +528,11 @@ public class OrderService {
                 .paymentStatus(paymentDto.getPaymentStatus())
                 .build();
 
-        log.info("[Order] 주문 상세 조회 완료 - orderNo: {}, 상품 수: {}", 
+        log.info("[Order] 주문 상세 조회 완료 - orderNo: {}, 상품 수: {}",
                 orderNo, orderProducts.size());
 
         return response;
     }
 
-    
+
 }

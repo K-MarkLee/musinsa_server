@@ -52,14 +52,6 @@ public class Product extends BaseEntity {
     @Column(name = "product_gender_type", nullable = false)
     private ProductGenderType productGenderType;
 
-    // 역정규화 브랜드이름 (조회)
-    @Column(name = "brand_name", nullable = false, length = 100)
-    private String brandName;
-
-    // 역정규화: "상의/티셔츠"
-    @Column(name = "category_path", nullable = false, length = 255)
-    private String categoryPath;
-
     // 필수 값 검증 후 상품과 연관 컬렉션을 초기화하는 빌더 생성자이다.
     @Builder
     public Product(Brand brand, String productName, String productInfo,
@@ -90,8 +82,6 @@ public class Product extends BaseEntity {
         this.productName = productName;
         this.productInfo = productInfo;
         this.productGenderType = productGenderType;
-        this.brandName = brandName;
-        this.categoryPath = categoryPath;
         this.isAvailable = isAvailable != null ? isAvailable : true;
 
         if (images != null) {

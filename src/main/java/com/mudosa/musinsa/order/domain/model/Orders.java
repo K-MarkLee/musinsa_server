@@ -56,10 +56,7 @@ public class Orders extends BaseEntity {
     
     @Column(name = "total_discount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalDiscount = BigDecimal.ZERO;
-    
-    @Column(name = "final_payment_amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal finalPaymentAmount;
-    
+
     @Column(name = "is_settleable", nullable = false)
     private Boolean isSettleable = false;
     
@@ -83,7 +80,6 @@ public class Orders extends BaseEntity {
         Orders order = new Orders();
         order.user = user;
         order.totalPrice = totalPrice;
-        order.finalPaymentAmount = totalPrice;
         order.status = OrderStatus.PENDING;
         order.couponId = couponId;
 
@@ -168,7 +164,6 @@ public class Orders extends BaseEntity {
         }
 
         this.totalDiscount = discount;
-        this.finalPaymentAmount = this.totalPrice.subtract(discount);
     }
 
     /* 주문 아이템 추가 */

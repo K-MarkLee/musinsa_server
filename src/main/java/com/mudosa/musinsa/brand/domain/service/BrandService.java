@@ -138,7 +138,7 @@ public class BrandService {
         .productId(product.getProductId())
         .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
         // 엔티티에 brandName 필드가 없다면 아래 줄을 brand.getNameKo() 등으로 교체
-        .brandName(product.getBrandName())
+        .brandName(product.getBrand().getNameKo())
         .productName(product.getProductName())
         .productInfo(product.getProductInfo())
         .productGenderType(product.getProductGenderType() != null
@@ -148,7 +148,6 @@ public class BrandService {
         .hasStock(hasStock)
         .lowestPrice(lowestPrice)
         .thumbnailUrl(thumbnailUrl)
-        .categoryPath(product.getCategoryPath())
         .build();
   }
 

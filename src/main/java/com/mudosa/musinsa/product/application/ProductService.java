@@ -9,7 +9,6 @@ import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
 import com.mudosa.musinsa.product.domain.model.Category;
 import com.mudosa.musinsa.product.domain.model.Inventory;
-import com.mudosa.musinsa.product.domain.model.OptionName;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
@@ -218,14 +217,13 @@ public class ProductService {
         return ProductDetailResponse.builder()
             .productId(product.getProductId())
             .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
-            .brandName(product.getBrandName())
+            .brandName(product.getBrand().getNameKo())
             .productName(product.getProductName())
             .productInfo(product.getProductInfo())
             .productGenderType(product.getProductGenderType() != null
                 ? product.getProductGenderType().name()
                 : null)
             .isAvailable(product.getIsAvailable())
-            .categoryPath(product.getCategoryPath())
             .likeCount(likeCount)
             .images(imageResponses)
             .options(optionDetails)
@@ -236,11 +234,10 @@ public class ProductService {
         List<ProductDetailResponse.OptionDetail.OptionValueDetail> optionValueDetails = option.getProductOptionValues().stream()
             .map(mapping -> {
                 OptionValue optionValue = mapping.getOptionValue();
-                OptionName optionName = optionValue != null ? optionValue.getOptionName() : null;
+                String optionName = optionValue != null ? optionValue.getOptionName() : null;
                 return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
                     .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-                    .optionNameId(optionName != null ? optionName.getOptionNameId() : null)
-                    .optionName(optionName != null ? optionName.getOptionName() : null)
+                    .optionName(optionName != null ? optionName : null)
                     .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
                     .build();
             })
@@ -350,7 +347,7 @@ public class ProductService {
             ? parseGenderType(request.getProductGenderType())
             : null;
 
-        if (request.getBrandName() != null && !request.getBrandName().equals(product.getBrandName())) {
+        if (request.getBrandName() != null && !request.getBrandName().equals(product.getBrand().getNameKo())) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "브랜드명은 수정할 수 없습니다.");
         }
 
@@ -588,7 +585,7 @@ public class ProductService {
         return ProductSearchResponse.ProductSummary.builder()
             .productId(product.getProductId())
             .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
-            .brandName(product.getBrandName())
+            .brandName(product.getBrand().getNameKo())
             .productName(product.getProductName())
             .productInfo(product.getProductInfo())
             .productGenderType(product.getProductGenderType() != null
@@ -598,7 +595,6 @@ public class ProductService {
             .hasStock(hasStock)
             .lowestPrice(lowestPrice)
             .thumbnailUrl(thumbnailUrl)
-            .categoryPath(product.getCategoryPath())
             .build();
     }
 

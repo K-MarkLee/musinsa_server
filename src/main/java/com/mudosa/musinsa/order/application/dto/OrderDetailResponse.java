@@ -29,7 +29,6 @@ public class OrderDetailResponse {
     // 결제 정보
     private BigDecimal totalProductAmount;
     private BigDecimal discountAmount;
-    private BigDecimal orderFinalAmount;
     private BigDecimal paymentFinalAmount;
     private String paymentMethod;
     private String pgProvider;
