@@ -448,7 +448,7 @@ public class ChatServiceImpl implements ChatService {
 
         //저장
         result.add(attachmentRepository.save(att));
-        log.debug("[chatId={}][messageId={}] 파일 업로드 성공: {}", chatId, messageId, targetPath);
+        log.debug("[chatId={}][messageId={}] 파일 업로드 성공: {}", chatId, messageId, storedUrl);
 
       } catch (IOException e) {
         // 저장 실패시 오류
