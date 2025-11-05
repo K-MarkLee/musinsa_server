@@ -20,7 +20,7 @@ public record MessageCreatedEvent(MessageResponse messageResponse, long timestam
   public MessageCreatedEvent(MessageResponse messageResponse) {
     this(messageResponse, System.currentTimeMillis());
     log.trace("[MessageCreatedEvent] 생성됨. chatId={}, messageId={}, timestamp={}",
-        messageResponse.getChatId(), messageResponse.getMessageId(), timestamp);
+        messageResponse.getChatId(), messageResponse.getMessageId(), this.timestamp);
 
   }
 
