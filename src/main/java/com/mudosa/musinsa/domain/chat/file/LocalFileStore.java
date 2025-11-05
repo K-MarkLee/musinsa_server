@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.domain.chat.file;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -13,11 +14,12 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Component
+@Slf4j
 public class LocalFileStore implements FileStore {
 
   public String storeMessageFile(Long chatId, Long messageId, MultipartFile file) throws IOException {
     String baseDir = new ClassPathResource("static/").getFile().getAbsolutePath();
-    String uploadDir = baseDir + "/chat/" + chatId + "/message/" + messageId;
+    String uploadDir = Paths.get(baseDir, "chat", String.valueOf(chatId), "message", String.valueOf(messageId)).toString();
 
     Files.createDirectories(Paths.get(uploadDir));
 
@@ -44,7 +46,7 @@ public class LocalFileStore implements FileStore {
 
       return Files.deleteIfExists(filePath);
     } catch (IOException e) {
-      e.printStackTrace();
+      log.error("Failed to delete file: {}", relativePath, e);
       return false;
     }
   }
@@ -65,14 +67,14 @@ public class LocalFileStore implements FileStore {
               try {
                 Files.deleteIfExists(path);
               } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Failed to delete folder: {}", folderPath, e);
               }
             });
         return true;
       }
       return false;
     } catch (IOException e) {
-      e.printStackTrace();
+      log.error("Failed to delete folder: chat {} - message {}", chatId, messageId, e);
       return false;
     }
   }
