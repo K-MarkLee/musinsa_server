@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 
 /**
  * 알림 애그리거트 루트
+ * @author katsudon
  */
 @Entity
 @Table(name = "notification")
