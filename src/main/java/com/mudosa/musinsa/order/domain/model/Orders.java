@@ -3,6 +3,7 @@ package com.mudosa.musinsa.order.domain.model;
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
+import com.mudosa.musinsa.order.application.dto.InsufficientStockItem;
 import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -177,5 +178,30 @@ public class Orders extends BaseEntity {
         for (OrderProduct orderProduct : orderProducts) {
             addOrderProduct(orderProduct);
         }
+    }
+
+    /* 재고 확인 */
+    public StockValidationResult validateStock() {
+        if (this.orderProducts.isEmpty()) {
+            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND, "주문 상품이 없습니다");
+        }
+        
+        List<InsufficientStockItem> insufficientItems = new ArrayList<>();
+        
+        for (OrderProduct orderProduct : this.orderProducts) {
+            if (!orderProduct.hasEnoughStock()) {
+                insufficientItems.add(new InsufficientStockItem(
+                    orderProduct.getProductOption().getProductOptionId(),
+                    orderProduct.getProductQuantity(),
+                    orderProduct.getAvailableStock()
+                ));
+            }
+        }
+        
+        if (!insufficientItems.isEmpty()) {
+            return StockValidationResult.invalid(insufficientItems);
+        }
+        
+        return StockValidationResult.valid();
     }
 }

@@ -101,4 +101,14 @@ public class OrderProduct extends BaseEntity {
     public void validateProductOption() {
         this.productOption.validateAvailable();
     }
+
+    /* 재고 확인 */
+    public boolean hasEnoughStock() {
+        return this.productOption.getInventory().isSufficientStock(this.productQuantity);
+    }
+
+    /* 재고 개수 확인 */
+    public int getAvailableStock() {
+        return this.productOption.getInventory().getStockQuantity().getValue();
+    }
 }

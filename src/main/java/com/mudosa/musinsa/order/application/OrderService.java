@@ -8,7 +8,6 @@ import com.mudosa.musinsa.order.domain.model.OrderProduct;
 import com.mudosa.musinsa.order.domain.model.Orders;
 import com.mudosa.musinsa.order.domain.model.StockValidationResult;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
-import com.mudosa.musinsa.order.domain.service.StockValidator;
 import com.mudosa.musinsa.payment.application.dto.OrderValidationResult;
 import com.mudosa.musinsa.payment.application.dto.PaymentDetailDto;
 import com.mudosa.musinsa.payment.application.service.PaymentFetchService;
@@ -44,7 +43,6 @@ public class OrderService {
     private final CartService cartService;
     private final MemberCouponService memberCouponService;
     private final ProductOptionRepository productOptionRepository;
-    private final StockValidator stockValidator;
     private final UserRepository userRepository;
     private final PaymentFetchService paymentService;
     private final ProductOptionValueRepository productOptionValueRepository;
@@ -170,7 +168,7 @@ public class OrderService {
         order.validatePending();
 
         // 4. 재고 검증
-        StockValidationResult stockValidationResult = stockValidator.validateStockForOrder(order);
+        StockValidationResult stockValidationResult = order.validateStock();
         if (stockValidationResult.hasInsufficientStock()) {
             log.warn("재고 부족 - orderNo: {}", orderNo);
             return OrderValidationResult.insufficientStock(
@@ -249,7 +247,7 @@ public class OrderService {
             log.error("쿠폰 복구 실패 - orderId: {}, couponId: {}",
                     order.getId(), order.getCouponId(), e);
 
-            // TODO:쿠폰 복구 못했다고 결제를 취소해야되나...?
+
             throw new BusinessException(
                     ErrorCode.COUPON_ROLLBACK_INVALID,
                     "쿠폰 복구에 실패했습니다: " + e.getMessage()
@@ -273,27 +271,11 @@ public class OrderService {
 
         List<ProductOption> productOptions = productOptionRepository.findAllByIdWithInventory(productOptionIds);
 
-        // 요청된 모든 상품 옵션이 존재하는지 확인
-        //TODO: 해당 기능은 productOption이 가져가야할거같은데..
-//        productOptions.forEach(ProductOption::isValid);
-        if (productOptions.size() != productOptionIds.size()) {
-            List<Long> foundIds = productOptions.stream()
-                    .map(ProductOption::getProductOptionId)
-                    .toList();
-            List<Long> notFoundIds = productOptionIds.stream()
-                    .filter(id -> !foundIds.contains(id))
-                    .toList();
-
-            log.error("존재하지 않는 상품 옵션: {}", notFoundIds);
-            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_FOUND,
-                    "존재하지 않는 상품 옵션: " + notFoundIds);
-        }
-
         /* 3. 총 금액 계산 */
         BigDecimal totalPrice = calculateTotalPrice(request.getItems(), productOptions);
         log.info("총 금액 계산 완료 - totalPrice: {}", totalPrice);
 
-        /* 4. 주문 생성 (status: PENDING) */
+        /* 4. 주문 생성 */
         Orders order = Orders.create(
                 totalPrice,
                 user,  // User 엔티티 전달
@@ -309,12 +291,8 @@ public class OrderService {
 
         order.addOrderProducts(orderProducts);
 
-        //TODO: 재고 관리를 validate클래스에서 하는게 맞을까?
-        /* 6. 재고 확인 (StockValidator 재사용) */
-        StockValidationResult stockValidation = stockValidator.validateStockForOrder(order);
-
-
-        //orderProducts.stream().map(o-> o.getProductOption().getInventory().isValid())
+        /* 6. 재고 확인*/
+        StockValidationResult stockValidation = order.validateStock();
 
         if (stockValidation.hasInsufficientStock()) {
             log.warn("재고 부족 - 부족한 상품 수: {}", stockValidation.getInsufficientItems().size());
