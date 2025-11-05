@@ -73,7 +73,7 @@ public class SettlementAggregationService {
     public List<SettlementDaily> aggregateToDaily(Long brandId, LocalDate startDate, LocalDate endDate) {
         log.info("일일 정산 집계 시작: brandId={}, 기간={} ~ {}", brandId, startDate, endDate);
 
-        // MyBatis로 settlements_per_transaction 데이터 집계
+        // settlements_per_transaction 집계
         List<DailyAggregationDto> aggregations = perTransactionMapper.aggregateByDaily(
             brandId, startDate, endDate
         );
