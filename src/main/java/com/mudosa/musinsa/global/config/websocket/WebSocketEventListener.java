@@ -26,37 +26,31 @@ public class WebSocketEventListener {
   // 세션 ID와 사용자 정보를 매핑
   private final Map<String, Long> sessionUserMap = new ConcurrentHashMap<>();
 
-  /**
-   * WebSocket 연결 이벤트 처리
-   */
   @EventListener
   public void handleWebSocketConnectListener(SessionConnectedEvent event) {
     StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
     String sessionId = headerAccessor.getSessionId();
-
-    // 헤더에서 사용자 정보 추출 (실제로는 JWT 토큰 등에서 추출)
     Long userId = getUserIdFromHeaders(headerAccessor);
-
     if (userId != null) {
       sessionUserMap.put(sessionId, userId);
       log.info("새로운 WebSocket 연결: sessionId={}, userId={}", sessionId, userId);
+    } else {
+      log.info("WebSocket 연결: sessionId={}, userId 없음", sessionId);
     }
   }
 
-  /**
-   * WebSocket 연결 해제 이벤트 처리
-   */
   @EventListener
   public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
     StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
     String sessionId = headerAccessor.getSessionId();
-
     Long userId = sessionUserMap.remove(sessionId);
-
     if (userId != null) {
       log.info("WebSocket 연결 해제: sessionId={}, userId={}", sessionId, userId);
+    } else {
+      log.info("WebSocket 연결 해제: sessionId={}, userId 정보 없음", sessionId);
     }
   }
+
 
   /**
    * 헤더에서 사용자 ID 추출 (예시)

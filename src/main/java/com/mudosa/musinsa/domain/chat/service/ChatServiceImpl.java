@@ -89,18 +89,27 @@ public class ChatServiceImpl implements ChatService {
 
     //시작 시간으로 고정(여러번 호출시 시간이 달라지는 문제 발생 가능)
     LocalDateTime now = LocalDateTime.now();
+    log.info("[chatId={}][userId={}] 메시지 저장 시작. parentId={}, contentLength={}, fileCount={}",
+        chatId, userId, parentId,
+        (content != null ? content.length() : 0),
+        (files != null ? files.size() : 0));
 
     // 0) 기본 검증
     validateMessageOrFiles(content, files);
+    log.debug("[chatId={}][userId={}] 메시지/파일 검증 완료", chatId, userId);
 
     // 1) 채팅방/참여자 확인
     ChatRoom chatRoom = getChatRoomOrThrow(chatId);
 
     //참여자 정보 확인
     ChatPart chatPart = getChatPartOrThrow(chatId, userId);
+    log.debug("[chatId={}][userId={}] 채팅방 및 참여자 검증 완료. chatRoomId={}", chatId, userId, chatRoom.getChatId());
 
     // 2) 부모 메시지 확인 (같은 방인지까지 확인)
     Message parent = getParentMessageIfExists(parentId, chatId);
+    if (parent != null) {
+      log.debug("[chatId={}][userId={}] 부모 메시지 존재. parentMessageId={}", chatId, userId, parent.getMessageId());
+    }
 
     // 3) 메시지 엔티티 생성/저장
     Message message = Message.builder()
@@ -115,9 +124,11 @@ public class ChatServiceImpl implements ChatService {
 
     // 채팅방 마지막 메시지 시간 갱신
     chatRoom.setLastMessageAt(now);
+    log.info("[chatId={}][userId={}] 메시지 저장 완료. messageId={}", chatId, userId, savedMessage.getMessageId());
 
     // 4) 첨부파일 저장
     List<MessageAttachment> savedAttachments = saveAttachments(chatId, savedMessage.getMessageId(), files, savedMessage);
+    log.info("[chatId={}][userId={}] 첨부파일 {}개 저장 완료", chatId, userId, savedAttachments.size());
 
     // 5) 응답 생성
     MessageResponse dto = MessageResponse.from(savedMessage, savedAttachments);
@@ -138,7 +149,10 @@ public class ChatServiceImpl implements ChatService {
     Page<Message> messages = messageRepository.findPageWithRelationsByChatId(chatId, pageable);
 
     // 비어 있으면 즉시 반환
-    if (messages.isEmpty()) return Page.empty(pageable);
+    if (messages.isEmpty()) {
+      log.debug("[chatId={}][userId={}] 메시지 없음. page={}, size={}", chatId, userId, page, size);
+      return Page.empty(pageable);
+    }
 
     // 동일 채팅방 → 동일 브랜드. 첫 건으로 brandId 획득
     Long brandId = messages.getContent().get(0).getChatRoom().getBrand().getBrandId();
@@ -249,12 +263,17 @@ public class ChatServiceImpl implements ChatService {
   @Override
   @Transactional
   public ChatPartResponse addParticipant(Long chatId, Long userId) {
+    log.info("[chatId={}][userId={}] 채팅방 참여 요청", chatId, userId);
+
     // 1-1) 채팅방 존재 확인
     ChatRoom chatRoom = getChatRoomOrThrow(chatId);
 
     // 1-2) 유저 존재 확인
     User user = userRepository.findById(userId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        .orElseThrow(() -> {
+          log.warn("[chatId={}][userId={}] 유저 정보를 찾을 수 없습니다.", chatId, userId);
+          return new BusinessException(ErrorCode.USER_NOT_FOUND);
+        });
 
     // 2) 이미 참여 중인지 확인 (중복 방지)
     validateNotAlreadyParticipant(chatId, userId);
@@ -268,6 +287,9 @@ public class ChatServiceImpl implements ChatService {
 
     chatPart = chatPartRepository.save(chatPart);
 
+    log.info("[chatId={}][userId={}] 채팅방 참여 성공. chatPartId={}",
+        chatId, userId, chatPart.getChatPartId());
+
     // 4) DTO 변환
     return toResponse(chatPart);
   }
@@ -278,11 +300,16 @@ public class ChatServiceImpl implements ChatService {
   @Transactional
   @Override
   public void leaveChat(Long chatId, Long userId) {
+    log.info("[chatId={}][userId={}] 채팅방 나가기 요청", chatId, userId);
+
     // 활성 상태의 참여 기록 조회
     ChatPart chatPart = getChatPartOrThrow(chatId, userId);
 
     // 이미 나갔는지 확인할 필요 없음 (조건상 DeletedAt IS NULL 보장됨)
     chatPart.setDeletedAt(LocalDateTime.now());
+
+    log.info("[chatId={}][userId={}] 채팅방 나가기 성공. chatPartId={}",
+        chatId, userId, chatPart.getChatPartId());
   }
 
 
@@ -293,7 +320,10 @@ public class ChatServiceImpl implements ChatService {
    */
   private ChatRoom getChatRoomOrThrow(Long chatId) {
     return chatRoomRepository.findById(chatId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_NOT_FOUND));
+        .orElseThrow(() -> {
+          log.warn("[chatId={}] 채팅방이 존재하지 않습니다.", chatId);
+          return new BusinessException(ErrorCode.CHAT_NOT_FOUND);
+        });
   }
 
   /**
@@ -302,7 +332,10 @@ public class ChatServiceImpl implements ChatService {
   private ChatPart getChatPartOrThrow(Long chatId, Long userId) {
     return chatPartRepository
         .findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(chatId, userId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_PARTICIPANT_NOT_FOUND));
+        .orElseThrow(() -> {
+          log.warn("[chatId={}][userId={}] 채팅 참여 정보를 확인할 수 없습니다.", chatId, userId);
+          return new BusinessException(ErrorCode.CHAT_PARTICIPANT_NOT_FOUND);
+        });
   }
 
   /**
@@ -317,6 +350,7 @@ public class ChatServiceImpl implements ChatService {
   // 2) 추가할 때만 쓰는 검증 메서드
   private void validateNotAlreadyParticipant(Long chatId, Long userId) {
     if (isParticipant(chatId, userId)) {
+      log.warn("[chatId={}][userId={}] 이미 채팅방에 참여 중인 유저입니다.", chatId, userId);
       throw new BusinessException(ErrorCode.CHAT_PARTICIPANT_ALREADY_EXISTS);
     }
   }
@@ -340,6 +374,7 @@ public class ChatServiceImpl implements ChatService {
 
     //둘 다 없으면 오류 반환
     if (noMessage && noFiles) {
+      log.warn("텍스트나 파일 중 하나 이상 보유해야 합니다.");
       throw new BusinessException(ErrorCode.MESSAGE_OR_FILE_REQUIRED);
     }
   }
@@ -352,12 +387,16 @@ public class ChatServiceImpl implements ChatService {
     }
     //해당 id에 해당하는 부모 메시지가 없으면 오류 반환
     Message parent = messageRepository.findById(parentId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.MESSAGE_PARENT_NOT_FOUND));
+        .orElseThrow(() -> {
+          log.warn("[chatId={}][parentId={}] 부모 메시지를 찾을 수 없습니다.", chatId, parentId);
+          return new BusinessException(ErrorCode.MESSAGE_PARENT_NOT_FOUND);
+        });
 
     //TODO: 캡슐화를 공부해보자!
     // 부모 메시지가 다른 방의 메시지면 막기
     if (!parent.isSameRoom(chatId)) {
 //    if (!parent.getChatRoom().getChatId().equals(chatId)) {
+      log.warn("[chatId={}][parentId={}] 부모 메시지가 다른 채팅방에 속해 있습니다.", chatId, parentId);
       throw new BusinessException(ErrorCode.MESSAGE_PARENT_NOT_FOUND);
     }
 
@@ -372,9 +411,9 @@ public class ChatServiceImpl implements ChatService {
                                                   Message message) {
     //파일 없으면 빈 배열 반환
     if (files == null || files.isEmpty()) {
+      log.debug("[chatId={}][messageId={}] 첨부파일 없음", chatId, messageId);
       return List.of();
     }
-
     //저장 결과 배열
     List<MessageAttachment> result = new ArrayList<>();
 
@@ -409,10 +448,11 @@ public class ChatServiceImpl implements ChatService {
 
         //저장
         result.add(attachmentRepository.save(att));
-        log.info("파일 업로드 성공: {}", targetPath);
+        log.debug("[chatId={}][messageId={}] 파일 업로드 성공: {}", chatId, messageId, targetPath);
 
       } catch (IOException e) {
         // 저장 실패시 오류
+        log.error("[chatId={}][messageId={}] 파일 업로드 중 오류가 발생했습니다.", chatId, messageId, e);
         throw new BusinessException(ErrorCode.FILE_SAVE_FAILED);
       }
     }
@@ -428,5 +468,6 @@ public class ChatServiceImpl implements ChatService {
     //TODO: 만약에 스프링 큐가 아닌 다른 큐를 쓴다면 관련 코드가 다 변경되어아햘지 않을까? OOP를 적용해보자!
     messageEventPublisher.publishMessageCreated(dto);
     eventPublisher.publishEvent(new NotificationRequiredEvent(userId, chatId, content));
+    log.info("[chatId={}][userId={}] 이벤트 발행 완료. messageId={}", chatId, userId, dto.getMessageId());
   }
 }
