@@ -6,13 +6,11 @@ package com.mudosa.musinsa.event.presentation.controller;
 import com.mudosa.musinsa.event.presentation.dto.res.EventListResDto;
 import com.mudosa.musinsa.event.model.Event;
 import com.mudosa.musinsa.event.service.EventService;
-import com.mudosa.musinsa.event.service.EventEntryService;
+import com.mudosa.musinsa.event.service.EventCouponAccessService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.ViewResolver;
 
 import java.util.List;
 
@@ -28,7 +26,7 @@ import java.util.List;
 public class EventController {
 
     private final EventService eventService;
-    private final EventEntryService eventEntryService;
+    private final EventCouponAccessService eventEntryService;
 
     /*
     이벤트 목록 조회 api
@@ -56,8 +54,9 @@ public class EventController {
     }
 
     /* 쿠폰 발급 트리거
-     * 슬롯/상태 검증 → (eventId,couponId) 재고 차감 → 발급이력 저장 → member_coupon 생성
-
+    * 슬롯/상태 검증 → (eventId,couponId) 재고 차감 → 발급이력 저장 → member_coupon 생성
+    * 멱등성 보장 ? 이미 발급받은 경우 200으로 기존 결과 반환 or 409로 충돌
+    *
     */
 
     //@PostMapping
