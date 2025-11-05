@@ -15,6 +15,7 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -33,6 +34,7 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 @Slf4j
 @Configuration
+@Profile("!dev")  // 개발 환경에서는 배치 Job 로드 안 함
 @RequiredArgsConstructor
 public class YearlySettlementAggregationJob {
 
