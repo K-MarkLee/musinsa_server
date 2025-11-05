@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.domain.chat.controller;
 
 import com.google.firebase.messaging.FirebaseMessagingException;
+import com.mudosa.musinsa.common.dto.ApiResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
@@ -10,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,7 +41,8 @@ public class ChatControllerImpl implements ChatController {
       path = "/{chatId}/send",
       consumes = MediaType.MULTIPART_FORM_DATA_VALUE
   )
-  public ResponseEntity<MessageResponse> sendMessage(
+  @Override
+  public ApiResponse<MessageResponse> sendMessage(
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails,
       @RequestParam(value = "parentId", required = false) Long parentId,
@@ -51,7 +52,7 @@ public class ChatControllerImpl implements ChatController {
     Long userId = userDetails.getUserId();
 
     MessageResponse savedMessage = chatService.saveMessage(chatId, userId, parentId, message, files);
-    return ResponseEntity.ok(savedMessage);
+    return ApiResponse.success(savedMessage, "메시지를 성공적으로 전송했습니다.");
   }
 
 
@@ -60,7 +61,8 @@ public class ChatControllerImpl implements ChatController {
    * GET /api/chat/1/messages?userId=1&page=0&size=20
    */
   @GetMapping("/{chatId}/messages")
-  public ResponseEntity<Page<MessageResponse>> getChatMessages(
+  @Override
+  public ApiResponse<Page<MessageResponse>> getChatMessages(
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails,
       @RequestParam(defaultValue = "0") int page,
@@ -70,7 +72,10 @@ public class ChatControllerImpl implements ChatController {
 
     Page<MessageResponse> messages = chatService.getChatMessages(chatId, userId, page, size);
 
-    return ResponseEntity.ok(messages);
+    return ApiResponse.success(
+        messages,
+        "이전 메시지를 성공적으로 조회했습니다: " + (page * size) + " ~ " + ((page * size) + size)
+    );
   }
 
   /**
@@ -78,10 +83,11 @@ public class ChatControllerImpl implements ChatController {
    * GET /api/chat/1/info
    */
   @GetMapping("/{chatId}/info")
-  public ResponseEntity<ChatRoomInfoResponse> getChatInfo(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+  @Override
+  public ApiResponse<ChatRoomInfoResponse> getChatInfo(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
 
-    return ResponseEntity.ok(chatService.getChatRoomInfoByChatId(chatId, userId));
+    return ApiResponse.success(chatService.getChatRoomInfoByChatId(chatId, userId), "채팅방의 정보를 성공적으로 조회했습니다.");
   }
 
 
@@ -90,9 +96,10 @@ public class ChatControllerImpl implements ChatController {
    * POST /api/chat/1/participants
    */
   @PostMapping("/{chatId}/participants")
-  public ResponseEntity<ChatPartResponse> addParticipant(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+  @Override
+  public ApiResponse<ChatPartResponse> addParticipant(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
-    return ResponseEntity.ok(chatService.addParticipant(chatId, userId));
+    return ApiResponse.success(chatService.addParticipant(chatId, userId), "채팅방에 성공적으로 참여했습니다.");
   }
 
   /**
@@ -100,10 +107,11 @@ public class ChatControllerImpl implements ChatController {
    * PATCH /api/chat/1/leave
    */
   @PatchMapping("/{chatId}/leave")
-  public ResponseEntity<List<ChatRoomInfoResponse>> leaveChat(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+  @Override
+  public ApiResponse<List<ChatRoomInfoResponse>> leaveChat(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
     chatService.leaveChat(chatId, userId);
-    return ResponseEntity.ok(chatService.getChatRoomByUserId(userId));
+    return ApiResponse.success(chatService.getChatRoomByUserId(userId), "채팅방에서 성공적으로 퇴장하셨습니다.");
   }
 
   /**
@@ -111,9 +119,10 @@ public class ChatControllerImpl implements ChatController {
    * GET /api/chat/1/my
    */
   @GetMapping("/my")
-  public ResponseEntity<List<ChatRoomInfoResponse>> getMyChat(@AuthenticationPrincipal CustomUserDetails userDetails) {
+  @Override
+  public ApiResponse<List<ChatRoomInfoResponse>> getMyChat(@AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
-    return ResponseEntity.ok(chatService.getChatRoomByUserId(userId));
+    return ApiResponse.success(chatService.getChatRoomByUserId(userId), "나의 참여 채팅방 목록이 성공적으로 조회되었습니다.");
   }
 
 

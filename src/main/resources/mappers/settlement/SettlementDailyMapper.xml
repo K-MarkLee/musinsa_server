@@ -5,7 +5,7 @@
 <mapper namespace="com.mudosa.musinsa.settlement.domain.repository.SettlementDailyMapper">
 
     <!-- 주간 집계 쿼리 -->
-    <select id="aggregateByWeekly" resultType="com.mudosa.musinsa.settlement.domain.dto.WeeklyAggregationDto">
+    <select id="aggregateByWeekly" resultType="com.mudosa.musinsa.settlement.batch.dto.WeeklyAggregationDto">
         SELECT
             brand_id as brandId,
             YEAR(settlement_date) as "year",
@@ -26,7 +26,7 @@
     </select>
 
     <!-- 월간 집계 쿼리 -->
-    <select id="aggregateByMonthly" resultType="com.mudosa.musinsa.settlement.domain.dto.MonthlyAggregationDto">
+    <select id="aggregateByMonthly" resultType="com.mudosa.musinsa.settlement.batch.dto.MonthlyAggregationDto">
         SELECT
             brand_id as brandId,
             YEAR(settlement_date) as "year",

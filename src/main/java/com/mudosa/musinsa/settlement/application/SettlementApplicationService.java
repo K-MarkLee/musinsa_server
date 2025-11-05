@@ -15,8 +15,9 @@ import java.util.List;
 
 /**
  * 정산 애플리케이션 서비스
- * - 정산 거래 생성 및 관리
- * - 정산 상태 관리
+ *
+ * 거래별 정산 데이터의 생성 및 조회
+ * PaymentSettlementService에서 호출될 때 실행
  */
 @Service
 @RequiredArgsConstructor
@@ -112,5 +113,17 @@ public class SettlementApplicationService {
     public SettlementPerTransaction getSettlementTransactionByPaymentId(Long paymentId) {
         return settlementPerTransactionRepository.findFirstByPaymentId(paymentId)
             .orElseThrow(() -> new IllegalArgumentException("Settlement not found for payment: " + paymentId));
+    }
+
+    /**
+     * Payment ID로 정산 거래 존재 여부 확인 -> 중복 생성 방지
+     *
+     * @param paymentId 결제 ID
+     * @return 정산 거래 존재 여부
+     */
+    @Transactional(readOnly = true)
+    public boolean existsByPaymentId(Long paymentId) {
+        log.debug("Checking if settlement exists for paymentId={}", paymentId);
+        return settlementPerTransactionRepository.findFirstByPaymentId(paymentId).isPresent();
     }
 }

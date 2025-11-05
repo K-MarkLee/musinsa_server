@@ -97,6 +97,7 @@ class ProductOptionQueryTest {
         
         // 실제 사용 시: orderServiceHelper.findProductOptionsInBatch(largeIdList)
         List<ProductOption> result = productOptionRepository.findAllByIdWithInventory(largeIdList);
+
         
         log.info("========== 조회 완료: {}개 ==========", result.size());
         

@@ -236,6 +236,7 @@ public class Product extends BaseEntity {
         }
     }
 
+    //TODO: 엔티티안에 DTO가 있는게 맞을까?
     public record ImageRegistration(String imageUrl, boolean isThumbnail) {
     }
 }

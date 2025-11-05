@@ -44,12 +44,12 @@ public class EventService {
                 .collect(Collectors.toList());//이벤트 상태 계산하고 DTO로 변환, 메서드 참조는 기존에 정의된 메서드를 직접 참조
     }
 
-    // 이벤트 목록 조회 ( 날짜와 상태에 맞춰서 필터링 ) GET - resDto를 통해서 반환
+    //이벤트 목록 조회 ( 날짜와 상태에 맞춰서 필터링 ) GET - resDto를 통해서 반환
 
     public List<EventListResDto> getFilteredEventList(LocalDateTime currentTime) {
         List<Event> events = eventRepository.findAll();
         return events.stream()
-                // 필터링 해주는게 이 stream에서 filter() 연산을 통해서 !
+                //필터링 해주는게 이 stream에서 filter() 연산을 통해서 !
                 .filter(event ->event.getStartedAt().isAfter(currentTime)) //LocalDateTime 클래스 내장 메서드
                 .map(event -> mapEventToDto(event,currentTime)) // event라는 매개변수를 받아서 메서드를 호출하는 익명함수
                 .collect(Collectors.toList());
@@ -99,7 +99,9 @@ public class EventService {
 
     }
 
-    // 이벤트 상태 계산 (SOON, OPEN, CLOSED) - 이거 status로 분리 ?
+
+    //TODO: 이벤트로 단일 책임 원칙 설정
+    // 이벤트 상태 계산 (SOON, OPEN, CLOSED)
     private Event.EventStatus calculateEventStatus(Event event, LocalDateTime currentTime) {
         if (currentTime.isBefore(event.getStartedAt())) {
             return Event.EventStatus.PLANNED;

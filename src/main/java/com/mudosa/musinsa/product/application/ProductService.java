@@ -56,7 +56,7 @@ public class ProductService {
 
     // ProductCreateCommand를 기반으로 상품과 연관 엔티티를 한 번에 저장한다.
     @Transactional
-    public Long createProduct(ProductCreateCommand command) {
+    public Long createProduct(ProductCreateCommand command) { //TODO: DTO가 서비스 클래스가 있는게 맞을까?
         Product product = Product.builder()
             .brand(command.getBrand())
             .productName(command.getProductName())
@@ -96,6 +96,7 @@ public class ProductService {
                         .build())
                     .forEach(productOption::addOptionValue);
 
+                //TODO: product에서
             product.addProductOption(productOption);
         });
 
@@ -108,7 +109,7 @@ public class ProductService {
     public Long createProduct(ProductCreateRequest request,
                               Brand brand,
                               Category category) {
-    ProductGenderType genderType = parseGenderType(request.getProductGenderType());
+        ProductGenderType genderType = parseGenderType(request.getProductGenderType());
 
         validateDenormalizedFields(request, brand, category);
 
@@ -447,7 +448,7 @@ public class ProductService {
             .orElseThrow(() -> new EntityNotFoundException("Product option not found: " + productOptionId));
 
         product.removeProductOption(targetOption);
-        productRepository.flush();
+        productRepository.flush(); //TODO: flush가 필요할까요?
     }
 
     private void validateBrandOwnership(Product product, Long brandId) {

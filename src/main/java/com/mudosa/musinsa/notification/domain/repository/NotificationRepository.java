@@ -20,6 +20,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Modifying
     @Transactional
+    //TODO: @Query가 어떻게 동작하는지 메커니즘 학습
     @Query("UPDATE Notification n SET n.notificationStatus = true, n.readAt = CURRENT_TIMESTAMP WHERE n.notificationId = :notificationId")
     int updateNotificationStatus(@Param("notificationId")Long notificationId);
 }

@@ -5,7 +5,7 @@
 <mapper namespace="com.mudosa.musinsa.settlement.domain.repository.SettlementMonthlyMapper">
 
     <!-- 연간 집계 쿼리 -->
-    <select id="aggregateByYearly" resultType="com.mudosa.musinsa.settlement.domain.dto.YearlyAggregationDto">
+    <select id="aggregateByYearly" resultType="com.mudosa.musinsa.settlement.batch.dto.YearlyAggregationDto">
         SELECT
             brand_id as brandId,
             YEAR(month_start_date) as "year",

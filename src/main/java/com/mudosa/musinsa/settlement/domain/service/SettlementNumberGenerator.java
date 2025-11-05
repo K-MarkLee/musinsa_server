@@ -59,7 +59,7 @@ public class SettlementNumberGenerator {
     }
 
     /**
-     * DB 시퀀스에서 다음 값 조회 (MySQL용 - AUTO_INCREMENT 시뮬레이션)
+     * DB 시퀀스에서 다음 값 조회
      * 간단한 타임스탬프 기반 번호 생성으로 대체
      */
     private Long getNextSequence(String sequenceName) {

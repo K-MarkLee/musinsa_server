@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.settlement.domain.dto;
+package com.mudosa.musinsa.settlement.batch.dto;
 
 import com.mudosa.musinsa.common.vo.Money;
 import lombok.Getter;
@@ -6,30 +6,22 @@ import lombok.Getter;
 import java.math.BigDecimal;
 
 /**
- * 월간 집계 DTO
+ * 연간 집계 DTO
  */
 @Getter
-public class MonthlyAggregationDto {
+public class YearlyAggregationDto {
 
     private Long brandId;
     private Integer year;
-    private Integer month;
-    private String settlementTimezone;
     private Long totalOrderCount;
     private Money totalSalesAmount;
     private Money totalCommissionAmount;
     private Money totalTaxAmount;
     private Money totalPgFeeAmount;
 
-    // MyBatis가 setter를 사용하도록 기본 생성자 추가
-    public MonthlyAggregationDto() {
-    }
-
-    public MonthlyAggregationDto(
+    public YearlyAggregationDto(
         Long brandId,
         Integer year,
-        Integer month,
-        String settlementTimezone,
         Long totalOrderCount,
         BigDecimal totalSalesAmount,
         BigDecimal totalCommissionAmount,
@@ -38,8 +30,6 @@ public class MonthlyAggregationDto {
     ) {
         this.brandId = brandId;
         this.year = year;
-        this.month = month;
-        this.settlementTimezone = settlementTimezone;
         this.totalOrderCount = totalOrderCount;
         this.totalSalesAmount = new Money(totalSalesAmount);
         this.totalCommissionAmount = new Money(totalCommissionAmount);
@@ -47,21 +37,12 @@ public class MonthlyAggregationDto {
         this.totalPgFeeAmount = new Money(totalPgFeeAmount);
     }
 
-    // MyBatis용 setter 메서드들
     public void setBrandId(Long brandId) {
         this.brandId = brandId;
     }
 
     public void setYear(Integer year) {
         this.year = year;
-    }
-
-    public void setMonth(Integer month) {
-        this.month = month;
-    }
-
-    public void setSettlementTimezone(String settlementTimezone) {
-        this.settlementTimezone = settlementTimezone;
     }
 
     public void setTotalOrderCount(Long totalOrderCount) {

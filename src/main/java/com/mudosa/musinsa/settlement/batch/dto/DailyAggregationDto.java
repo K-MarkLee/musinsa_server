@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.settlement.domain.dto;
+package com.mudosa.musinsa.settlement.batch.dto;
 
 import com.mudosa.musinsa.common.vo.Money;
 import lombok.Getter;

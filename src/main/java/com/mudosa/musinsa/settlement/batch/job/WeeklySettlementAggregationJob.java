@@ -15,19 +15,28 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
 
 /**
- * 주간 정산 집계 배치
- * - 실행 주기: 매주 월요일
- * - 집계 범위: SettlementDaily → SettlementWeekly
- * - 처리 방식: 브랜드별 청크 단위 처리
+ * 주간 정산 집계 배치 Job
+ *
+ * 일일 정산 데이터를 주간 단위로 집계
+ * 매주 월요일 자동 실행
+ *
+ * 처리 흐름:
+ * 모든 브랜드 ID 조회 (BrandIdReader)
+ * -> 브랜드별로 지난주 월요일~일요일의 일일 정산 데이터 집계
+ * -> SettlementDaily → SettlementWeekly 변환 및 저장
+ *
+ * 집계 기간: 지난주 (월요일 ~ 일요일)
  */
 @Slf4j
 @Configuration
+@Profile("!dev")  // 개발 환경에서는 배치 Job 로드 안 함
 @RequiredArgsConstructor
 public class WeeklySettlementAggregationJob {
 

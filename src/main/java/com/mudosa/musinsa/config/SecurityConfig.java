@@ -64,6 +64,7 @@ public class SecurityConfig {
                         "/api/payments/confirm",  // 결제 승인
                         "/api/payments/fail",     // 결제 실패
                         "/api/orders/pending",    // 주문서 조회 (비로그인 가능)
+                        "/api/test/**",           // 테스트 API (개발 환경 전용)
                         "/swagger-ui/**",         // Swagger UI
                         "/v3/api-docs/**",        // API 문서
                         "/error",                 // 에러 페이지

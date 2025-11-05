@@ -274,6 +274,8 @@ public class OrderService {
         List<ProductOption> productOptions = productOptionRepository.findAllByIdWithInventory(productOptionIds);
 
         // 요청된 모든 상품 옵션이 존재하는지 확인
+        //TODO: 해당 기능은 productOption이 가져가야할거같은데..
+//        productOptions.forEach(ProductOption::isValid);
         if (productOptions.size() != productOptionIds.size()) {
             List<Long> foundIds = productOptions.stream()
                     .map(ProductOption::getProductOptionId)
@@ -307,8 +309,13 @@ public class OrderService {
 
         order.addOrderProducts(orderProducts);
 
+        //TODO: 재고 관리를 validate클래스에서 하는게 맞을까?
         /* 6. 재고 확인 (StockValidator 재사용) */
         StockValidationResult stockValidation = stockValidator.validateStockForOrder(order);
+
+
+        //orderProducts.stream().map(o-> o.getProductOption().getInventory().isValid())
+
         if (stockValidation.hasInsufficientStock()) {
             log.warn("재고 부족 - 부족한 상품 수: {}", stockValidation.getInsufficientItems().size());
             return OrderCreateResponse.insufficientStock(stockValidation.getInsufficientItems());
@@ -322,6 +329,7 @@ public class OrderService {
         return OrderCreateResponse.success(savedOrder.getId(), savedOrder.getOrderNo());
     }
 
+    //TODO: 총 주문 금액 계산 로직인데 해당 코드가 여기있으면 될까? 다른롯에서 만약 쓴다면?
     private BigDecimal calculateTotalPrice(
             List<OrderCreateItem> items,
             List<ProductOption> productOptions) {
@@ -329,6 +337,7 @@ public class OrderService {
         BigDecimal totalPrice = BigDecimal.ZERO;
 
         for (OrderCreateItem item : items) {
+            //ProductOption에서 관리
             ProductOption productOption = productOptions.stream()
                     .filter(po -> po.getProductOptionId().equals(item.getProductOptionId()))
                     .findFirst()
@@ -418,6 +427,8 @@ public class OrderService {
                 .map(op -> {
                     ProductOption productOption = op.getProductOption();
                     Product product = productOption.getProduct();
+
+                    //TODO: 상품 옵션값들을 DB에서 계속 조회할 이유가 잇을까? 캐싱하면 어떨까?
 
                     // Map에서 옵션 값 조회
                     List<ProductOptionValue> optionValues =

@@ -61,4 +61,9 @@ public class Message {
     this.parent = parent;
     parent.getChildren().add(this);
   }
+
+    public boolean isSameRoom(Long id) {
+        return this.getChatRoom().getChatId().equals(id);
+      //코드
+    }
 }

@@ -35,8 +35,8 @@ public interface OrderRepository extends JpaRepository<Orders, Long> {
     Optional<Orders> findByOrderNo(String orderNo);
 
     @Query("""
-        SELECT DISTINCT o 
-        FROM Orders o 
+        SELECT DISTINCT o
+        FROM Orders o
         JOIN FETCH o.user u
         JOIN FETCH o.orderProducts op
         JOIN FETCH op.productOption po
@@ -44,4 +44,15 @@ public interface OrderRepository extends JpaRepository<Orders, Long> {
         WHERE o.orderNo = :orderNo
     """)
     Optional<Orders> findOrderWithDetails(String orderNo);
+
+    @Query("""
+        SELECT DISTINCT o
+        FROM Orders o
+        JOIN FETCH o.orderProducts op
+        JOIN FETCH op.productOption po
+        JOIN FETCH po.product p
+        JOIN FETCH p.brand b
+        WHERE o.id = :orderId
+    """)
+    Optional<Orders> findByIdWithProductsAndBrand(Long orderId);
 }

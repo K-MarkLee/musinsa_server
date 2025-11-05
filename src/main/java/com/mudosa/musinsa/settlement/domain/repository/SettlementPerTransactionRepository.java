@@ -14,17 +14,12 @@ import java.util.List;
  */
 @Repository
 public interface SettlementPerTransactionRepository
-    extends JpaRepository<SettlementPerTransaction, Long>,
-            SettlementPerTransactionAggregationRepository {
+    extends JpaRepository<SettlementPerTransaction, Long> {
 
-    /**
-     * OOM 방지를 위해 페이징 사용
-     */
+    // 페이징
     Page<SettlementPerTransaction> findByBrandId(Long brandId, Pageable pageable);
 
-    /**
-     * 특정 브랜드의 정산 집계 대상 거래를 조회 (날짜 범위 + 페이징)
-     */
+    // 특정 브랜드의 집계 대상 거래 조회
     Page<SettlementPerTransaction> findByBrandIdAndTransactionDateLocalBetween(
         Long brandId,
         LocalDate startDate,
@@ -32,19 +27,13 @@ public interface SettlementPerTransactionRepository
         Pageable pageable
     );
 
-    /**
-     * 특정 결제 ID에 연결된 모든 정산 거래를 조회
-     */
+    // 특정 결제 ID에 연결된 모든 정산 거래를 조회
     List<SettlementPerTransaction> findByPaymentId(Long paymentId);
 
-    /**
-     * 특정 결제 ID에 연결된 단일 정산 거래를 조회
-     */
+    // 특정 결제 ID에 연결된 단일 정산 거래를 조회
     java.util.Optional<SettlementPerTransaction> findFirstByPaymentId(Long paymentId);
 
-    /**
-     * 브랜드 ID와 날짜 범위로 정산 거래 조회 (페이징 없음)
-     */
+    // 브랜드 ID와 날짜 범위로 정산 거래 조회
     List<SettlementPerTransaction> findByBrandIdAndTransactionDateLocalBetween(
         Long brandId,
         LocalDate startDate,

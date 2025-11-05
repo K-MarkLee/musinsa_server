@@ -15,17 +15,26 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
- * 연간 정산 집계 배치
- * - 실행 주기: 매년 1월 1일
- * - 집계 범위: SettlementMonthly → SettlementYearly
- * - 처리 방식: 브랜드별 청크 단위 처리
+ * 연간 정산 집계 배치 Job
+ *
+ * 월간 정산 데이터를 연간 단위로 집계
+ * 매년 1월 1일 자동 실행
+ *
+ * 처리 흐름:
+ * -> 모든 브랜드 ID 조회 (BrandIdReader)
+ * -> 브랜드별로 작년 1월~12월의 월간 정산 데이터 집계
+ * -> SettlementMonthly → SettlementYearly 변환 및 저장
+ *
+ * 집계 기간: 작년 (1월 ~ 12월)
  */
 @Slf4j
 @Configuration
+@Profile("!dev")  // 개발 환경에서는 배치 Job 로드 안 함
 @RequiredArgsConstructor
 public class YearlySettlementAggregationJob {
 

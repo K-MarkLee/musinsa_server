@@ -2,21 +2,20 @@ package com.mudosa.musinsa.payment.application.service;
 
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.payment.application.dto.*;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import com.mudosa.musinsa.payment.application.dto.PaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.PaymentResponseDto;
+import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 
 @Slf4j
@@ -59,6 +58,8 @@ public class TossPaymentStrategy implements PaymentStrategy {
 		try {
 			String encodedAuth = createBasicAuthHeader(tossPaymentsSecretKey);
 
+            //TODO: 외부 API 호출에 대해서 클래스나 유틸로 따로 분리하고, 필요한 데이터만 받게끔
+            //설정 클래스도 있어야함
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_JSON);
 			headers.set(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth);

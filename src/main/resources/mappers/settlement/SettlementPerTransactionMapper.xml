@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mudosa.musinsa.settlement.domain.repository.SettlementPerTransactionMapper">
+
+    <!-- 일일 집계 쿼리 -->
+    <select id="aggregateByDaily" resultType="com.mudosa.musinsa.settlement.batch.dto.DailyAggregationDto">
+        SELECT
+            brand_id as brandId,
+            transaction_date_local as settlementDate,
+            COUNT(*) as totalOrderCount,
+            COALESCE(SUM(transaction_amount), 0) as totalSalesAmount,
+            COALESCE(SUM(commission_amount), 0) as totalCommissionAmount,
+            COALESCE(SUM(tax_amount), 0) as totalTaxAmount,
+            COALESCE(SUM(pg_fee_amount), 0) as totalPgFeeAmount
+        FROM settlements_per_transaction
+        WHERE brand_id = #{brandId}
+          AND transaction_date_local BETWEEN #{startDate} AND #{endDate}
+        GROUP BY brand_id, transaction_date_local
+        ORDER BY transaction_date_local
+    </select>
+
+</mapper>

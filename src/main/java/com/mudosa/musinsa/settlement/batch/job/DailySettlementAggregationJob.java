@@ -8,26 +8,38 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
 
 /**
- * 일일 정산 집계 배치
- * - 실행 주기: 매일 자정
- * - 집계 범위: SettlementPerTransaction → SettlementDaily
- * - 처리 방식: 브랜드별 청크 단위 처리
+ * 일일 정산 집계 배치 Job
+ *
+ * 거래별 정산 데이터를 일일 단위로 집계
+ * 매일 자정 자동 실행
+ *
+ * 처리 흐름:
+ * 모든 브랜드 ID 조회 (BrandIdReader)
+ * -> 브랜드별로 어제 날짜의 거래별 정산 데이터 집계
+ * -> SettlementPerTransaction → SettlementDaily 변환 및 저장
+ *
+ * JobParameter:
+ * - targetDate (Optional): 미지정 시 어제
  */
 @Slf4j
 @Configuration
+@Profile("!dev")  // 개발 환경에서는 배치 Job 로드 안 함
 @RequiredArgsConstructor
 public class DailySettlementAggregationJob {
 
@@ -51,7 +63,7 @@ public class DailySettlementAggregationJob {
         return new StepBuilder("dailySettlementStep", jobRepository)
             .<Long, Long>chunk(batchProperties.getChunkSize(), transactionManager)
             .reader(brandIdReader.createReader(JOB_NAME))
-            .processor(buildProcessor())
+            .processor(buildProcessor(null))
             .writer(buildWriter())
             .faultTolerant()
             .skip(DataAccessException.class)
@@ -59,13 +71,25 @@ public class DailySettlementAggregationJob {
             .build();
     }
 
-    private ItemProcessor<Long, Long> buildProcessor() {
+    @Bean
+    @StepScope
+    public ItemProcessor<Long, Long> buildProcessor(
+            @Value("#{jobParameters['targetDate']}") String targetDateStr
+    ) {
         return brandId -> {
-            LocalDate targetDate = DateRangeCalculator.getYesterday();
+            // JobParameters에서 targetDate 가져오기 (없으면 어제 기본값)
+            LocalDate targetDate;
+            if (targetDateStr != null && !targetDateStr.isEmpty()) {
+                targetDate = LocalDate.parse(targetDateStr);
+                log.info("📅 JobParameters로 전달받은 targetDate 사용: {}", targetDate);
+            } else {
+                targetDate = DateRangeCalculator.getYesterday();
+                log.info("📅 기본값 사용 (어제): {}", targetDate);
+            }
 
             settlementService.aggregateToDaily(brandId, targetDate, targetDate);
 
-            log.debug("브랜드 {} 일일 정산 집계 완료", brandId);
+            log.debug("브랜드 {} 일일 정산 집계 완료 (targetDate={})", brandId, targetDate);
             return brandId;
         };
     }

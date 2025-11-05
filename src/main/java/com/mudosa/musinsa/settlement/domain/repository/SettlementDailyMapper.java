@@ -1,7 +1,7 @@
 package com.mudosa.musinsa.settlement.domain.repository;
 
-import com.mudosa.musinsa.settlement.domain.dto.MonthlyAggregationDto;
-import com.mudosa.musinsa.settlement.domain.dto.WeeklyAggregationDto;
+import com.mudosa.musinsa.settlement.batch.dto.MonthlyAggregationDto;
+import com.mudosa.musinsa.settlement.batch.dto.WeeklyAggregationDto;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

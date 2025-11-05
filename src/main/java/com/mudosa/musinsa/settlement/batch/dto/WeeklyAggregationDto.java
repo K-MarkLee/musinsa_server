@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.settlement.domain.dto;
+package com.mudosa.musinsa.settlement.batch.dto;
 
 import com.mudosa.musinsa.common.vo.Money;
 import lombok.Getter;
@@ -25,7 +25,6 @@ public class WeeklyAggregationDto {
     private Money totalTaxAmount;
     private Money totalPgFeeAmount;
 
-    // MyBatis가 setter를 사용하도록 기본 생성자 추가
     public WeeklyAggregationDto() {
     }
 
@@ -57,7 +56,6 @@ public class WeeklyAggregationDto {
         this.totalPgFeeAmount = new Money(totalPgFeeAmount);
     }
 
-    // MyBatis용 setter 메서드들
     public void setBrandId(Long brandId) {
         this.brandId = brandId;
     }

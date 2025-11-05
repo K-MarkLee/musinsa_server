@@ -5,7 +5,7 @@
 <mapper namespace="com.mudosa.musinsa.domain.payment.mapper.PaymentMapper">
 
     <!-- ResultMap 예시 -->
-    <resultMap id="PaymentResultMap" type="com.mudosa.musinsa.domain.payment.entity.Payment">
+    <resultMap id="PaymentResultMap" type="com.mudosa.musinsa.payment.domain.model.Payment">
         <id property="paymentId" column="payment_id"/>
         <result property="paymentMethodId" column="payment_method_id"/>
         <result property="paymentStatus" column="payment_status"/>

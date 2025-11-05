@@ -3,13 +3,6 @@ package com.mudosa.musinsa.order.domain.model;
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.order.application.dto.InsufficientStockItem;
-import com.mudosa.musinsa.order.application.dto.OrderCreateResponse;
-import com.mudosa.musinsa.payment.domain.model.Payment;
-import com.mudosa.musinsa.payment.domain.model.PaymentEventType;
-import com.mudosa.musinsa.payment.domain.model.PaymentStatus;
-import com.mudosa.musinsa.product.domain.model.Inventory;
-import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -41,6 +34,7 @@ public class Orders extends BaseEntity {
     @Column(name = "coupon_id")
     private Long couponId;
 
+    //TODO: order가 order_product를 바라보는 상황이 있을까?
     @OneToMany(mappedBy = "orders", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderProduct> orderProducts = new ArrayList<>();
 

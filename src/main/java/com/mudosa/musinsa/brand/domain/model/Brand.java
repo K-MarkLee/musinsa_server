@@ -51,6 +51,8 @@ public class Brand {
   @Column(name = "updated_at")
   private LocalDateTime updatedAt;
 
+  private LocalDateTime brandCreatedAt;
+
   /**
    * 브랜드 생성
    */

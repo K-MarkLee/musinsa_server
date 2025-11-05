@@ -28,9 +28,26 @@ spring:
   # Spring Batch 설정
   batch:
     jdbc:
-      initialize-schema: always  # 개발 환경: 자동 스키마 생성
+      initialize-schema: never  # 스키마 자동 생성 비활성화 (수동으로 관리)
     job:
       enabled: false  # 애플리케이션 시작 시 자동 실행 방지 (외부 스케줄러로 실행)
+
+# ========================================
+# MyBatis 공통 설정 (Spring Boot 표준)
+# ========================================
+mybatis:
+  mapper-locations: classpath:/mappers/**/*.xml
+  type-aliases-package: >
+    com.mudosa.musinsa.domain.order.mapper,
+    com.mudosa.musinsa.domain.payment.mapper,
+    com.mudosa.musinsa.domain.user.mapper,
+    com.mudosa.musinsa.domain.product.mapper,
+    com.mudosa.musinsa.domain.brand.mapper,
+    com.mudosa.musinsa.domain.coupon.mapper,
+    com.mudosa.musinsa.domain.event.mapper,
+    com.mudosa.musinsa.settlement.batch.dto
+  configuration:
+    map-underscore-to-camel-case: true
 
 # ========================================
 # 배치 처리 설정
@@ -39,20 +56,6 @@ batch:
   settlement:
     chunk-size: 10  # 한 번에 처리할 브랜드 수
     max-skip-count: 100  # 최대 허용 실패 건수
-
-  # MyBatis 공통 설정
-  mybatis:
-    mapper-locations: classpath:/mappers/**/*.xml
-    type-aliases-package: >
-      com.mudosa.musinsa.domain.order.mapper,
-      com.mudosa.musinsa.domain.payment.mapper,
-      com.mudosa.musinsa.domain.user.mapper,
-      com.mudosa.musinsa.domain.product.mapper,
-      com.mudosa.musinsa.domain.brand.mapper,
-      com.mudosa.musinsa.domain.coupon.mapper,
-      com.mudosa.musinsa.domain.event.mapper
-    configuration:
-      map-underscore-to-camel-case: true
 #      use-actual-param-name: true
 #      jdbc-type-for-null: NULL
 #      lazy-loading-enabled: true
@@ -107,8 +110,8 @@ logging:
 
 jwt:
   secret: ${JWT_SECRET:this-is-a-secret}
-  expiration: ${JWT_ACCESS_EXPIRATION:3600000}
-  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+  expiration: ${JWT_ACCESS_EXPIRATION:86400000}    # 24시간 (개발용 기본값)
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:2592000000}  # 30일 (개발용 기본값)
 
 server:
   port: ${SERVER_PORT:8080}

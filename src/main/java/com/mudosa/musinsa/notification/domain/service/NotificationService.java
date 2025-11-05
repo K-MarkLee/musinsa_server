@@ -1,7 +1,6 @@
 package com.mudosa.musinsa.notification.domain.service;
 
 import com.google.firebase.messaging.FirebaseMessagingException;
-import com.mudosa.musinsa.brand.domain.model.BrandMember;
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.fbtoken.service.FirebaseTokenService;
 import com.mudosa.musinsa.notification.domain.dto.NotificationDTO;
@@ -9,8 +8,6 @@ import com.mudosa.musinsa.notification.domain.model.Notification;
 import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
 import com.mudosa.musinsa.notification.domain.repository.NotificationMetadataRepository;
 import com.mudosa.musinsa.notification.domain.repository.NotificationRepository;
-import com.mudosa.musinsa.product.domain.model.Inventory;
-import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
@@ -76,33 +73,35 @@ public class NotificationService {
         return result;
     }
 
-    public void createNotification(Long userId,String notificationCategory) throws FirebaseMessagingException {
+//    public void createNotification(Long userId,String notificationCategory) throws FirebaseMessagingException {
+//
+//        User resultUser = userRepository.findById(userId).orElseThrow(
+//                ()->new NoSuchElementException("User not found")
+//        );
+//
+//        NotificationMetadata resultNotificationMetadata = notificationMetadataRepository.findByNotificationCategory(notificationCategory).orElseThrow(
+//                ()->new NoSuchElementException("Notification Metadata not found")
+//        );
+//
+//        Notification notification = Notification.builder()
+//                .user(resultUser)
+//                .notificationMetadata(resultNotificationMetadata)
+//                .notificationTitle(resultNotificationMetadata.getNotificationTitle())
+//                .notificationMessage(resultNotificationMetadata.getNotificationMessage())
+//                .notificationUrl(resultNotificationMetadata.getNotificationUrl())
+//                .build();
+//        notificationRepository.save(notification);
+//        //푸시 알림 보내기
+//        if (fcmService != null) {
+//            fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
+//        } else {
+//            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
+//        }
+//    }
 
-        User resultUser = userRepository.findById(userId).orElseThrow(
-                ()->new NoSuchElementException("User not found")
-        );
-
-        NotificationMetadata resultNotificationMetadata = notificationMetadataRepository.findByNotificationCategory(notificationCategory).orElseThrow(
-                ()->new NoSuchElementException("Notification Metadata not found")
-        );
-
-        Notification notification = Notification.builder()
-                .user(resultUser)
-                .notificationMetadata(resultNotificationMetadata)
-                .notificationTitle(resultNotificationMetadata.getNotificationTitle())
-                .notificationMessage(resultNotificationMetadata.getNotificationMessage())
-                .notificationUrl(resultNotificationMetadata.getNotificationUrl())
-                .build();
-        notificationRepository.save(notification);
-        //푸시 알림 보내기
-        if (fcmService != null) {
-            fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
-        } else {
-            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
-        }
-    }
-
+    //TODO: 파라미터에 대한 dto 필요성 검토
     public void createChatNotification(Long userId, String title, String message, Long chatRoomId) throws FirebaseMessagingException {
+        //TODO: 하드코딩하면 안된다..
         NotificationMetadata result = notificationMetadataRepository.findByNotificationCategory("CHAT").orElseThrow(
                 ()->new NoSuchElementException("Notification Metadata not found")
         );
@@ -129,35 +128,35 @@ public class NotificationService {
         return notificationRepository.updateNotificationStatus(notificationId);
     }
 
-    public void createOutOfStockNote(Inventory inventory){
-        ProductOption prodOption = productOptionRepository.findByInventory(inventory).orElseThrow(
-                ()->new NoSuchElementException("Inventory not found"));
-        BrandMember brandMem = brandMemberRepository.findByBrand(prodOption.getProduct().getBrand()).orElseThrow(
-                ()->new NoSuchElementException("Product not found")
-        );
-        NotificationMetadata resultNotificationMetadata = notificationMetadataRepository.findByNotificationCategory("STOCKLACK").orElseThrow(()->new NoSuchElementException("Notification Metadata not found"));
-
-        Notification notification = Notification.builder()
-                .user(userRepository.findById(brandMem.getUserId()).orElseThrow(
-                        ()->new NoSuchElementException("User not found")
-                ))
-                .notificationMetadata(resultNotificationMetadata)
-                .notificationTitle(prodOption.getProduct().getProductName()+resultNotificationMetadata.getNotificationTitle())
-                .notificationMessage(resultNotificationMetadata.getNotificationMessage())
-                .notificationUrl(resultNotificationMetadata.getNotificationUrl())
-                .build();
-        notificationRepository.save(notification);
-
-        if (fcmService != null) {
-            try{
-                fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(brandMem.getUserId()));
-            }catch (FirebaseMessagingException e){
-                log.error(e.getMessage());
-            }
-        } else {
-            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
-        }
-    }
+//    public void createOutOfStockNote(Inventory inventory){
+//        ProductOption prodOption = productOptionRepository.findByInventory(inventory).orElseThrow(
+//                ()->new NoSuchElementException("Inventory not found"));
+//        BrandMember brandMem = brandMemberRepository.findByBrand(prodOption.getProduct().getBrand()).orElseThrow(
+//                ()->new NoSuchElementException("Product not found")
+//        );
+//        NotificationMetadata resultNotificationMetadata = notificationMetadataRepository.findByNotificationCategory("STOCKLACK").orElseThrow(()->new NoSuchElementException("Notification Metadata not found"));
+//
+//        Notification notification = Notification.builder()
+//                .user(userRepository.findById(brandMem.getUserId()).orElseThrow(
+//                        ()->new NoSuchElementException("User not found")
+//                ))
+//                .notificationMetadata(resultNotificationMetadata)
+//                .notificationTitle(prodOption.getProduct().getProductName()+resultNotificationMetadata.getNotificationTitle())
+//                .notificationMessage(resultNotificationMetadata.getNotificationMessage())
+//                .notificationUrl(resultNotificationMetadata.getNotificationUrl())
+//                .build();
+//        notificationRepository.save(notification);
+//
+//        if (fcmService != null) {
+//            try{
+//                fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(brandMem.getUserId()));
+//            }catch (FirebaseMessagingException e){
+//                log.error(e.getMessage());
+//            }
+//        } else {
+//            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
+//        }
+//    }
 
 //    public void createNotificationFromDTO (NotificationDTO dto){
 //        Notification note = Notification.builder()

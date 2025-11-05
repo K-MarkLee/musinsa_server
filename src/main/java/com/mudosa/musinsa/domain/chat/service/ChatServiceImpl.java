@@ -7,7 +7,7 @@ import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.entity.Message;
 import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
 import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
-import com.mudosa.musinsa.domain.chat.event.MessageCreatedEvent;
+import com.mudosa.musinsa.domain.chat.event.MessageEventPublisher;
 import com.mudosa.musinsa.domain.chat.mapper.ChatRoomMapper;
 import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
@@ -52,7 +52,9 @@ public class ChatServiceImpl implements ChatService {
   private final ChatPartRepository chatPartRepository;
   private final MessageRepository messageRepository;
   private final MessageAttachmentRepository attachmentRepository;
+  //  @Qualifier("springPublisher") // 추후 누구를 쓸지 지정하고자 하면 추가 필요
   private final ApplicationEventPublisher eventPublisher;
+  private final MessageEventPublisher messageEventPublisher;
   private final UserRepository userRepository;
   private final BrandMemberRepository brandMemberRepository;
   private final ChatRoomMapper chatRoomMapper;
@@ -352,8 +354,10 @@ public class ChatServiceImpl implements ChatService {
     Message parent = messageRepository.findById(parentId)
         .orElseThrow(() -> new BusinessException(ErrorCode.MESSAGE_PARENT_NOT_FOUND));
 
+    //TODO: 캡슐화를 공부해보자!
     // 부모 메시지가 다른 방의 메시지면 막기
-    if (!parent.getChatRoom().getChatId().equals(chatId)) {
+    if (!parent.isSameRoom(chatId)) {
+//    if (!parent.getChatRoom().getChatId().equals(chatId)) {
       throw new BusinessException(ErrorCode.MESSAGE_PARENT_NOT_FOUND);
     }
 
@@ -381,6 +385,7 @@ public class ChatServiceImpl implements ChatService {
 
       //저장
       try {
+        //TODO: 파일 처리 분리 필요!
         // === 실제 경로 생성 ===
         String uploadDir = new ClassPathResource("static/").getFile().getAbsolutePath()
             + "/chat/" + chatId + "/message/" + messageId;
@@ -420,7 +425,8 @@ public class ChatServiceImpl implements ChatService {
                                     Long chatId,
                                     MessageResponse dto,
                                     String content) {
-    eventPublisher.publishEvent(new MessageCreatedEvent(dto));
+    //TODO: 만약에 스프링 큐가 아닌 다른 큐를 쓴다면 관련 코드가 다 변경되어아햘지 않을까? OOP를 적용해보자!
+    messageEventPublisher.publishMessageCreated(dto);
     eventPublisher.publishEvent(new NotificationRequiredEvent(userId, chatId, content));
   }
 }

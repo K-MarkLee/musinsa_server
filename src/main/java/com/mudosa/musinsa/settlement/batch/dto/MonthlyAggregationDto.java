@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.settlement.domain.dto;
+package com.mudosa.musinsa.settlement.batch.dto;
 
 import com.mudosa.musinsa.common.vo.Money;
 import lombok.Getter;
@@ -6,22 +6,29 @@ import lombok.Getter;
 import java.math.BigDecimal;
 
 /**
- * 연간 집계 DTO
+ * 월간 집계 DTO
  */
 @Getter
-public class YearlyAggregationDto {
+public class MonthlyAggregationDto {
 
     private Long brandId;
     private Integer year;
+    private Integer month;
+    private String settlementTimezone;
     private Long totalOrderCount;
     private Money totalSalesAmount;
     private Money totalCommissionAmount;
     private Money totalTaxAmount;
     private Money totalPgFeeAmount;
 
-    public YearlyAggregationDto(
+    public MonthlyAggregationDto() {
+    }
+
+    public MonthlyAggregationDto(
         Long brandId,
         Integer year,
+        Integer month,
+        String settlementTimezone,
         Long totalOrderCount,
         BigDecimal totalSalesAmount,
         BigDecimal totalCommissionAmount,
@@ -30,6 +37,8 @@ public class YearlyAggregationDto {
     ) {
         this.brandId = brandId;
         this.year = year;
+        this.month = month;
+        this.settlementTimezone = settlementTimezone;
         this.totalOrderCount = totalOrderCount;
         this.totalSalesAmount = new Money(totalSalesAmount);
         this.totalCommissionAmount = new Money(totalCommissionAmount);
@@ -37,13 +46,20 @@ public class YearlyAggregationDto {
         this.totalPgFeeAmount = new Money(totalPgFeeAmount);
     }
 
-    // MyBatis용 setter 메서드들
     public void setBrandId(Long brandId) {
         this.brandId = brandId;
     }
 
     public void setYear(Integer year) {
         this.year = year;
+    }
+
+    public void setMonth(Integer month) {
+        this.month = month;
+    }
+
+    public void setSettlementTimezone(String settlementTimezone) {
+        this.settlementTimezone = settlementTimezone;
     }
 
     public void setTotalOrderCount(Long totalOrderCount) {

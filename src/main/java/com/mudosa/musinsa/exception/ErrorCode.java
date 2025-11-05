@@ -78,7 +78,10 @@ public enum ErrorCode {
   CHAT_PARTICIPANT_ALREADY_EXISTS("100002", "이미 해당 채팅방에 참여 중인 사용자입니다.", HttpStatus.CONFLICT),
 
   //inventory
-  INVENTORY_NOT_AVAILABLE("90001", "재고가 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
+  INVENTORY_NOT_AVAILABLE("90001", "재고가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+
+  //settlement
+  SETTLEMENT_NOT_FOUND("A0001", "정산 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND);
 
   private final String code;
   private final String message;

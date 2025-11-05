@@ -2,7 +2,9 @@ package com.mudosa.musinsa.settlement.domain.model;
 
 import lombok.Getter;
 
-/* 정산 상태 */
+/**
+ * 정산 상태
+ */
 @Getter
 public enum SettlementStatus {
 
