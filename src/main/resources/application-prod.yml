@@ -69,6 +69,13 @@ spring:
             enabled: true
         cache: true
 
+  # Spring Batch 프로덕션 환경 설정
+  batch:
+    jdbc:
+      initialize-schema: never
+    job:
+      enabled: false  # 배치 비활성화 (개발 환경과 동일)
+
 # ========================================
 # 프로덕션 환경 로깅 설정 (최소화)
 # ========================================
@@ -175,3 +182,26 @@ spring.lifecycle:
 # 커넥션 풀 모니터링
 decorator.datasource:
   enabled: false  # p6spy 등 비활성화 (성능)
+
+# ========================================
+# FCM 프로덕션 환경 설정
+# ========================================
+fcm:
+  service-acount-file: ${FCM_SERVICE_ACCOUNT_FILE:key/fdbdproject.json}
+  topic-name: ${FCM_TOPIC_NAME:fdbdMessage}
+  project-id: ${FCM_PROJECT_ID:fdbdproject}
+
+# ========================================
+# Toss Payments 프로덕션 환경 설정
+# ========================================
+tosspayments:
+  secret-key: ${TOSS_SECRET_KEY:test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}
+  client-key: ${TOSS_CLIENT_KEY:test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm}
+
+# ========================================
+# 배치 처리 설정
+# ========================================
+batch:
+  settlement:
+    chunk-size: ${BATCH_CHUNK_SIZE:10}
+    max-skip-count: ${BATCH_MAX_SKIP_COUNT:100}
