@@ -1,151 +1,132 @@
 package com.mudosa.musinsa.domain.chat.controller;
 
-import com.mudosa.musinsa.domain.chat.dto.ChatRoomResponse;
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.mudosa.musinsa.common.dto.ApiResponse;
+import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
+import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
-import com.mudosa.musinsa.domain.chat.service.ChatService;
+import com.mudosa.musinsa.security.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
 
 /**
+ * <Swagger 설명을 위한 interface>
  * 채팅 REST API 컨트롤러
- * WebSocket과 별도로 HTTP 요청으로 처리할 작업들
  * - 채팅방 목록 조회
  * - 메시지 히스토리 조회 (페이징)
  * - 채팅방 생성/삭제
  * - 파일 업로드 등
  */
 @Tag(name = "Chat API", description = "채팅 API")
-@RestController
-@RequestMapping("/api/chat")
-@Slf4j
-@RequiredArgsConstructor
-@CrossOrigin(origins = "*") // CORS 설정 (프로덕션에서는 구체적으로 지정)
-public class ChatController {
-
-  private final ChatService chatService;
+public interface ChatController {
 
   /**
-   * 사용자의 채팅방 목록 조회
-   * GET /api/chat/rooms?userId=1
+   * 채팅 메시지 전송
+   * POST /api/chat/{chatId}/send
    */
-  @GetMapping("/rooms")
-  public ResponseEntity<List<ChatRoomResponse>> getUserChatRooms(
-      @RequestParam Long userId
-  ) {
-    log.info("채팅방 목록 조회 요청: userId={}", userId);
-    List<ChatRoomResponse> rooms = chatService.getUserChatRooms(userId);
-    return ResponseEntity.ok(rooms);
-  }
-
-  /**
-   * 채팅방 생성
-   * POST /api/chat/rooms
-   * Body: { "brandId": 1, "type": "DM", "userIds": [1, 2] }
-   */
-  @PostMapping("/rooms")
-  public ResponseEntity<ChatRoomResponse> createChatRoom(
-      @RequestBody Map<String, Object> request
-  ) {
-    Long brandId = Long.parseLong(request.get("brandId").toString());
-    String type = request.get("type").toString();
-    List<Long> userIds = ((List<?>) request.get("userIds"))
-        .stream()
-        .map(id -> Long.parseLong(id.toString()))
-        .toList();
-
-    log.info("채팅방 생성 요청: brandId={}, type={}, userIds={}", brandId, type, userIds);
-
-    ChatRoomResponse room = chatService.createChatRoom(brandId, type, userIds);
-    return ResponseEntity.ok(room);
-  }
-
-  /**
-   * 채팅방 메시지 목록 조회 (페이징)
-   * GET /api/chat/rooms/1/messages?userId=1&page=0&size=20
-   */
-  @GetMapping("/rooms/{chatId}/messages")
-  public ResponseEntity<Page<MessageResponse>> getChatMessages(
+  @Operation(
+      summary = "메시지 전송",
+      description = "특정 채팅방에 텍스트 또는 이미지를 전송합니다. "
+          + "텍스트 메시지(`message`)와 이미지 파일(`files`)은 모두 선택적으로 포함 가능합니다."
+  )
+  ApiResponse<MessageResponse> sendMessage(
+      @Parameter(description = "채팅방 ID", example = "1", required = true)
       @PathVariable Long chatId,
-      @RequestParam Long userId,
+
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+
+      @Parameter(description = "답장 대상 메시지 ID (없을 경우 null)", example = "2")
+      @RequestParam(value = "parentId", required = false) Long parentId,
+
+      @Parameter(
+          description = "텍스트 메시지",
+          schema = @Schema(example = "오늘도 좋은 하루입니다 😊"))
+      @RequestPart(value = "message", required = false) String message,
+
+      @Parameter(description = "전송할 이미지 파일 리스트")
+      @RequestPart(value = "files", required = false) List<MultipartFile> files) throws FirebaseMessagingException;
+
+  /**
+   * 채팅방 이전 메시지 조회 (페이징)
+   * GET /api/chat/1/messages?userId=1&page=0&size=20
+   */
+  @Operation(
+      summary = "메시지 조회",
+      description = "특정 채팅방의 메시지를 조회합니다. (페이지 처리)"
+  )
+  ApiResponse<Page<MessageResponse>> getChatMessages(
+      @Parameter(description = "채팅방 ID", example = "1", required = true)
+      @PathVariable Long chatId,
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @Parameter(description = "페이지 번호", example = "0")
       @RequestParam(defaultValue = "0") int page,
+      @Parameter(description = "불러올 메시지 개수", example = "20")
       @RequestParam(defaultValue = "20") int size
-  ) {
-    log.info("메시지 목록 조회: chatId={}, userId={}, page={}, size={}",
-        chatId, userId, page, size);
-
-    Page<MessageResponse> messages = chatService.getChatMessages(chatId, userId, page, size);
-
-    return ResponseEntity.ok(messages);
-  }
-
-  /**
-   * 메시지 삭제
-   * DELETE /api/chat/messages/1?userId=1
-   */
-  @DeleteMapping("/messages/{messageId}")
-  public ResponseEntity<Void> deleteMessage(
-      @PathVariable Long messageId,
-      @RequestParam Long userId
-  ) {
-    log.info("메시지 삭제 요청: messageId={}, userId={}", messageId, userId);
-    chatService.deleteMessage(messageId, userId);
-    return ResponseEntity.noContent().build();
-  }
-
-  /**
-   * 파일 업로드 엔드포인트 (예시)
-   * POST /api/chat/upload
-   * Content-Type: multipart/form-data
-   */
-  @PostMapping("/upload")
-  public ResponseEntity<Map<String, String>> uploadFile(
-      @RequestParam("file") org.springframework.web.multipart.MultipartFile file
-  ) {
-    try {
-      // 파일 저장 로직 (S3, 로컬 스토리지 등)
-      String fileName = file.getOriginalFilename();
-      String fileUrl = "/uploads/" + fileName;
-
-      log.info("파일 업로드: fileName={}", fileName);
-
-      return ResponseEntity.ok(Map.of(
-          "url", fileUrl,
-          "fileName", fileName,
-          "mimeType", file.getContentType(),
-          "size", String.valueOf(file.getSize())
-      ));
-
-    } catch (Exception e) {
-      log.error("파일 업로드 실패", e);
-      return ResponseEntity.badRequest().build();
-    }
-  }
+  );
 
   /**
    * 채팅방 정보 조회
-   * GET /api/chat/rooms/1
+   * GET /api/chat/1/info
    */
-  @GetMapping("/rooms/{chatId}")
-  public ResponseEntity<ChatRoomResponse> getChatRoom(
+  @Operation(
+      summary = "채팅방 정보 조회",
+      description = "특정 채팅방의 정보를 조회합니다"
+  )
+  ApiResponse<ChatRoomInfoResponse> getChatInfo(
+      @Parameter(description = "채팅방 ID", example = "1", required = true)
       @PathVariable Long chatId,
-      @RequestParam Long userId
-  ) {
-    log.info("채팅방 정보 조회: chatId={}, userId={}", chatId, userId);
+      @AuthenticationPrincipal CustomUserDetails userDetails
+  );
 
-    // 권한 검증 및 조회 로직
-    List<ChatRoomResponse> rooms = chatService.getUserChatRooms(userId);
-    ChatRoomResponse room = rooms.stream()
-        .filter(r -> r.getChatId().equals(chatId))
-        .findFirst()
-        .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다."));
 
-    return ResponseEntity.ok(room);
-  }
+  /**
+   * 채팅방 참가
+   * POST /api/chat/1/participants
+   */
+  @Operation(
+      summary = "채팅방 참가",
+      description = "특정 채팅방에 참여합니다."
+  )
+  ApiResponse<ChatPartResponse> addParticipant(
+      @Parameter(description = "채팅방 ID", example = "1", required = true)
+      @PathVariable Long chatId,
+      @AuthenticationPrincipal CustomUserDetails userDetails);
+
+  /**
+   * 채팅방 나가기
+   * PATCH /api/chat/1/leave
+   */
+  @Operation(
+      summary = "채팅방 나가기",
+      description = "특정 채팅방에서 퇴장합니다."
+  )
+  ApiResponse<List<ChatRoomInfoResponse>> leaveChat(
+      @Parameter(description = "채팅방 ID", example = "1", required = true)
+      @PathVariable Long chatId,
+      @AuthenticationPrincipal CustomUserDetails userDetails);
+
+  /**
+   * 나의 참가 채팅방 조회
+   * GET /api/chat/1/my
+   */
+  @Operation(
+      summary = "채팅방 나가기",
+      description = "특정 채팅방에서 퇴장합니다."
+  )
+  @GetMapping("/my")
+  ApiResponse<List<ChatRoomInfoResponse>> getMyChat(
+      @AuthenticationPrincipal CustomUserDetails userDetails);
+
+
 }

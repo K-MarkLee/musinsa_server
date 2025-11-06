@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mudosa.musinsa.settlement.domain.repository.SettlementMonthlyMapper">
+
+    <!-- 연간 집계 쿼리 -->
+    <select id="aggregateByYearly" resultType="com.mudosa.musinsa.settlement.batch.dto.YearlyAggregationDto">
+        SELECT
+            brand_id as brandId,
+            YEAR(month_start_date) as "year",
+            COALESCE(SUM(total_order_count), 0) as totalOrderCount,
+            COALESCE(SUM(total_sales_amount), 0) as totalSalesAmount,
+            COALESCE(SUM(total_commission_amount), 0) as totalCommissionAmount,
+            COALESCE(SUM(total_tax_amount), 0) as totalTaxAmount,
+            COALESCE(SUM(total_pg_fee_amount), 0) as totalPgFeeAmount
+        FROM settlements_monthly
+        WHERE brand_id = #{brandId}
+          AND month_start_date BETWEEN #{startDate} AND #{endDate}
+        GROUP BY brand_id, YEAR(month_start_date)
+        ORDER BY YEAR(month_start_date)
+    </select>
+
+</mapper>

@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.domain.chat.entity;
 
-import com.mudosa.musinsa.domain.chat.enums.MessageType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -42,11 +41,7 @@ public class Message {
   @OneToMany(mappedBy = "parent", orphanRemoval = false)
   @Builder.Default
   private List<Message> children = new ArrayList<>();
-
-  @Enumerated(EnumType.STRING)
-  @Column(name = "type", nullable = false, length = 10)
-  private MessageType type; // TEXT, IMAGE, FILE, LINK
-
+  
   @Column(name = "content", columnDefinition = "TEXT")
   private String content;
 
@@ -57,9 +52,18 @@ public class Message {
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
 
+  @Builder.Default
+  @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<MessageAttachment> attachments = new ArrayList<>();
+
   // 편의 메서드(필요 시)
   public void replyTo(Message parent) {
     this.parent = parent;
     parent.getChildren().add(this);
   }
+
+    public boolean isSameRoom(Long id) {
+        return this.getChatRoom().getChatId().equals(id);
+      //코드
+    }
 }

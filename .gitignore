@@ -36,7 +36,21 @@ out/
 ### VS Code ###
 .vscode/
 
+### Environment Variables ###
 .env
+.env.local
 .env.dev
 .env.test
-.gradle/
+.env.prod
+!.env.prod.example
+
+### Logs ###
+*.log
+logs/
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Docker ###
+docker-compose.override.yml

@@ -1,24 +1,32 @@
 package com.mudosa.musinsa.domain.chat.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 /**
  * 채팅 참여자 정보 DTO
  */
-@Data
-@Builder
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
+@Schema(description = "ChatPart Response Dto")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ChatPartResponse {
+  @Schema(description = "참여 id", example = "1")
   private Long chatPartId;
+  @Schema(description = "유저 id", example = "1")
   private Long userId;
+  @Schema(description = "유저 이름", example = "홍길동")
   private String userName;
+  @Schema(description = "채팅 내 역할", example = "MANAGER")
   private String role;
-  private LocalDateTime joinedAt;
-  private LocalDateTime leftAt;
+  @Schema(description = "참여 시간", example = "2025-11-04T13:56:25.623Z")
+  private LocalDateTime createdAt;
+  @Schema(description = "떠난 시간", example = "2025-11-14T15:56:25.923Z")
+  private LocalDateTime deletedAt;
 }

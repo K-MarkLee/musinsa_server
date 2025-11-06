@@ -1,9 +1,11 @@
 package com.mudosa.musinsa.domain.chat.service;
 
-import com.mudosa.musinsa.domain.chat.dto.ChatRoomResponse;
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
+import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
-import com.mudosa.musinsa.domain.chat.dto.MessageSendRequest;
 import org.springframework.data.domain.Page;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -14,24 +16,14 @@ import java.util.List;
 public interface ChatService {
 
   /**
-   * 채팅방 생성 및 참여자 등록.
-   *
-   * @param brandId 브랜드 ID
-   * @param type    채팅방 타입 문자열 (e.g. "GROUP", "DM")
-   * @param userIds 초기 참여자 사용자 ID 목록
-   * @return 생성된 채팅방 정보
-   * @throws IllegalArgumentException 타입 미스매치 등 유효성 오류
-   */
-  ChatRoomResponse createChatRoom(Long brandId, String type, List<Long> userIds);
-
-  /**
    * 메시지 저장(답장/첨부 포함).
    *
-   * @param request 메시지 전송 요청 DTO
-   * @return 저장된 메시지 응답 DTO
-   * @throws RuntimeException 채팅방/참여자/부모 메시지 미존재 등
+   * @param chatId  채팅방 id
+   * @param userId  발신자 유저 id
+   * @param content 메시지 내용
+   * @param files   첨부파일들(이미지)
    */
-  MessageResponse saveMessage(MessageSendRequest request);
+  MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files) throws FirebaseMessagingException;
 
   /**
    * 특정 채팅방의 메시지 페이지 조회(최신순).
@@ -46,19 +38,33 @@ public interface ChatService {
   Page<MessageResponse> getChatMessages(Long chatId, Long userId, int page, int size);
 
   /**
-   * 사용자가 참여 중인 채팅방 목록 조회.
+   * 특정 채팅방의 정보 조회
    *
-   * @param userId 사용자 ID
-   * @return 채팅방 응답 목록
+   * @param chatId 채팅방 ID
+   * @param userId 조회 사용자 ID(참여 여부 검증용)
    */
-  List<ChatRoomResponse> getUserChatRooms(Long userId);
+  ChatRoomInfoResponse getChatRoomInfoByChatId(Long chatId, Long userId);
 
   /**
-   * 메시지 소프트 삭제.
+   * 채팅방 참여
    *
-   * @param messageId 메시지 ID
-   * @param userId    삭제 수행 사용자 ID(본인 메시지 검증)
-   * @throws RuntimeException 권한 미일치/미존재 등
+   * @param chatId 채팅방 ID
+   * @param userId 사용자 ID
    */
-  void deleteMessage(Long messageId, Long userId);
+  ChatPartResponse addParticipant(Long chatId, Long userId);
+
+  /**
+   * 채팅방 떠나기
+   *
+   * @param chatId 채팅방 ID
+   * @param userId 사용자 ID
+   */
+  void leaveChat(Long chatId, Long userId);
+
+  /**
+   * 유저 참여 채팅방 목록 조회
+   *
+   * @param userId 사용자 ID
+   */
+  List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId);
 }

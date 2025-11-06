@@ -7,9 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * Coupon Repository
- */
 @Repository
 public interface CouponRepository extends JpaRepository<Coupon, Long> {
 

@@ -28,7 +28,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   /**
    * 메시지 브로커 설정
-   * - /brand: 1:N 브로드캐스트 (그룹 채팅)
+   * - /topic: 1:N 브로드캐스트 (그룹 채팅)
    * - /qna: 1:1 메시징 (개인 알림)
    * - /app: 클라이언트가 메시지를 보낼 prefix
    */
@@ -36,7 +36,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   public void configureMessageBroker(MessageBrokerRegistry config) {
     // Simple Broker 활성화 (개발용)
     // 프로덕션에서는 RabbitMQ, ActiveMQ 등 외부 브로커 사용 권장
-    config.enableSimpleBroker("/brand", "/qna");
+    config.enableSimpleBroker("/topic", "/qna");
 
     // 클라이언트가 메시지를 보낼 때 사용할 prefix
     config.setApplicationDestinationPrefixes("/app");

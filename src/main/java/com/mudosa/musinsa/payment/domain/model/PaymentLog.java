@@ -1,15 +1,11 @@
 package com.mudosa.musinsa.payment.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 결제 로그 엔티티
- * Payment 애그리거트 내부
- */
 @Entity
 @Table(name = "payment_log")
 @Getter
@@ -27,28 +23,33 @@ public class PaymentLog extends BaseEntity {
     
     @Column(name = "user_id", nullable = false)
     private Long userId;
-    
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "event_status", nullable = false, length = 50)
-    private String eventStatus;
+    private PaymentEventType eventStatus;
     
     @Column(name = "event_message", columnDefinition = "TEXT")
     private String eventMessage;
-    
-    /**
-     * 결제 로그 생성
-     */
-    public static PaymentLog create(Long userId, String eventStatus, String eventMessage) {
+
+    /* 결제 로그 생성 */
+    public static PaymentLog create(
+            Payment payment,
+            PaymentEventType eventType,
+            String eventMessage,
+            Long userId) {
+
         PaymentLog log = new PaymentLog();
-        log.userId = userId;
-        log.eventStatus = eventStatus;
+        log.payment = payment; //Payment 어그리게이트 처리할 수 있도록 꼭 설정해줘야함.
+        log.eventStatus = eventType;
         log.eventMessage = eventMessage;
+        log.userId = userId;
         return log;
     }
-    
-    /**
-     * Payment 할당 (Package Private)
-     */
+
+
     void assignPayment(Payment payment) {
         this.payment = payment;
     }
+
+
 }

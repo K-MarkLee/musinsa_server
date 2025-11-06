@@ -1,52 +1,87 @@
 package com.mudosa.musinsa.product.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-/**
- * 카테고리 애그리거트 루트
- */
 @Entity
-@Table(name = "category")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "category")
 public class Category extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "category_id")
-    private Long id;
+    private Long categoryId;
     
-    @Column(name = "category_name", nullable = false, length = 50)
+    @Column(name = "category_name", nullable = false, length = 100)
     private String categoryName;
     
-    @Column(name = "parent_id")
-    private Long parentId;
+    @Column(name = "image_url", length = 2048)
+    private String imageUrl;
     
-    @Column(name = "category_level", nullable = false)
-    private Integer categoryLevel = 0;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id", foreignKey = @ForeignKey(name = "fk_category_parent"))
+    private Category parent;
     
-    @Column(name = "display_order")
-    private Integer displayOrder = 0;
+    // 자식 카테고리 컬렉션을 관리한다.
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private final List<Category> children = new ArrayList<>();
     
-    /**
-     * 카테고리 생성
-     */
-    public static Category create(String categoryName, Long parentId, int level) {
-        Category category = new Category();
-        category.categoryName = categoryName;
-        category.parentId = parentId;
-        category.categoryLevel = level;
-        return category;
+    // 카테고리를 생성하면서 필수 정보를 검증한다.
+    @Builder
+    public Category(String categoryName, Category parent, String imageUrl) {
+        // 필수 파라미터를 확인해 무결성을 보장한다.
+        if (categoryName == null || categoryName.trim().isEmpty()) {
+            throw new IllegalArgumentException("카테고리명은 필수입니다.");
+        }
+        
+        this.categoryName = categoryName;
+        this.parent = parent;
+        this.imageUrl = imageUrl;
+    }
+
+    // 현재 카테고리의 전체 경로를 재귀적으로 생성한다.
+    public String buildPath() {
+        return buildPathInternal(new HashSet<>());
+    }
+
+    // 순환 검사를 하며 부모 경로를 이어 붙인다.
+    private String buildPathInternal(Set<Category> visited) {
+        if (!visited.add(this)) {
+            throw new IllegalStateException("카테고리 계층에 순환 참조가 감지되었습니다.");
+        }
+
+        try {
+            Category currentParent = getParent();
+            String currentName = getCategoryName();  // 게터를 사용해 지연 로딩 프록시를 초기화한다.
+
+            if (currentParent == null) {
+                return currentName;  // 부모: "상의"
+            }
+
+            return currentParent.buildPathInternal(visited) + "/" + currentName;  // 자식: "상의/티셔츠"
+        } finally {
+            visited.remove(this);
+        }
     }
     
-    /**
-     * 최상위 카테고리 생성
-     */
-    public static Category createRoot(String categoryName) {
-        return create(categoryName, null, 0);
+    // 부모 카테고리가 존재하는지 확인한다.
+    public boolean hasParent() {
+        return this.parent != null;
     }
+    
+    // 루트 카테고리 여부를 확인한다.
+    public boolean isRoot() {
+        return this.parent == null;
+    }
+
 }

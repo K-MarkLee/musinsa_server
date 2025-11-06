@@ -1,18 +1,14 @@
 package com.mudosa.musinsa.domain.chat.entity;
 
 import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
+import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-    name = "chat_part",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_chat_user", columnNames = {"chat_id", "user_id"})
-    }
-)
+@Table(name = "chat_part")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -28,17 +24,19 @@ public class ChatPart {
   @JoinColumn(name = "chat_id", nullable = false)
   private ChatRoom chatRoom;
 
-  @Column(name = "user_id", nullable = false)
-  private Long userId; // 별도 User 엔티티 연동 전까지 FK 값 보관
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "role", nullable = false, length = 20)
   private ChatPartRole role; // USER, BRAND_ADMIN
 
-  @Column(name = "joined_at", nullable = false, insertable = false, updatable = false,
+  @Column(name = "created_at", nullable = false, insertable = false, updatable = false,
       columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
-  private LocalDateTime joinedAt;
+  private LocalDateTime createdAt;
 
-  @Column(name = "left_at")
-  private LocalDateTime leftAt;
+  @Setter
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
 }

@@ -1,49 +1,43 @@
 package com.mudosa.musinsa.notification.domain.model;
 
-import com.mudosa.musinsa.common.domain.BaseEntity;
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.time.LocalDateTime;
 
 /**
  * 알림 애그리거트 루트
+ * @author katsudon
  */
 @Entity
 @Table(name = "notification")
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "notification_id")
-    private Long id;
-    
-    @Column(name = "user_id", nullable = false)
-    private Long userId; // User 애그리거트 참조 (ID만)
-    
-    @Column(name = "n_metadata_id", nullable = false)
-    private Long nMetadataId; // NotificationMetadata 참조 (ID만)
-    
-    @Column(name = "is_read", nullable = false)
-    private Boolean isRead = false;
-    
-    /**
-     * 알림 생성
-     */
-    public static Notification create(Long userId, Long metadataId) {
-        Notification notification = new Notification();
-        notification.userId = userId;
-        notification.nMetadataId = metadataId;
-        notification.isRead = false;
-        return notification;
-    }
-    
-    /**
-     * 읽음 처리
-     */
-    public void markAsRead() {
-        this.isRead = true;
-    }
+    private Long notificationId;
+
+    @ManyToOne
+    @JoinColumn(name="user_id")
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name="n_metadata_id")
+    private NotificationMetadata notificationMetadata;
+
+    private String notificationTitle;
+    private String notificationMessage;
+    private String notificationUrl;
+
+    @Builder.Default
+    private Boolean notificationStatus = false;
+    private LocalDateTime readAt;
+
+
 }

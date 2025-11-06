@@ -1,71 +1,89 @@
-# ========================================
-# 공통 설정 (모든 프로필에 적용)
-# ========================================
 spring:
   profiles:
     active: dev  # 기본 프로필 (로컬 개발)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   
-  # Application 기본 설정
   application:
     name: musinsa-server
   
-  # JPA 공통 설정
   jpa:
-    open-in-view: false  # OSIV 비활성화 (성능 최적화)
+#    open-in-view: false  # OSIV 비활성화 (성능 최적화)
     properties:
       hibernate:
         format_sql: true  # SQL 포맷팅
         use_sql_comments: true  # SQL에 주석 추가
         highlight_sql: true  # SQL 하이라이트
-        jdbc:
-          batch_size: 100  # 배치 처리 최적화
-          fetch_size: 50  # 페치 사이즈
-        order_inserts: true  # INSERT 순서 최적화
-        order_updates: true  # UPDATE 순서 최적화
-        query:
-          in_clause_parameter_padding: true  # IN 절 파라미터 패딩
+#        jdbc:
+#          batch_size: 100  # 배치 처리 최적화
+#          fetch_size: 50  # 페치 사이즈
+#        order_inserts: true  # INSERT 순서 최적화
+#        order_updates: true  # UPDATE 순서 최적화
+#        query:
+#          in_clause_parameter_padding: true  # IN 절 파라미터 패딩
 
-  # MyBatis 공통 설정
-  mybatis:
-    mapper-locations: classpath:/mappers/**/*.xml
-    type-aliases-package: >
-      com.mudosa.musinsa.domain.order.mapper,
-      com.mudosa.musinsa.domain.payment.mapper,
-      com.mudosa.musinsa.domain.user.mapper,
-      com.mudosa.musinsa.domain.product.mapper,
-      com.mudosa.musinsa.domain.brand.mapper,
-      com.mudosa.musinsa.domain.coupon.mapper,
-      com.mudosa.musinsa.domain.event.mapper
-    configuration:
-      map-underscore-to-camel-case: true
-      use-actual-param-name: true
-      jdbc-type-for-null: NULL
-      lazy-loading-enabled: true
-      aggressive-lazy-loading: false
-      auto-mapping-behavior: PARTIAL
-      auto-mapping-unknown-column-behavior: WARNING
-      cache-enabled: true
-      default-fetch-size: 100
-      default-statement-timeout: 30
-      default-executor-type: REUSE
+  # Spring Batch 설정
+  batch:
+    jdbc:
+      initialize-schema: never  # 스키마 자동 생성 비활성화 (수동으로 관리)
+    job:
+      enabled: false  # 애플리케이션 시작 시 자동 실행 방지 (외부 스케줄러로 실행)
+
+# ========================================
+# MyBatis 공통 설정 (Spring Boot 표준)
+# ========================================
+mybatis:
+  mapper-locations: classpath:/mappers/**/*.xml
+  type-aliases-package: >
+    com.mudosa.musinsa.domain.order.mapper,
+    com.mudosa.musinsa.domain.payment.mapper,
+    com.mudosa.musinsa.domain.user.mapper,
+    com.mudosa.musinsa.domain.product.mapper,
+    com.mudosa.musinsa.domain.brand.mapper,
+    com.mudosa.musinsa.domain.coupon.mapper,
+    com.mudosa.musinsa.domain.event.mapper,
+    com.mudosa.musinsa.settlement.batch.dto
+  configuration:
+    map-underscore-to-camel-case: true
+
+# ========================================
+# 배치 처리 설정
+# ========================================
+batch:
+  settlement:
+    chunk-size: 10  # 한 번에 처리할 브랜드 수
+    max-skip-count: 100  # 최대 허용 실패 건수
+#      use-actual-param-name: true
+#      jdbc-type-for-null: NULL
+#      lazy-loading-enabled: true
+#      aggressive-lazy-loading: false
+#      auto-mapping-behavior: PARTIAL
+#      auto-mapping-unknown-column-behavior: WARNING
+#      cache-enabled: true
+#      default-fetch-size: 100
+#      default-statement-timeout: 30
+#      default-executor-type: REUSE
 
   # Servlet 설정
-  servlet:
-    multipart:
-      enabled: true
-      max-file-size: 10MB
-      max-request-size: 10MB
-      file-size-threshold: 0
+#  servlet:
+#    multipart:
+#      enabled: true
+#      max-file-size: 10MB
+#      max-request-size: 10MB
+#      file-size-threshold: 0
 
   # Jackson 설정
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-      fail-on-empty-beans: false
-    deserialization:
-      fail-on-unknown-properties: false
-    time-zone: Asia/Seoul
-    date-format: yyyy-MM-dd HH:mm:ss
+#  jackson:
+#    serialization:
+#      write-dates-as-timestamps: false
+#      fail-on-empty-beans: false
+#    deserialization:
+#      fail-on-unknown-properties: false
+#    time-zone: Asia/Seoul
+#    date-format: yyyy-MM-dd HH:mm:ss
 
 # ========================================
 # Swagger (SpringDoc) 공통 설정
@@ -85,38 +103,24 @@ springdoc:
   default-produces-media-type: application/json
   show-actuator: false
 
-# ========================================
-# 로깅 공통 설정
-# ========================================
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %clr(%-5level) %clr(%logger{36}){cyan} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-  level:
-    root: info
-    com.mudosa.musinsa: info
 
-# ========================================
-# JWT 공통 설정
-# ========================================
 jwt:
-  header: Authorization
-  prefix: Bearer 
-  secret: ${JWT_SECRET}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
-  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+  secret: ${JWT_SECRET:this-is-a-secret}
+  expiration: ${JWT_ACCESS_EXPIRATION:86400000}    # 24시간 (개발용 기본값)
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:2592000000}  # 30일 (개발용 기본값)
 
-# ========================================
-# Server 공통 설정
-# ========================================
 server:
   port: ${SERVER_PORT:8080}
-  shutdown: graceful
-  compression:
-    enabled: true
-    mime-types: application/json,application/xml,text/html,text/xml,text/plain
-  error:
-    include-message: always
-    include-binding-errors: always
-    include-stacktrace: on_param
-    include-exception: false
+#  shutdown: graceful
+#  compression:
+#    enabled: true
+#    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+#  error:
+#    include-message: always
+#    include-binding-errors: always
+#    include-stacktrace: on_param
+#    include-exception: false

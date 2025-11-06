@@ -1,31 +1,98 @@
 package com.mudosa.musinsa.domain.chat.dto;
 
-import com.mudosa.musinsa.domain.chat.enums.MessageType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.mudosa.musinsa.domain.chat.entity.Message;
+import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * 서버에서 클라이언트로 전송되는 메시지 DTO
- */
-@Data
-@Builder
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
+@Schema(description = "Message Response Dto")
 public class MessageResponse {
+  @Schema(description = "메시지 id", example = "1")
   private Long messageId;
+  @Schema(description = "채팅 id", example = "1")
   private Long chatId;
+  @Schema(description = "참여 id", example = "1")
   private Long chatPartId;
-  private Long userId;           // 발신자 User ID
-  private String userName;       // 발신자 이름 (조인하여 가져옴)
-  private MessageType type;
+  @Schema(description = "유저 id", example = "1")
+  private Long userId;
+  @Schema(description = "유저 이름", example = "홍길동")
+  private String userName;
+  @Schema(description = "메시지 내용", example = "안녕하세요!")
   private String content;
-  private Long parentId;
+  @Schema(description = "메시지 내 첨부파일 리스트")
   private List<AttachmentResponse> attachments;
+  @Schema(description = "보낸 시간", example = "2025-11-04T13:56:25.623Z")
   private LocalDateTime createdAt;
+  @Schema(description = "삭제 여부", example = "false")
   private boolean isDeleted;
+
+  @Schema(description = "답장 메시지")
+  private ParentMessageResponse parent;
+
+  @Schema(description = "매니저 여부", example = "false")
+  private boolean isManager;
+
+  public static MessageResponse from(Message message, List<MessageAttachment> attachments) {
+    // 1) 부모 메시지 취득 (없을 수 있음)
+    Message parent = message.getParent();
+    ParentMessageResponse parentDto = null;
+
+    if (parent != null) {
+      // 부모 첨부 → DTO 변환
+      List<MessageAttachment> parentAtt = parent.getAttachments() != null
+          ? parent.getAttachments()
+          : List.of();
+
+      List<AttachmentResponse> parentAttachmentDtos = parentAtt.stream()
+          .map(AttachmentResponse::from)
+          .toList();
+
+      parentDto = ParentMessageResponse.builder()
+          .messageId(parent.getMessageId())
+          .userId(parent.getChatPart() != null ? parent.getChatPart().getUser().getId() : null)
+          .userName(parent.getChatPart() != null ? parent.getChatPart().getUser().getUserName() : "Unknown") // TODO: User 연동 시 교체
+          .content(parent.getContent())
+          .createdAt(parent.getCreatedAt())
+          .attachments(parentAttachmentDtos)
+          .isDeleted(parent.getDeletedAt() != null)
+          .build();
+    }
+
+    // 2) 현재 메시지 첨부 → DTO 변환
+    List<AttachmentResponse> attachmentDtos = (attachments != null ? attachments : List.<MessageAttachment>of())
+        .stream()
+        .map(AttachmentResponse::from)
+        .toList();
+
+    // 3) 발신자/식별자 널가드 (프록시 안전: 식별자만 꺼냄)
+    Long chatId = message.getChatRoom() != null ? message.getChatRoom().getChatId() : null;
+    Long chatPartId = message.getChatPart() != null ? message.getChatPart().getChatPartId() : null;
+    Long userId = message.getChatPart() != null ? message.getChatPart().getUser().getId() : null;
+    String userName = (message.getChatPart() != null) ? message.getChatPart().getUser().getUserName() : "Unknown"; // TODO: 실제 유저명 매핑
+
+    return MessageResponse.builder()
+        .messageId(message.getMessageId())
+        .chatId(chatId)
+        .chatPartId(chatPartId)
+        .userId(userId)
+        .userName(userName)
+        .content(message.getContent())
+        .attachments(attachmentDtos)
+        .createdAt(message.getCreatedAt())
+        .isDeleted(message.getDeletedAt() != null)
+        .parent(parentDto)
+        .build();
+  }
+
+  public void setManager(boolean manager) {
+    isManager = manager;
+  }
 }

@@ -1,74 +1,71 @@
-# ========================================
-# 로컬 개발 환경 설정 (Dev Profile)
-# ========================================
 spring:
-  # DataSource 설정
+  # Spring Batch 비활성화 (개발 환경)
+  batch:
+    job:
+      enabled: false
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:musinsa_dev}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     
-    # HikariCP 설정 (로컬 개발 환경)
-    hikari:
-      pool-name: HikariCP-Dev
-      maximum-pool-size: 10  # 로컬은 작게
-      minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      auto-commit: false  # 트랜잭션 관리 명시적으로
-      connection-test-query: SELECT 1
-      leak-detection-threshold: 60000  # 커넥션 누수 감지 (60초)
+#    # HikariCP 설정 (로컬 개발 환경)
+#    hikari:
+#      pool-name: HikariCP-Dev
+#      maximum-pool-size: 10  # 로컬은 작게
+#      minimum-idle: 5
+#      connection-timeout: 30000
+#      idle-timeout: 600000
+#      max-lifetime: 1800000
+#      auto-commit: false  # 트랜잭션 관리 명시적으로
+#      connection-test-query: SELECT 1
+#      leak-detection-threshold: 60000  # 커넥션 누수 감지 (60초)
 
   # JPA 개발 환경 설정
   jpa:
     hibernate:
       ddl-auto: none  # 일단 스키마 완벽해질 때까지만 검증 작업 안함
       naming:
-        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
-        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
     show-sql: true  # SQL 콘솔 출력
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-        generate_statistics: true  # 통계 정보 생성
 
   # MyBatis 개발 환경 설정
-  mybatis:
-    configuration:
-      log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl  # SLF4J 로깅
-      local-cache-scope: STATEMENT  # 변경 사항 즉시 반영
+#  mybatis:
+#    configuration:
+#      log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl  # SLF4J 로깅
+#      local-cache-scope: STATEMENT  # 변경 사항 즉시 반영
 
-  # 정적 리소스 캐싱 비활성화
-  web:
-    resources:
-      cache:
-        period: 0
-      add-mappings: true
+#  # 정적 리소스 캐싱 비활성화
+#  web:
+#    resources:
+#      cache:
+#        period: 0
+#      add-mappings: true
 
   # DevTools 설정
   devtools:
     restart:
-      enabled: true
+      enabled: true #원래 true
     livereload:
       enabled: true
 
-# ========================================
-# 개발 환경 로깅 설정 (상세)
-# ========================================
+
 logging:
   level:
     # Application 로깅
-    com.mudosa.musinsa: info
-    
+    com.mudosa.musinsa: debug
+
     # JPA/Hibernate 로깅
-    org.hibernate.SQL: info
-    org.hibernate.type.descriptor.sql.BasicBinder: info  # 바인딩 파라미터
-    org.hibernate.type.descriptor.sql.BasicExtractor: info  # 결과 추출
-    org.hibernate.engine.transaction.internal.TransactionImpl: info
-    org.hibernate.stat: info  # Hibernate 통계
-    
+    org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql.BasicBinder: debug  # 바인딩 파라미터
+    org.hibernate.type.descriptor.sql.BasicExtractor: debug  # 결과 추출
+    org.hibernate.engine.transaction.internal.TransactionImpl: debug
+    org.hibernate.stat: debug  # Hibernate 통계
+
     # MyBatis 로깅 (도메인별)
     com.mudosa.musinsa.domain.order.mapper: trace
     com.mudosa.musinsa.domain.payment.mapper: trace
@@ -77,31 +74,30 @@ logging:
     com.mudosa.musinsa.domain.brand.mapper: trace
     com.mudosa.musinsa.domain.coupon.mapper: trace
     com.mudosa.musinsa.domain.event.mapper: trace
-    
+
     # Spring Framework 로깅
     org.springframework.web: info
     org.springframework.security: info
     org.springframework.jdbc.core: info
     org.springframework.transaction: info
-    
+
     # HikariCP 로깅
     com.zaxxer.hikari: info
-    
+
     # Connection Pool 상태 모니터링
     com.zaxxer.hikari.pool.HikariPool: info
     com.zaxxer.hikari.pool.PoolBase: info
 
-# ========================================
-# JWT 개발 환경 설정
-# ========================================
 jwt:
-  secret: ${JWT_SECRET:dev-musinsa-secret-key-for-development-environment-minimum-256-bits-required-1234567890}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}  # 1시간
-  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7일
+  secret: ${JWT_SECRET}                       # .env의 JWT_SECRET
+  expiration: ${JWT_ACCESS_EXPIRATION:1800000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
-# ========================================
-# Swagger 개발 환경 설정
-# ========================================
+tosspayments:
+  secret-key: ${TOSS_SECRET_KEY:test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}  # 테스트 시크릿 키 (개발자센터에서 발급)
+  client-key: ${TOSS_CLIENT_KEY:test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm}  # 테스트 클라이언트 키
+
+
 springdoc:
   swagger-ui:
     enabled: true
@@ -115,21 +111,29 @@ springdoc:
 # ========================================
 # Server 개발 환경 설정
 # ========================================
-server:
-  error:
-    include-stacktrace: always  # 개발 환경에서는 스택트레이스 표시
-    include-exception: true
-    include-message: always
-    include-binding-errors: always
+#server:
+#  error:
+#    include-stacktrace: always  # 개발 환경에서는 스택트레이스 표시
+#    include-exception: true
+#    include-message: always
+#    include-binding-errors: always
 
 # ========================================
 # Management / Actuator (개발 환경)
 # ========================================
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: always
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: health,info,metrics,prometheus
+#  endpoint:
+#    health:
+#      show-details: always
+
+# ========================================
+# FCM 환경변수 설정
+# ========================================
+fcm:
+  service-acount-file: key/fdbdproject.json
+  topic-name: fdbdMessage
+  project-id: fdbdproject
