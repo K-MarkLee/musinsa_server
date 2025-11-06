@@ -73,7 +73,7 @@ public class ProductSearchRequest {
     // 페이지 번호와 사이즈를 보정해 Pageable을 생성한다.
     private Pageable createPageable() {
         int pageNumber = page != null && page >= 0 ? page : 0;
-        int pageSize = size != null && size > 0 ? size : 20;
+        int pageSize = size != null && size > 0 ? size : 24;
         return PageRequest.of(pageNumber, pageSize);
     }
 

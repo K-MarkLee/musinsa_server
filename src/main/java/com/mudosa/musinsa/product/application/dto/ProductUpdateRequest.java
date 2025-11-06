@@ -9,7 +9,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -26,19 +25,12 @@ public class ProductUpdateRequest {
 
     private String productInfo;
 
-    private String productGenderType;
-
     private Boolean isAvailable;
-
-    private String brandName;
 
     @Valid
     private List<ImageUpdateRequest> images;
 
     // 옵션 수정 정책은 추후 확정. 구조만 마련해둔다.
-    @Valid
-    private List<OptionUpdateRequest> options;
-
     @Getter
     @Builder
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -47,17 +39,6 @@ public class ProductUpdateRequest {
         @NotBlank(message = "이미지 URL은 필수입니다.")
         private String imageUrl;
         private Boolean isThumbnail;
-    }
-
-    @Getter
-    @Builder
-    @NoArgsConstructor(access = AccessLevel.PROTECTED)
-    @AllArgsConstructor(access = AccessLevel.PROTECTED)
-    public static class OptionUpdateRequest {
-        private Long productOptionId;
-        private BigDecimal productPrice;
-        private Integer stockQuantity;
-        private List<Long> optionValueIds;
     }
 
     @AssertTrue(message = "상품 이미지를 수정할 경우 썸네일 1개를 포함해야 합니다.")
@@ -81,23 +62,10 @@ public class ProductUpdateRequest {
         return productInfo == null || !productInfo.trim().isEmpty();
     }
 
-    @AssertTrue(message = "상품 성별 타입은 비어 있을 수 없습니다.")
-    public boolean isGenderTypeValid() {
-        return productGenderType == null || !productGenderType.trim().isEmpty();
-    }
-
-    @AssertTrue(message = "브랜드명은 비어 있을 수 없습니다.")
-    public boolean isBrandNameValid() {
-        return brandName == null || !brandName.trim().isEmpty();
-    }
-
     public boolean hasUpdatableField() {
         return productName != null
             || productInfo != null
-            || productGenderType != null
             || isAvailable != null
-            || brandName != null
-            || (images != null)
-            || (options != null && !options.isEmpty());
+            || (images != null);
     }
 }
