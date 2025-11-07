@@ -225,4 +225,5 @@ public class Product extends BaseEntity {
     // 이미지 등록 정보를 나타내는 레코드 클래스이다. 서비스에서 이미지 엔티티 직접 생성하지 않도록 한다.
     public record ImageRegistration(String imageUrl, boolean isThumbnail) {
     }
+
 }

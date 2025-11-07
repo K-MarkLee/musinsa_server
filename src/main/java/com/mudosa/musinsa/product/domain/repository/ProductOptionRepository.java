@@ -3,7 +3,6 @@ package com.mudosa.musinsa.product.domain.repository;
 import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
-import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

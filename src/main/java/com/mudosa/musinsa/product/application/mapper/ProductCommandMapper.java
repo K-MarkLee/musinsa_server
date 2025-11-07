@@ -1,13 +1,9 @@
 package com.mudosa.musinsa.product.application.mapper;
 
-import com.mudosa.musinsa.brand.domain.model.Brand;
-import com.mudosa.musinsa.product.application.ProductCommandService.ProductCreateCommand;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
-import com.mudosa.musinsa.product.domain.model.Category;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
-import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
 
@@ -20,49 +16,12 @@ import java.util.stream.Collectors;
  */
 public final class ProductCommandMapper {
 
-    private ProductCommandMapper() {
-    }
-
-    public static ProductCreateCommand toCreateCommand(ProductCreateRequest request,
-                                                       Brand brand,
-                                                       Category category,
-                                                       ProductGenderType genderType) {
-        List<ProductCreateCommand.ImageSpec> imageSpecs = request.getImages() == null
-            ? Collections.emptyList()
-            : request.getImages().stream()
-                .map(image -> new ProductCreateCommand.ImageSpec(
-                    image.getImageUrl(),
-                    Boolean.TRUE.equals(image.getIsThumbnail())))
-                .collect(Collectors.toList());
-
-        List<ProductCreateCommand.OptionSpec> optionSpecs = request.getOptions() == null
-            ? Collections.emptyList()
-            : request.getOptions().stream()
-                .map(option -> new ProductCreateCommand.OptionSpec(
-                    option.getProductPrice(),
-                    option.getStockQuantity(),
-                    option.getOptionValueIds()))
-                .collect(Collectors.toList());
-
-        return ProductCreateCommand.builder()
-            .brand(brand)
-            .productName(request.getProductName())
-            .productInfo(request.getProductInfo())
-            .productGenderType(genderType)
-            .brandName(brand != null ? brand.getNameKo() : request.getBrandName())
-            .categoryPath(category != null ? category.buildPath() : request.getCategoryPath())
-            .isAvailable(request.getIsAvailable())
-            .images(imageSpecs)
-            .options(optionSpecs)
-            .build();
-    }
-
-    public static List<Product.ImageRegistration> toImageRegistrations(List<ProductCreateCommand.ImageSpec> specs) {
+    public static List<Product.ImageRegistration> toImageRegistrations(List<ProductCreateRequest.ImageCreateRequest> specs) {
         if (specs == null || specs.isEmpty()) {
             return Collections.emptyList();
         }
         return specs.stream()
-            .map(spec -> new Product.ImageRegistration(spec.imageUrl(), spec.isThumbnail()))
+            .map(spec -> new Product.ImageRegistration(spec.getImageUrl(), Boolean.TRUE.equals(spec.getIsThumbnail())))
             .collect(Collectors.toList());
     }
 

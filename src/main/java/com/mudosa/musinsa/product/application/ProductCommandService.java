@@ -22,13 +22,10 @@ import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -59,45 +56,51 @@ public class ProductCommandService {
 	public Long createProduct(ProductCreateRequest request,
 							  Brand brand,
 							  Category category) {
+		if (request.getImages() == null || request.getImages().isEmpty()) {
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 이미지는 최소 1장 이상 등록해야 합니다.");
+		}
+		if (request.getOptions() == null || request.getOptions().isEmpty()) {
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 옵션은 최소 1개 이상 등록해야 합니다.");
+		}
+
 		ProductGenderType genderType = parseGenderType(request.getProductGenderType());
-		ProductCreateCommand command = ProductCommandMapper.toCreateCommand(request, brand, category, genderType);
+		Map<Long, OptionValue> optionValueMap = loadOptionValues(request.getOptions());
+
+		List<Product.ImageRegistration> imageRegistrations = ProductCommandMapper.toImageRegistrations(request.getImages());
+
+		String brandName = brand != null ? brand.getNameKo() : request.getBrandName();
+		String categoryPath = category != null ? category.buildPath() : request.getCategoryPath();
 
 		Product product = Product.builder()
-			.brand(command.getBrand())
-			.productName(command.getProductName())
-			.productInfo(command.getProductInfo())
-			.productGenderType(command.getProductGenderType())
-			.brandName(command.getBrandName())
-			.categoryPath(command.getCategoryPath())
-			.isAvailable(command.getIsAvailable())
+			.brand(brand)
+			.productName(request.getProductName())
+			.productInfo(request.getProductInfo())
+			.productGenderType(genderType)
+			.brandName(brandName)
+			.categoryPath(categoryPath)
+			.isAvailable(request.getIsAvailable())
 			.build();
 
-		List<Product.ImageRegistration> imageRegistrations = ProductCommandMapper.toImageRegistrations(command.getImages());
 		product.registerImages(imageRegistrations);
 
-		Map<Long, OptionValue> optionValueMap = loadOptionValues(command.getOptions());
-
-		command.getOptions().forEach(optionSpec -> {
+		request.getOptions().forEach(option -> {
 			Inventory inventory = Inventory.builder()
-				.stockQuantity(new StockQuantity(optionSpec.stockQuantity()))
+				.stockQuantity(new StockQuantity(option.getStockQuantity()))
 				.build();
 
 			ProductOption productOption = ProductOption.builder()
 				.product(product)
-				.productPrice(new Money(optionSpec.productPrice()))
+				.productPrice(new Money(option.getProductPrice()))
 				.inventory(inventory)
 				.build();
 
-			List<Long> optionValueIds = optionSpec.optionValueIds() != null
-				? optionSpec.optionValueIds()
-				: Collections.emptyList();
-
-			optionValueIds.stream()
-				.map(id -> ProductOptionValue.builder()
+			option.getOptionValueIds().forEach(optionValueId -> {
+				OptionValue optionValue = optionValueMap.get(optionValueId);
+				productOption.addOptionValue(ProductOptionValue.builder()
 					.productOption(productOption)
-					.optionValue(optionValueMap.get(id))
-					.build())
-				.forEach(productOption::addOptionValue);
+					.optionValue(optionValue)
+					.build());
+			});
 
 			product.addProductOption(productOption);
 		});
@@ -258,10 +261,14 @@ public class ProductCommandService {
 	}
 
 	// 옵션 값 ID 목록에 해당하는 옵션 값 엔티티들을 로드한다.
-	private Map<Long, OptionValue> loadOptionValues(List<ProductCreateCommand.OptionSpec> optionSpecs) {
+	private Map<Long, OptionValue> loadOptionValues(List<ProductCreateRequest.OptionCreateRequest> optionSpecs) {
+		if (optionSpecs == null || optionSpecs.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
 		Set<Long> optionValueIds = optionSpecs.stream()
-			.filter(spec -> spec.optionValueIds() != null)
-			.flatMap(spec -> spec.optionValueIds().stream())
+			.filter(Objects::nonNull)
+			.flatMap(spec -> spec.getOptionValueIds().stream())
 			.collect(Collectors.toSet());
 
 		if (optionValueIds.isEmpty()) {
@@ -302,46 +309,4 @@ public class ProductCommandService {
 		}
 	}
 
-	/**
-	 * 상품 생성 요청을 전달하기 위한 커맨드 레코드.
-	 */
-	@Getter
-	public static class ProductCreateCommand {
-		private final Brand brand;
-		private final String productName;
-		private final String productInfo;
-		private final ProductGenderType productGenderType;
-		private final String brandName;
-		private final String categoryPath;
-		private final Boolean isAvailable;
-		private final List<ImageSpec> images;
-		private final List<OptionSpec> options;
-
-		@Builder
-		public ProductCreateCommand(Brand brand,
-									String productName,
-									String productInfo,
-									ProductGenderType productGenderType,
-									String brandName,
-									String categoryPath,
-									Boolean isAvailable,
-									List<ImageSpec> images,
-									List<OptionSpec> options) {
-			this.brand = brand;
-			this.productName = productName;
-			this.productInfo = productInfo;
-			this.productGenderType = productGenderType;
-			this.brandName = brandName;
-			this.categoryPath = categoryPath;
-			this.isAvailable = isAvailable;
-			this.images = images != null ? images : Collections.emptyList();
-			this.options = options != null ? options : Collections.emptyList();
-		}
-
-		public record ImageSpec(String imageUrl, boolean isThumbnail) {}
-
-		public record OptionSpec(BigDecimal productPrice,
-								 int stockQuantity,
-								 List<Long> optionValueIds) {}
-	}
 }

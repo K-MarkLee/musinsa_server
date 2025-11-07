@@ -14,16 +14,12 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long>, ProductRepositoryCustom {
 
   @Query("""
-      select distinct p
-      from Product p
-      left join fetch p.brand
-      left join fetch p.images
-      left join fetch p.productOptions po
-      left join fetch po.inventory
-      left join fetch po.productOptionValues pov
-      left join fetch pov.optionValue
-      where p.productId = :productId
-      """)
+    select distinct p
+    from Product p
+    left join fetch p.brand
+    left join fetch p.images
+    where p.productId = :productId
+    """)
   Optional<Product> findDetailById(Long productId);
 
   List<Product> findTop6ByBrandOrderByCreatedAtDesc(Brand brand);
