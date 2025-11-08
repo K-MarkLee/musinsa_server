@@ -23,4 +23,11 @@ public interface BrandMemberRepository extends JpaRepository<BrandMember, Long> 
       where bm.brand_id = :brandId
       """, nativeQuery = true)
   List<Long> findActiveUserIdsByBrandId(@Param("brandId") Long brandId);
+
+  @Query(value = """
+      select bm.brand_id
+      from brand_member bm
+      where bm.user_id = :userId
+      """, nativeQuery = true)
+  List<Long> findBrandIdsByUserId(@Param("userId") Long userId);
 }
