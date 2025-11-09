@@ -51,9 +51,7 @@ public class ProductQueryService {
 
 		int pageNumber = pageable.isPaged() ? pageable.getPageNumber() : 0;
 		int pageSize = pageable.isPaged() ? pageable.getPageSize() : summaries.size();
-		int totalPages = pageSize > 0
-			? (int) Math.ceil((double) page.getTotalElements() / Math.max(pageSize, 1))
-			: (page.getTotalElements() > 0 ? 1 : 0);
+		int totalPages = page.getTotalPages();
 
 		return ProductSearchResponse.builder()
 			.products(summaries)
