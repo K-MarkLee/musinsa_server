@@ -121,7 +121,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
             Root<Product> subProduct = priceSubquery.correlate(product);
             jakarta.persistence.criteria.Join<Product, ?> options = subProduct.join("productOptions");
             
-            priceSubquery.select(cb.min(options.get("productPrice")))
+            priceSubquery.select(cb.min(options.get("productPrice").get("amount")))
                 .where(cb.equal(subProduct.get("productId"), product.get("productId")));
 
             Expression<java.math.BigDecimal> lowestPriceExpr = priceSubquery.getSelection();
