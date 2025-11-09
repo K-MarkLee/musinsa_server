@@ -4,7 +4,7 @@ import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.product.application.ProductService;
+import com.mudosa.musinsa.product.application.ProductCommandService;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductCreateResponse;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
@@ -34,7 +34,7 @@ import java.util.Objects;
 @RequestMapping("/api/brands/{brandId}/products")
 public class BrandProductController {
 
-    private final ProductService productService;
+    private final ProductCommandService productService;
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
 
@@ -60,7 +60,7 @@ public class BrandProductController {
     public ResponseEntity<ProductDetailResponse> updateProduct(@PathVariable Long brandId,
                                                                @PathVariable Long productId,
                                                                @Valid @RequestBody ProductUpdateRequest request) {
-        ProductDetailResponse response = productService.updateProductForBrand(brandId, productId, request);
+        ProductDetailResponse response = productService.updateProduct(brandId, productId, request);
         return ResponseEntity.ok(response);
     }
 

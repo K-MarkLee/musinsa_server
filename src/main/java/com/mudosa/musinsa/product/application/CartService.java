@@ -93,7 +93,7 @@ public class CartService {
         return CartItemResponse.from(saved);
     }
 
-    /* 장바구니 삭제 */
+    /* 장바구니 삭제 일괄*/
     @Transactional
     public void deleteCartItemsByProductOptions(Long userId, List<Long> productOptionIds) {
         if (productOptionIds == null || productOptionIds.isEmpty()) {
@@ -113,7 +113,7 @@ public class CartService {
                 userId, deletedCount);
     }
 
-/* 장바구니 삭제 */
+/* 장바구니 삭제 개별*/
     @Transactional
     public void deleteCartItem(Long userId, Long cartItemId) {
         CartItem cartItem = cartItemRepository.findById(cartItemId)
