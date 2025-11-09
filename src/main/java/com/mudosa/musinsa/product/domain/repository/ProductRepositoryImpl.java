@@ -119,7 +119,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
             // 최저가 계산을 위한 서브쿼리
             Subquery<java.math.BigDecimal> priceSubquery = cq.subquery(java.math.BigDecimal.class);
             Root<Product> subProduct = priceSubquery.correlate(product);
-            jakarta.persistence.criteria.Join<Product, ?> options = subProduct.join("options");
+            jakarta.persistence.criteria.Join<Product, ?> options = subProduct.join("productOptions");
             
             priceSubquery.select(cb.min(options.get("productPrice")))
                 .where(cb.equal(subProduct.get("productId"), product.get("productId")));
