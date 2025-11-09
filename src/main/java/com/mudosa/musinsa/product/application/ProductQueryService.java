@@ -10,14 +10,11 @@ import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,22 +40,11 @@ public class ProductQueryService {
 		ProductSearchCondition.PriceSort priceSort = condition != null ? condition.getPriceSort() : null;
 		List<String> categoryPaths = condition != null ? condition.getCategoryPaths() : Collections.emptyList();
 
-		// 2. 조건 기반 상품 조회 (List 로 반환되어 별도 정렬/페이징 필요)
-		List<Product> products = new ArrayList<>(productRepository.findAllByFilters(categoryPaths, gender, keyword, brandId));
+		// 2. 데이터베이스 레벨에서 필터링, 정렬, 페이징 수행
+		Page<Product> page = productRepository.findAllByFiltersWithPagination(
+			categoryPaths, gender, keyword, brandId, priceSort, pageable);
 
-		// 3. 가격 정렬 옵션 적용
-		if (priceSort != null) {
-			Comparator<Product> comparator = Comparator.comparing(ProductQueryMapper::calculateLowestPrice);
-			if (priceSort == ProductSearchCondition.PriceSort.HIGHEST) {
-				comparator = comparator.reversed();
-			}
-			products.sort(comparator);
-		}
-
-		// 4. 수동 페이징
-		Page<Product> page = toPage(products, pageable);
-
-		// 5. 응답 DTO 변환
+		// 3. 응답 DTO 변환
 		List<ProductSearchResponse.ProductSummary> summaries = page.getContent().stream()
 			.map(ProductQueryMapper::toProductSummary)
 			.collect(Collectors.toList());
@@ -90,19 +76,4 @@ public class ProductQueryService {
 	return ProductQueryMapper.toProductDetail(product);
 	}
 
-	/**
-	 * 정렬된 도메인 목록을 입력 Pageable 에 맞게 슬라이스한다.
-	 */
-	private Page<Product> toPage(List<Product> products, Pageable pageable) {
-		if (pageable == null || pageable.isUnpaged()) {
-			return new PageImpl<>(products, Pageable.unpaged(), products.size());
-		}
-
-		// 정렬 결과를 유지한 채 서브리스트로 잘라 Spring Page 형태로 감싼다.
-		int total = products.size();
-		int fromIndex = Math.min((int) pageable.getOffset(), total);
-		int toIndex = Math.min(fromIndex + pageable.getPageSize(), total);
-		List<Product> content = new ArrayList<>(products.subList(fromIndex, toIndex));
-		return new PageImpl<>(content, pageable, total);
 	}
-}
