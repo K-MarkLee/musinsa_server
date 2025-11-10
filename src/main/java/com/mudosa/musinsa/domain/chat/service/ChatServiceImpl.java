@@ -56,7 +56,7 @@ public class ChatServiceImpl implements ChatService {
   private final UserRepository userRepository;
   private final BrandMemberRepository brandMemberRepository;
   private final ChatRoomMapper chatRoomMapper;
-  
+
   private final @Qualifier("localFileStore") FileStore fileStore;
 
   @Override
@@ -362,6 +362,7 @@ public class ChatServiceImpl implements ChatService {
     return ChatPartResponse.builder()
         .chatPartId(chatPart.getChatPartId())
         .userId(chatPart.getUser().getId())
+        .chatId(chatPart.getChatRoom().getChatId())
         .userName(chatPart.getUser().getUserName())
         .createdAt(chatPart.getCreatedAt())
         .build();
