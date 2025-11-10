@@ -124,6 +124,6 @@ public class Event extends BaseEntity {
 
     // ===== Enums =====
     public enum EventType { DROP, COMMENT, DISCOUNT }
-    public enum EventStatus { DRAFT, PLANNED, OPEN, PAUSED, ENDED, CANCELLED }
+    //public enum EventStatus { DRAFT, PLANNED, OPEN, PAUSED, ENDED, CANCELLED }
     public enum LimitScope { EVENT, OPTION }
 }

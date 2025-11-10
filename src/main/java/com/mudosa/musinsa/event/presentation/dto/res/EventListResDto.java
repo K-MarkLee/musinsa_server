@@ -3,6 +3,7 @@ package com.mudosa.musinsa.event.presentation.dto.res;
 
 import com.mudosa.musinsa.event.model.Event;
 import com.mudosa.musinsa.event.model.EventOption;
+import com.mudosa.musinsa.event.model.EventStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,9 +26,11 @@ public class EventListResDto {
     private String title; //이벤트 이름
     private String description;
 
+    private EventStatus status; // enum 타입으로 교체했으니까 , event에 종속 아님
+
     // 이벤트 타입
     private Event.EventType eventType;
-    private Event.EventStatus eventStatus;
+
 
     private Boolean isPublic;
     private Integer limitPerUser;
@@ -45,14 +48,14 @@ public class EventListResDto {
             Event event,
             List<EventOptionResDto> optionDtos,
             String thumbnailUrl,
-            Event.EventStatus status
+            EventStatus status
     ) {
         return new EventListResDto(
                 event.getId(),
                 event.getTitle(),
                 event.getDescription(),
-                event.getEventType(),
                 status,
+                event.getEventType(),
                 event.getIsPublic(),
                 event.getLimitPerUser(),
                 event.getLimitScope(),
