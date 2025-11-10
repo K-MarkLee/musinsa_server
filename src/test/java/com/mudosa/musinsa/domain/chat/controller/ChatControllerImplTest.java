@@ -203,7 +203,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       // given
       CustomUserDetails userDetails = new CustomUserDetails(1L, "USER");
 
-      given(chatService.getChatRoomByUserId(1L))
+      given(chatService.getChatRoomByUserId(userDetails.getUserId()))
           .willReturn(List.of());
 
       // when & then
