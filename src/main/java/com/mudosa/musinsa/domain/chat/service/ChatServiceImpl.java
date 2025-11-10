@@ -302,6 +302,8 @@ public class ChatServiceImpl implements ChatService {
   public void leaveChat(Long chatId, Long userId) {
     log.info("[chatId={}][userId={}] 채팅방 나가기 요청", chatId, userId);
 
+    getChatRoomOrThrow(chatId);
+
     // 활성 상태의 참여 기록 조회
     ChatPart chatPart = getChatPartOrThrow(chatId, userId);
 
