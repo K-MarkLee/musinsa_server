@@ -21,6 +21,8 @@ public class ChatPartResponse {
   private Long chatPartId;
   @Schema(description = "유저 id", example = "1")
   private Long userId;
+  @Schema(description = "채팅 id", example = "1")
+  private Long chatId;
   @Schema(description = "유저 이름", example = "홍길동")
   private String userName;
   @Schema(description = "채팅 내 역할", example = "MANAGER")
