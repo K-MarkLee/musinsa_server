@@ -3,15 +3,20 @@ package com.mudosa.musinsa.event.presentation.controller;
 //import com.mudosa.musinsa.event.presentation.dto.req.EventCouponIssueRequest;
 //import com.mudosa.musinsa.event.presentation.dto.res.EventCouponIssueResponse;
 
-import com.mudosa.musinsa.event.presentation.dto.res.EventListResDto;
 import com.mudosa.musinsa.event.model.Event;
+
+import com.mudosa.musinsa.event.presentation.dto.req.EventCouponIssueRequest;
+import com.mudosa.musinsa.event.presentation.dto.res.EventCouponIssueResponse;
+import com.mudosa.musinsa.event.presentation.dto.res.EventListResDto;
+import com.mudosa.musinsa.event.service.EventCouponIssuanceService;
 import com.mudosa.musinsa.event.service.EventService;
-import com.mudosa.musinsa.event.service.EventCouponAccessService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 //MVC
@@ -26,7 +31,9 @@ import java.util.List;
 public class EventController {
 
     private final EventService eventService;
-    private final EventCouponAccessService eventEntryService;
+    private final EventCouponIssuanceService eventCouponIssuanceService;
+
+
 
     /*
     이벤트 목록 조회 api
@@ -59,6 +66,22 @@ public class EventController {
     *
     */
 
-    //@PostMapping
+    @PostMapping("/{eventId}/coupons/{couponId}/issue")
+    public ResponseEntity<EventCouponIssueResponse> issueCoupon(
+            @PathVariable Long eventId,
+            @PathVariable Long couponId,
+            @Valid @RequestBody EventCouponIssueRequest request
+    ) {
+        EventCouponIssueResponse response = EventCouponIssueResponse.from(
+                eventCouponIssuanceService.issueCoupon(
+                        eventId,
+                        request.getEventOptionId(),
+                        couponId,
+                        request.getUserId()
+                )
+        );
+
+        return ResponseEntity.ok(response);
+    }
 
 }

@@ -9,6 +9,7 @@ import com.mudosa.musinsa.event.repository.EventImageRepository;
 import com.mudosa.musinsa.event.repository.EventOptionRepository;
 import com.mudosa.musinsa.event.repository.EventRepository;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.event.model.EventStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -57,7 +58,7 @@ public class EventService {
 
     // 이벤트 객체를 DTO 로 변환한다.
     private EventListResDto mapEventToDto(Event event, LocalDateTime currentTime) {
-        Event.EventStatus status = calculateEventStatus(event, currentTime);
+        EventStatus status = EventStatus.calculateStatus(event, currentTime);
 
         // 1) 옵션 엔티티 조회
         List<EventOption> options = eventOptionRepository.findByEventId(event.getId()); // 레포지토리에 구현 필요 + List로 객체반환
@@ -100,17 +101,7 @@ public class EventService {
     }
 
 
-    //TODO: 이벤트로 단일 책임 원칙 설정
-    // 이벤트 상태 계산 (SOON, OPEN, CLOSED)
-    private Event.EventStatus calculateEventStatus(Event event, LocalDateTime currentTime) {
-        if (currentTime.isBefore(event.getStartedAt())) {
-            return Event.EventStatus.PLANNED;
-        } else if (currentTime.isAfter(event.getEndedAt())) {
-            return Event.EventStatus.ENDED;
-        } else {
-            return Event.EventStatus.OPEN;
-        }
-    }
+
 
 
 }

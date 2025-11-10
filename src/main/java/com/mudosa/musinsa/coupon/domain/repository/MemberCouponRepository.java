@@ -15,5 +15,7 @@ public interface MemberCouponRepository extends JpaRepository<MemberCoupon, Long
 
     Optional<MemberCoupon> findByUserIdAndCouponId(Long userId, Long couponId);
 
+    long countByUserIdAndCouponId(Long userId,Long couponId);
+
     List<MemberCoupon> findAllByUserId(Long userId);
 }

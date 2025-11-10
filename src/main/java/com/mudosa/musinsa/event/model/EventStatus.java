@@ -1,14 +1,12 @@
-package com.mudosa.musinsa.event.service;
-
-import com.mudosa.musinsa.event.model.Event;
+package com.mudosa.musinsa.event.model;
 
 import java.time.LocalDateTime;
 
-public enum EventStatus2 {
-    DRAFT, PLANNED, OPEN, PAUSED, ENDED, CANCELLED
-;
+public enum EventStatus {
+    DRAFT, PLANNED, OPEN, PAUSED, ENDED, CANCELLED;
 
-    public EventStatus2 getSTatus(LocalDateTime currentTime,Event event){
+    // 기존 service의 calculateEventStatus 로직 그대로
+    public static EventStatus calculateStatus(Event event, LocalDateTime currentTime) {
         if (currentTime.isBefore(event.getStartedAt())) {
             return PLANNED;
         } else if (currentTime.isAfter(event.getEndedAt())) {

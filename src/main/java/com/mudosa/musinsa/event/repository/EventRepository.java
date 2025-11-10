@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.event.repository;
 
 import com.mudosa.musinsa.event.model.Event;
+import com.mudosa.musinsa.event.model.EventStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -29,8 +30,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     // (선택) 상세 조회 시 옵션/상품까지 한 번에 가져오고 싶을 때 N+1 방지용
 
     // 자동 상태 업데이트를 위한 쿼리
-    List<Event> findAllByStatusAndEndedAtBefore(Event.EventStatus status, LocalDateTime time);
+    List<Event> findAllByStatusAndEndedAtBefore(EventStatus status, LocalDateTime time);
 
-    List<Event> findAllByStatusAndStartedAtBefore(Event.EventStatus status, LocalDateTime time);
+    List<Event> findAllByStatusAndStartedAtBefore(EventStatus status, LocalDateTime time);
 
 }
