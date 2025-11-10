@@ -22,13 +22,13 @@ import java.util.List;
  * - 채팅방 목록 조회
  * - 메시지 히스토리 조회 (페이징)
  * - 채팅방 생성/삭제
- * - 파일 업로드 등
+ * - 메시지 전송
  */
 
-@RestController
-@RequestMapping("/api/chat")
 @Slf4j
+@RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/chat")
 public class ChatControllerImpl implements ChatController {
 
   private final ChatService chatService;
@@ -50,6 +50,13 @@ public class ChatControllerImpl implements ChatController {
       @RequestPart(value = "files", required = false) List<MultipartFile> files
   ) throws FirebaseMessagingException {
     Long userId = userDetails.getUserId();
+    log.info("[API][POST] /api/chat/{}/send userId={} parentId={} hasMessage={} fileCount={}",
+        chatId,
+        userId,
+        parentId,
+        (message != null && !message.isBlank()),
+        (files != null ? files.size() : 0)
+    );
 
     MessageResponse savedMessage = chatService.saveMessage(chatId, userId, parentId, message, files);
     return ApiResponse.success(savedMessage, "메시지를 성공적으로 전송했습니다.");
@@ -58,7 +65,7 @@ public class ChatControllerImpl implements ChatController {
 
   /**
    * 채팅방 이전 메시지 조회 (페이징)
-   * GET /api/chat/1/messages?userId=1&page=0&size=20
+   * GET /api/chat/1/messages?page=0&size=20
    */
   @GetMapping("/{chatId}/messages")
   @Override
@@ -69,6 +76,8 @@ public class ChatControllerImpl implements ChatController {
       @RequestParam(defaultValue = "20") int size
   ) {
     Long userId = userDetails.getUserId();
+    log.info("[API][GET] /api/chat/{}/messages userId={} page={} size={}",
+        chatId, userId, page, size);
 
     Page<MessageResponse> messages = chatService.getChatMessages(chatId, userId, page, size);
 
@@ -84,8 +93,11 @@ public class ChatControllerImpl implements ChatController {
    */
   @GetMapping("/{chatId}/info")
   @Override
-  public ApiResponse<ChatRoomInfoResponse> getChatInfo(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+  public ApiResponse<ChatRoomInfoResponse> getChatInfo(
+      @PathVariable Long chatId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
+    log.info("[API][GET] /api/chat/{}/info userId={}", chatId, userId);
 
     return ApiResponse.success(chatService.getChatRoomInfoByChatId(chatId, userId), "채팅방의 정보를 성공적으로 조회했습니다.");
   }
@@ -97,8 +109,12 @@ public class ChatControllerImpl implements ChatController {
    */
   @PostMapping("/{chatId}/participants")
   @Override
-  public ApiResponse<ChatPartResponse> addParticipant(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+  public ApiResponse<ChatPartResponse> addParticipant(
+      @PathVariable Long chatId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
+    log.info("[API][POST] /api/chat/{}/participants userId={}", chatId, userId);
+
     return ApiResponse.success(chatService.addParticipant(chatId, userId), "채팅방에 성공적으로 참여했습니다.");
   }
 
@@ -110,6 +126,8 @@ public class ChatControllerImpl implements ChatController {
   @Override
   public ApiResponse<List<ChatRoomInfoResponse>> leaveChat(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
+    log.info("[API][PATCH] /api/chat/{}/leave userId={}", chatId, userId);
+
     chatService.leaveChat(chatId, userId);
     return ApiResponse.success(chatService.getChatRoomByUserId(userId), "채팅방에서 성공적으로 퇴장하셨습니다.");
   }
@@ -122,6 +140,8 @@ public class ChatControllerImpl implements ChatController {
   @Override
   public ApiResponse<List<ChatRoomInfoResponse>> getMyChat(@AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
+    log.info("[API][GET] /api/chat/my userId={}", userId);
+
     return ApiResponse.success(chatService.getChatRoomByUserId(userId), "나의 참여 채팅방 목록이 성공적으로 조회되었습니다.");
   }
 

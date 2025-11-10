@@ -193,7 +193,7 @@ public class PaymentService {
                 log.info("보상 트랜잭션 성공");
             } catch (Exception rollbackError) {
                 log.error("보상 트랜잭션 실패 - 수동 처리 필요", rollbackError);
-                // TODO: 관리자 알림 발송
+
             }
         } else {
             // 주문 완료 전 실패
