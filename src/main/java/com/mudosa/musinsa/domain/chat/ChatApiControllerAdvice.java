@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.domain.chat;
 
 import com.mudosa.musinsa.common.dto.ApiResponse;
+import com.mudosa.musinsa.domain.chat.controller.ChatController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -11,8 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-@RestControllerAdvice
-public class ApiControllerAdvice {
+@RestControllerAdvice(basePackageClasses = {ChatController.class})
+public class ChatApiControllerAdvice {
 
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ExceptionHandler(HandlerMethodValidationException.class)
