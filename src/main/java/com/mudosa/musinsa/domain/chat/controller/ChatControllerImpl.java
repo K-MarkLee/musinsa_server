@@ -22,13 +22,13 @@ import java.util.List;
  * - 채팅방 목록 조회
  * - 메시지 히스토리 조회 (페이징)
  * - 채팅방 생성/삭제
- * - 파일 업로드 등
+ * - 메시지 전송
  */
 
-@RestController
-@RequestMapping("/api/chat")
 @Slf4j
+@RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/chat")
 public class ChatControllerImpl implements ChatController {
 
   private final ChatService chatService;
@@ -65,7 +65,7 @@ public class ChatControllerImpl implements ChatController {
 
   /**
    * 채팅방 이전 메시지 조회 (페이징)
-   * GET /api/chat/1/messages?userId=1&page=0&size=20
+   * GET /api/chat/1/messages?page=0&size=20
    */
   @GetMapping("/{chatId}/messages")
   @Override
@@ -93,7 +93,9 @@ public class ChatControllerImpl implements ChatController {
    */
   @GetMapping("/{chatId}/info")
   @Override
-  public ApiResponse<ChatRoomInfoResponse> getChatInfo(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+  public ApiResponse<ChatRoomInfoResponse> getChatInfo(
+      @PathVariable Long chatId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
     log.info("[API][GET] /api/chat/{}/info userId={}", chatId, userId);
 
@@ -107,7 +109,9 @@ public class ChatControllerImpl implements ChatController {
    */
   @PostMapping("/{chatId}/participants")
   @Override
-  public ApiResponse<ChatPartResponse> addParticipant(@PathVariable Long chatId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+  public ApiResponse<ChatPartResponse> addParticipant(
+      @PathVariable Long chatId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
     Long userId = userDetails.getUserId();
     log.info("[API][POST] /api/chat/{}/participants userId={}", chatId, userId);
 
