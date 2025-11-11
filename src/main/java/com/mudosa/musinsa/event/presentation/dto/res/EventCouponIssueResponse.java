@@ -28,6 +28,7 @@ public class EventCouponIssueResponse {
                 .issuedAt(r.issuedAt())
                 .expiredAt(r.expiredAt())
 //                .duplicate(r.duplicate())
+                .duplicated(r.duplicate())
                 .build();
     }
 

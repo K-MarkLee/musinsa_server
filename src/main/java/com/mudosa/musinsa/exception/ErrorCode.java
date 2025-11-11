@@ -59,7 +59,7 @@ public enum ErrorCode {
     EVENT_STOCK_EMPTY("50006", "이벤트 재고가 모두 소진되었습니다", HttpStatus.CONFLICT),
     EVENT_ENTRY_CONFLICT("50007", "이벤트 참여 대기열에서 거절되었습니다", HttpStatus.TOO_MANY_REQUESTS),
     EVENT_PRODUCT_MISMATCH("50008", "이벤트에 매핑되지 않은 상품입니다", HttpStatus.BAD_REQUEST),
-
+    EVENT_COUPON_NOT_ASSIGNED("50009", "이벤트에 쿠폰이 연결되어 있지 않습니다", HttpStatus.BAD_REQUEST),
   //coupon
     COUPON_NOT_FOUND("60001", "쿠폰을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     COUPON_ALREADY_USED("60002", "이미 사용된 쿠폰입니다", HttpStatus.BAD_REQUEST),
