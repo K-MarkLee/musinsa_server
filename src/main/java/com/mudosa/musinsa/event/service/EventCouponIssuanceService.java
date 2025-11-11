@@ -39,7 +39,6 @@ public class EventCouponIssuanceService {
     @Transactional
     public EventCouponIssueResult issueCoupon(Long eventId,
                                                  Long eventOptionId,
-                                                 Long couponId,
                                                  Long userId ){
         try (EventEntryService.EventEntryToken ignored = eventEntryService.acquireSlot(eventId, userId)){
 
@@ -48,6 +47,10 @@ public class EventCouponIssuanceService {
                     .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_NOT_FOUND));
             Event event = eventOption.getEvent();
             validateEventState(event);
+
+            Coupon coupon = Optional.ofNullable(event.getCoupon())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_COUPON_NOT_ASSIGNED));
+            Long couponId = coupon.getId();
 
             // 이미 발급된 쿠폰이 있는지 먼저 조회 , 있으면 그대로 재사용( 멱등 처리 )
             //var existing = couponIssuanceService.findIssuedCoupon(userId, couponId);
@@ -59,7 +62,7 @@ public class EventCouponIssuanceService {
             }
 
             // 사용자별 제한 확인
-            validateUserLimit(event, couponId, userId);
+            validateUserLimit(event, coupon, userId);
 
             // 재고 확인
             ensureEventStockAvailable(eventOption);
@@ -91,9 +94,9 @@ public class EventCouponIssuanceService {
 
     // 이벤트 발급 이력 테이블 (X) => MemberCoupon 테이블을 기준으로 발급 추적
     // 한 이벤트 옵션 기준으로 쿠폰을 사용한다는 전제로 사용자 검증
-    private void validateUserLimit(Event event, Long couponId, Long userId) {
+    private void validateUserLimit(Event event, Coupon coupon, Long userId) {
 
-        long issuedCount = couponIssuanceService.countIssuedByUser(userId,couponId); // couponIssuance 서비스에 새로생성필요
+        long issuedCount = couponIssuanceService.countIssuedByUser(userId,coupon.getId()); // couponIssuance 서비스에 새로생성필요
         if (issuedCount >= event.getLimitPerUser()) {
             throw new BusinessException(ErrorCode.EVENT_USER_LIMIT_EXCEEDED);
         }

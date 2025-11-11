@@ -66,17 +66,15 @@ public class EventController {
     *
     */
 
-    @PostMapping("/{eventId}/coupons/{couponId}/issue")
+    @PostMapping("/{eventId}/coupon/issue")
     public ResponseEntity<EventCouponIssueResponse> issueCoupon(
             @PathVariable Long eventId,
-            @PathVariable Long couponId,
             @Valid @RequestBody EventCouponIssueRequest request
     ) {
         EventCouponIssueResponse response = EventCouponIssueResponse.from(
                 eventCouponIssuanceService.issueCoupon(
                         eventId,
                         request.getEventOptionId(),
-                        couponId,
                         request.getUserId()
                 )
         );

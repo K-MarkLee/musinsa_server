@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,8 +61,8 @@ public class EventService {
     private EventListResDto mapEventToDto(Event event, LocalDateTime currentTime) {
         EventStatus status = EventStatus.calculateStatus(event, currentTime);
 
-        // 1) 옵션 엔티티 조회
-        List<EventOption> options = eventOptionRepository.findByEventId(event.getId()); // 레포지토리에 구현 필요 + List로 객체반환
+//        // 1) 옵션 엔티티 조회
+//        List<EventOption> options = eventOptionRepository.findByEventId(event.getId()); // 레포지토리에 구현 필요 + List로 객체반환
 
         // 2) 이벤트 썸네일 조회
         String thumbnailUrl = eventImageRepository.findByEventIdAndIsThumbnailTrue(event.getId()) //레포지토리 구현 필요
@@ -70,31 +71,45 @@ public class EventService {
 
         // 3) EventOption -> EventOptionResDto 매핑
 
-        List<EventOptionResDto> optionDtos = options.stream()
-                .map(eo -> {
-                    //필요 시 상품명만 뽑기 ( 구조에 맞게 수정 )
-                    String productName = null;
-                    String optionLabel = null;
+//        List<EventOptionResDto> optionDtos = options.stream()
+//                .map(eo -> {
+//                    //필요 시 상품명만 뽑기 ( 구조에 맞게 수정 )
+//                    String productName = null;
+//                    String optionLabel = null;
+//
+//                    ProductOption po = eo.getProductOption();
+//                    Long productOptionId = null;
+//                    Long productId = null;
+//
+//                    if (po != null) {
+//                        productOptionId = po.getProductOptionId();
+//                        optionLabel = null; // 추후에 로직 추가 필요,
+//
+//                        if(po.getProduct() != null) {
+//                            productName = po.getProduct().getProductName();
+//                            productId = po.getProduct().getProductId();
+//
+//                        }
+//                    }
+//
+//                    return EventOptionResDto.from(eo, productName, optionLabel, productOptionId, productId);
+//
+//                })
+//                .toList();
 
-                    ProductOption po = eo.getProductOption();
-                    Long productOptionId = null;
-                    Long productId = null;
-
-                    if (po != null) {
-                        productOptionId = po.getProductOptionId();
-                        optionLabel = null; // 추후에 로직 추가 필요,
-
-                        if(po.getProduct() != null) {
-                            productName = po.getProduct().getProductName();
-                            productId = po.getProduct().getProductId();
-
-                        }
-                    }
-
-                    return EventOptionResDto.from(eo, productName, optionLabel, productOptionId, productId);
-
-                })
+        var rows = eventOptionRepository.findRowsNativeByEventId(event.getId());
+        List<EventOptionResDto> optionDtos = rows.stream()
+                .map(r -> new EventOptionResDto(
+                        ((Number) r[0]).longValue(),      // optionId
+                        ((Number) r[1]).longValue(),      // productOptionId
+                        (String) r[2],                    // productName
+                        null,                             // optionLabel (미사용)
+                        (BigDecimal) r[3],                // eventPrice
+                        ((Number) r[4]).intValue(),       // eventStock
+                        ((Number) r[5]).longValue()       // productId
+                ))
                 .toList();
+
 
         return EventListResDto.from(event, optionDtos, thumbnailUrl, status);
 

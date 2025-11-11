@@ -77,6 +77,10 @@ public class Event extends BaseEntity {
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EventImage> eventImages = new ArrayList<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
+
     /** 팩토리 메서드 */
     public static Event create(
             String title,
@@ -86,7 +90,8 @@ public class Event extends BaseEntity {
             int limitPerUser,
             boolean isPublic,
             LocalDateTime startedAt,
-            LocalDateTime endedAt
+            LocalDateTime endedAt,
+            Coupon coupon
     ) {
         Event e = new Event();
         e.title = title;
@@ -98,6 +103,7 @@ public class Event extends BaseEntity {
         e.limitPerUser = limitPerUser;
         e.startedAt = startedAt;
         e.endedAt = endedAt;
+        e.coupon = coupon;
         return e;
     }
 
@@ -109,6 +115,10 @@ public class Event extends BaseEntity {
     public void addEventImage(EventImage image) {
         this.eventImages.add(image);
         image.assignEvent(this);
+    }
+
+    public void assignCoupon(Coupon coupon) {
+        this.coupon = coupon;
     }
 
     /** 진행중 여부(비즈니스 로직) */
