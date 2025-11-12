@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Qualifier("notificationEventPublisher")
 @AllArgsConstructor
-@Component("springPublisher")
+@Component
 public class SpringNotificationEventPublisher implements NotificationEventPublisher {
     private final ApplicationEventPublisher eventPublisher;
 
