@@ -5,18 +5,21 @@ package com.mudosa.musinsa.event.presentation.controller;
 
 import com.mudosa.musinsa.event.model.Event;
 
-import com.mudosa.musinsa.event.presentation.dto.req.EventCouponIssueRequest;
-import com.mudosa.musinsa.event.presentation.dto.res.EventCouponIssueResponse;
+import com.mudosa.musinsa.event.presentation.dto.req.EventCouponIssueReqDto;
+import com.mudosa.musinsa.event.presentation.dto.res.EventCouponIssueResDto;
 import com.mudosa.musinsa.event.presentation.dto.res.EventListResDto;
-import com.mudosa.musinsa.event.service.EventCouponIssuanceService;
+import com.mudosa.musinsa.event.service.EventCouponService;
 import com.mudosa.musinsa.event.service.EventService;
 
+import com.mudosa.musinsa.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
-import jakarta.validation.Valid;
+
 import java.util.List;
 
 //MVC
@@ -28,10 +31,11 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 
+
 public class EventController {
 
     private final EventService eventService;
-    private final EventCouponIssuanceService eventCouponIssuanceService;
+    private final EventCouponService eventCouponService;
 
 
 
@@ -66,20 +70,25 @@ public class EventController {
     *
     */
 
-    @PostMapping("/{eventId}/coupon/issue")
-    public ResponseEntity<EventCouponIssueResponse> issueCoupon(
-            @PathVariable Long eventId,
-            @Valid @RequestBody EventCouponIssueRequest request
+    @PostMapping("/coupon/issue")
+    public ResponseEntity<EventCouponIssueResDto> issueCoupon(
+            @Valid @RequestBody EventCouponIssueReqDto request,
+            @AuthenticationPrincipal CustomUserDetails user
+
     ) {
-        EventCouponIssueResponse response = EventCouponIssueResponse.from(
-                eventCouponIssuanceService.issueCoupon(
-                        eventId,
+        EventCouponService.EventCouponIssueResult result = eventCouponService.issueCoupon(
+
+                        request.getEventId(),
                         request.getEventOptionId(),
-                        request.getUserId()
-                )
+                        user.getUserId()
+
+                //이벤트 id, 이벤트상품옵션 id, 사용자 id
         );
 
-        return ResponseEntity.ok(response);
+        EventCouponIssueResDto response = EventCouponIssueResDto.from(result);
+
     }
+
+
 
 }

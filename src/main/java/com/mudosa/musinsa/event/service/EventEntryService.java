@@ -16,6 +16,11 @@ import java.util.concurrent.ConcurrentMap;
 @Slf4j
 @Service
 public class EventEntryService {
+
+    /*
+    * [EventEntryService] : 동시성 제어만 담당
+    * */
+
     private static final long HOLD_MILLIS = 5_000L; // 5초동안 hold
     //현재 점유 중인 슬롯들을 해시맵 형태로 저장
     private final ConcurrentMap<String, Instant> activeEntries = new ConcurrentHashMap<>();

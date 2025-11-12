@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.event.presentation.dto.res;
 
-import com.mudosa.musinsa.event.service.EventCouponIssuanceService;
+import com.mudosa.musinsa.event.service.EventCouponService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Builder;
@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 
-public class EventCouponIssueResponse {
+public class EventCouponIssueResDto {
     private Long memberCouponId;
     private Long couponId;
 
@@ -21,8 +21,8 @@ public class EventCouponIssueResponse {
 
 
     // 아직 없음
-    public static EventCouponIssueResponse from(EventCouponIssuanceService.EventCouponIssueResult r){
-        return EventCouponIssueResponse.builder()
+    public static EventCouponIssueResDto from(EventCouponService.EventCouponIssueResult r){
+        return EventCouponIssueResDto.builder()
                 .memberCouponId(r.memberCouponId())
                 .couponId(r.couponId())
                 .issuedAt(r.issuedAt())
