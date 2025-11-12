@@ -82,6 +82,19 @@ class MessageRepositoryTest extends JpaConfig {
     return message;
   }
 
+  private Message saveMessageWithParent(ChatPart chatPart, String content, LocalDateTime timestamp, Message parent) {
+    // 1. Message 생성 및 저장
+    Message message = Message.builder()
+        .chatPart(chatPart)
+        .content(content)
+        .parent(parent)
+        .createdAt(timestamp)
+        .build();
+
+    messageRepository.save(message); // id 확보
+
+    return message;
+  }
 
   @Nested
   @DisplayName("채팅방 메시지 페이징 조회")
@@ -383,15 +396,8 @@ class MessageRepositoryTest extends JpaConfig {
 
       LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
       Message parent = saveMessage(p, "부모", base);
-      // TODO: Test Helper로 분리 필요
-      Message reply = Message.builder()
-          .chatPart(p)
-          .parent(parent)
-          .content("자식")
-          .createdAt(base.plusSeconds(1))
-          .build();
 
-      messageRepository.save(reply);
+      Message reply = saveMessageWithParent(p, "자식", base.plusSeconds(1), parent);
 
       Pageable pageable = PageRequest.of(0, 10);
 
