@@ -1,7 +1,6 @@
 package com.mudosa.musinsa.notification.domain.repository;
 
 import com.mudosa.musinsa.notification.domain.model.Notification;
-import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,12 +14,11 @@ import java.util.List;
  */
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
-    
+
     List<Notification> findByUserId(Long userId);
 
-    @Modifying
-    @Transactional
     //TODO: @Query가 어떻게 동작하는지 메커니즘 학습
+    @Modifying
     @Query("UPDATE Notification n SET n.notificationStatus = true, n.readAt = CURRENT_TIMESTAMP WHERE n.notificationId = :notificationId")
-    int updateNotificationStatus(@Param("notificationId")Long notificationId);
+    int updateNotificationStatus(@Param("notificationId") Long notificationId);
 }
