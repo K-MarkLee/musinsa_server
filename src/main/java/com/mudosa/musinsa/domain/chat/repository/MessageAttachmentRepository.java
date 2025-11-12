@@ -13,10 +13,8 @@ import java.util.List;
 public interface MessageAttachmentRepository extends JpaRepository<MessageAttachment, Long> {
 
   /**
-   * 메시지의 모든 첨부파일 조회
+   * 메시지 목록 내의 모든 첨부파일 조회
    */
-  List<MessageAttachment> findByMessage_MessageId(Long messageId);
-
   @Query("""
         select ma
         from MessageAttachment ma
