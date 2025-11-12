@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.product.presentation.controller;
 
-import com.mudosa.musinsa.product.application.ProductService;
+import com.mudosa.musinsa.product.application.ProductQueryService;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchRequest;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/products")
 public class ProductQueryController {
 
-    private final ProductService productService;
+    private final ProductQueryService productService;
 
     // 검색 조건을 받아 상품 목록을 조회한다.
     @GetMapping

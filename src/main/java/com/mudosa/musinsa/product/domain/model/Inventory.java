@@ -47,6 +47,14 @@ public class Inventory extends BaseEntity {
     public void increase(int quantity) {
         this.stockQuantity.increase(quantity);
     }
+    
+
+    public boolean isSufficientStock(int requestedQuantity) {
+        if (requestedQuantity <= 0) {
+            throw new IllegalArgumentException("요청 수량은 0보다 커야 합니다.");
+        }
+        return this.stockQuantity.getValue() >= requestedQuantity;
+    }
 
 
 }

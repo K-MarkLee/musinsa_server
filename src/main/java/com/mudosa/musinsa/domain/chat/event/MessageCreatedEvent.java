@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.domain.chat.event;
 
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 메시지 생성 완료 이벤트
@@ -10,6 +11,7 @@ import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
  * @param messageResponse 완성된 응답 DTO (첨부 포함)
  * @param timestamp       이벤트 발행 시간 (디버깅/모니터링용)
  */
+@Slf4j
 public record MessageCreatedEvent(MessageResponse messageResponse, long timestamp) {
 
   /**
@@ -17,16 +19,8 @@ public record MessageCreatedEvent(MessageResponse messageResponse, long timestam
    */
   public MessageCreatedEvent(MessageResponse messageResponse) {
     this(messageResponse, System.currentTimeMillis());
-  }
+    log.trace("[MessageCreatedEvent] 생성됨. chatId={}, messageId={}, timestamp={}",
+        messageResponse.getChatId(), messageResponse.getMessageId(), this.timestamp);
 
-  /**
-   * 빠른 접근을 위한 헬퍼 메서드
-   */
-  public Long getMessageId() {
-    return messageResponse.getMessageId();
-  }
-
-  public Long getChatId() {
-    return messageResponse.getChatId();
   }
 }

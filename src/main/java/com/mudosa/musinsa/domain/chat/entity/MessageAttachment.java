@@ -18,6 +18,7 @@ public class MessageAttachment {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "message_id", nullable = false)
+  @Setter(AccessLevel.PUBLIC)
   private Message message;
 
   @Column(name = "attachment_url", nullable = false, length = 1024)

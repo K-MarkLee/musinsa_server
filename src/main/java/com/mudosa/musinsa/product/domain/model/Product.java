@@ -33,12 +33,6 @@ public class Product extends BaseEntity {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private java.util.List<ProductOption> productOptions = new java.util.ArrayList<>();
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
-    private java.util.List<ProductLike> productLikes = new java.util.ArrayList<>();
-
-    // CartItem은 직접 연결하지 않음 (성능 및 독립성 고려)
-    // Review는 나중에 구현 예정
-
     @Column(name = "product_name", nullable = false, length = 100)
     private String productName;
 
@@ -95,7 +89,7 @@ public class Product extends BaseEntity {
         this.isAvailable = isAvailable != null ? isAvailable : true;
 
         if (images != null) {
-            validateThumbnailConstraint(images);
+            validateImages(images);
             images.forEach(this::addImage);
         }
 
@@ -141,27 +135,18 @@ public class Product extends BaseEntity {
             throw new IllegalArgumentException("상품 이미지는 최소 1장 이상 등록해야 합니다.");
         }
 
-        java.util.List<Image> newImages = imageRegistrations.stream()
-                .map(spec -> Image.builder()
-                        .product(this)
-                        .imageUrl(spec.imageUrl())
-                        .isThumbnail(spec.isThumbnail())
-                        .build())
-                .toList();
+    java.util.List<Image> newImages = imageRegistrations.stream()
+        .map(spec -> Image.builder()
+            .product(this)
+            .imageUrl(spec.imageUrl())
+            .isThumbnail(spec.isThumbnail())
+            .build())
+        .toList();
 
-        validateThumbnailConstraint(newImages);
+    validateImages(newImages);
 
         this.images.clear();
         newImages.forEach(this::addImage);
-    }
-
-    // 외부에서 생성된 좋아요 엔티티를 상품에 연결한다.
-    public void addProductLike(ProductLike productLike) {
-        if (productLike == null) {
-            return;
-        }
-        productLike.assignProduct(this);
-        this.productLikes.add(productLike);
     }
 
     // 상품 판매 가능 여부를 직접 전환한다.
@@ -209,15 +194,16 @@ public class Product extends BaseEntity {
     }
 
     // 이미지 목록에서 썸네일 개수를 검증한다.
-    private void validateThumbnailConstraint(java.util.List<Image> images) {
+    private void validateImages(java.util.List<Image> images) {
+        if (images == null || images.isEmpty()) {
+            throw new IllegalArgumentException("상품 이미지는 최소 1장 이상 등록해야 합니다.");
+        }
+
         long thumbnailCount = images.stream()
                 .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
                 .count();
-        if (thumbnailCount == 0) {
-            throw new IllegalArgumentException("상품 썸네일은 최소 1개 이상이어야 합니다.");
-        }
-        if (thumbnailCount > 1) {
-            throw new IllegalArgumentException("상품 썸네일은 하나만 등록할 수 있습니다.");
+        if (thumbnailCount != 1) {
+            throw new IllegalArgumentException("상품 썸네일은 정확히 한 장이어야 합니다.");
         }
     }
 
@@ -236,7 +222,8 @@ public class Product extends BaseEntity {
         }
     }
 
-    //TODO: 엔티티안에 DTO가 있는게 맞을까?
+    // 이미지 등록 정보를 나타내는 레코드 클래스이다. 서비스에서 이미지 엔티티 직접 생성하지 않도록 한다.
     public record ImageRegistration(String imageUrl, boolean isThumbnail) {
     }
+
 }

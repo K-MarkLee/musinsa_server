@@ -3,9 +3,12 @@ package com.mudosa.musinsa.brand.domain.controller;
 import com.mudosa.musinsa.brand.domain.dto.BrandDetailResponseDTO;
 import com.mudosa.musinsa.brand.domain.dto.BrandResponseDTO;
 import com.mudosa.musinsa.common.dto.ApiResponse;
+import com.mudosa.musinsa.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -37,6 +40,16 @@ public interface BrandController {
       @RequestParam("request") String requestJson, // JSON 파트
       @Parameter(description = "브랜드 로고 이미지 파일", example = "logo.png")
       @RequestPart(value = "file", required = false) MultipartFile file
+  );
+
+  @Operation(
+      summary = "브랜드 소속 검증",
+      description = "JWT 토큰으로 인증된 사용자가 속한 브랜드 ID 목록을 반환합니다.",
+      security = @SecurityRequirement(name = "bearerAuth")
+  )
+  ApiResponse<List<Long>> verifyUserBrands(
+      @Parameter(description = "인증된 사용자 정보 (JWT 토큰에서 추출)", hidden = true)
+      @AuthenticationPrincipal CustomUserDetails userDetails
   );
 
 }
