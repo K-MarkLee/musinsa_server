@@ -15,14 +15,4 @@ public interface FileStore {
    * @return 공개용(or 상대) URL
    */
   String storeMessageFile(Long chatId, Long messageId, MultipartFile file) throws IOException;
-
-  /**
-   * 저장된 파일을 삭제
-   */
-  boolean deleteMessageFile(String relativePath);
-
-  /**
-   * 메세지 전체 폴더 삭제
-   */
-  boolean deleteMessageFolder(Long chatId, Long messageId);
 }
