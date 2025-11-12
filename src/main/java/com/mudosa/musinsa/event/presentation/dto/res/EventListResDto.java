@@ -41,6 +41,7 @@ public class EventListResDto {
 
     private String thumbnailUrl;
     private List<EventOptionResDto> options;
+    private Long couponId;
 
     // 정적 팩토리 메소드, 클래스 내부에 있어야 한다 !!
     // 추후에 service,controller 안에서 (EventListResDto::from)의 형태로 사용가능하다.
@@ -50,19 +51,22 @@ public class EventListResDto {
             String thumbnailUrl,
             EventStatus status
     ) {
-        return new EventListResDto(
-                event.getId(),
-                event.getTitle(),
-                event.getDescription(),
-                status,
-                event.getEventType(),
-                event.getIsPublic(),
-                event.getLimitPerUser(),
-                event.getLimitScope(),
-                event.getStartedAt(),
-                event.getEndedAt(),
-                thumbnailUrl,
-                optionDtos
-        );
+        Long couponId = event.getCoupon() != null ? event.getCoupon().getId() : null;
+
+        return EventListResDto.builder()
+                .eventId(event.getId())
+                .couponId(couponId)
+                .title(event.getTitle())
+                .description(event.getDescription())
+                .status(status)
+                .eventType(event.getEventType())
+                .isPublic(event.getIsPublic())
+                .limitPerUser(event.getLimitPerUser())
+                .limitScope(event.getLimitScope())
+                .startedAt(event.getStartedAt())
+                .endedAt(event.getEndedAt())
+                .thumbnailUrl(thumbnailUrl)
+                .options(optionDtos)
+                .build();
     }
 }
