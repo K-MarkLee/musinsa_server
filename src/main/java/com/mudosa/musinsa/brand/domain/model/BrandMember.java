@@ -37,6 +37,13 @@ public class BrandMember extends BaseEntity {
     return member;
   }
 
+  public static BrandMember create(Long userId, Brand brand) {
+    BrandMember member = new BrandMember();
+    member.userId = userId;
+    member.brand = brand;
+    return member;
+  }
+
   /**
    * Brand 할당 (Package Private)
    */
