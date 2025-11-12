@@ -3,11 +3,9 @@ package com.mudosa.musinsa.notification.domain.service;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.FirebaseMessagingException;
-import com.google.firebase.messaging.Message;
-import com.google.firebase.messaging.Notification;
+import com.google.firebase.messaging.*;
 import com.mudosa.musinsa.fbtoken.dto.FBTokenDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
@@ -17,6 +15,7 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 @Service
 @ConditionalOnProperty(name = "fcm.enabled", havingValue = "true", matchIfMissing = true)
 public class FcmService {
@@ -41,25 +40,42 @@ public class FcmService {
         FirebaseApp.initializeApp(options);
     }
 
-    public void sendMessageByTopic(String title, String body) throws IOException, FirebaseMessagingException {
-        FirebaseMessaging.getInstance().send(Message.builder()
-            .setNotification(Notification.builder()
-                .setTitle(title)
-                .setBody(body)
-                .build())
-            .setTopic(topicName)
-            .build());
-    }
+//    public void sendMessageByTopic(String title, String body) throws IOException, FirebaseMessagingException {
+//        FirebaseMessaging.getInstance().send(Message.builder()
+//            .setNotification(Notification.builder()
+//                .setTitle(title)
+//                .setBody(body)
+//                .build())
+//            .setTopic(topicName)
+//            .build());
+//    }
 
-    public void sendMessageByToken(String title, String body, List<FBTokenDTO> tokenList) throws FirebaseMessagingException {
-        for(FBTokenDTO token : tokenList) {
-            FirebaseMessaging.getInstance().send(Message.builder()
-                    .setNotification(Notification.builder()
-                            .setTitle(title)
-                            .setBody(body)
-                            .build())
-                    .setToken(token.getFirebaseTokenKey())
-                    .build());
+    public void sendMessageByToken(String title,String body,List<FBTokenDTO> tokenList){
+        List<String> registrationTokens = tokenList.stream()
+                .map(FBTokenDTO::getFirebaseTokenKey)
+                .toList();
+
+        if(registrationTokens.isEmpty()){
+            log.info("메세지를 보낼 토큰이 없습니다.");
+            return;
+        }
+
+        MulticastMessage message = MulticastMessage.builder()
+                .setNotification(Notification.builder()
+                        .setTitle(title)
+                        .setBody(body)
+                        .build())
+                .addAllTokens(registrationTokens)
+                .build();
+
+        try {
+            BatchResponse response = FirebaseMessaging.getInstance().sendMulticast(message);
+            if (response.getFailureCount() > 0){
+                log.warn("FCM messages failed to send to {} devices.",response.getFailureCount());
+            }
+            log.info("Successfully sent FCM messages to {} devices.",response.getSuccessCount());
+        } catch (FirebaseMessagingException e) {
+            log.error("Error sending Multicast message.", e);
         }
     }
 }

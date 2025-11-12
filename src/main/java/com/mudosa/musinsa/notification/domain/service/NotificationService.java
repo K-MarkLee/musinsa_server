@@ -1,21 +1,21 @@
 package com.mudosa.musinsa.notification.domain.service;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
+import com.mudosa.musinsa.domain.chat.entity.ChatPart;
+import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.fbtoken.service.FirebaseTokenService;
 import com.mudosa.musinsa.notification.domain.dto.NotificationDTO;
+import com.mudosa.musinsa.notification.domain.event.ChatNotificationCreatedEvent;
 import com.mudosa.musinsa.notification.domain.model.Notification;
 import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
 import com.mudosa.musinsa.notification.domain.repository.NotificationMetadataRepository;
 import com.mudosa.musinsa.notification.domain.repository.NotificationRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
-import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -26,8 +26,8 @@ import java.util.Objects;
  * 2. 어떤
  */
 
-@Service
 @Slf4j
+@Service
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
@@ -36,6 +36,12 @@ public class NotificationService {
     private final FirebaseTokenService firebaseTokenService;
     private final ProductOptionRepository productOptionRepository;
     private final BrandMemberRepository brandMemberRepository;
+    private final ChatPartRepository chatPartRepository;
+    private final String CHAT_METADATA_CATEGORY = "CHAT";
+    private final String MESSAGE_FROM_CHAT_ROOM = "채팅방에서 메세지가 왔습니다.";
+    private final String ATTACHED_FILE = "첨부파일이 있습니다";
+    private final String CHAT_URL = "/chat/";
+
 
     public NotificationService(
             NotificationRepository notificationRepository,
@@ -44,7 +50,8 @@ public class NotificationService {
             @Autowired(required = false) FcmService fcmService,
             FirebaseTokenService firebaseTokenService,
             ProductOptionRepository productOptionRepository,
-            BrandMemberRepository brandMemberRepository) {
+            BrandMemberRepository brandMemberRepository,
+            ChatPartRepository chatPartRepository) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.notificationMetadataRepository = notificationMetadataRepository;
@@ -52,25 +59,60 @@ public class NotificationService {
         this.firebaseTokenService = firebaseTokenService;
         this.productOptionRepository = productOptionRepository;
         this.brandMemberRepository = brandMemberRepository;
+        this.chatPartRepository = chatPartRepository;
     }
 
     public List<NotificationDTO> readNotification(Long userId){
-        List<Notification> listResult = notificationRepository.findByUserId(userId);
-        List<NotificationDTO> result = new ArrayList<>();
-        for(Notification notification : listResult){
-            NotificationDTO dto = NotificationDTO.builder()
-                    .notificationId(notification.getNotificationId())
-                    .userId(notification.getUser().getId())
-                    .nMetadataId(notification.getNotificationMetadata().getNMetadataId())
-                    .notificationTitle(notification.getNotificationTitle())
-                    .notificationMessage(notification.getNotificationMessage())
-                    .notificationUrl(notification.getNotificationUrl())
-                    .notificationStatus(notification.getNotificationStatus())
-                    .readAt(notification.getReadAt())
-                    .build();
-            result.add(dto);
+        return notificationRepository.findByUserId(userId).stream()
+                .map(notification -> NotificationDTO.builder()
+                        .notificationId(notification.getNotificationId())
+                        .userId(notification.getUser().getId())
+                        .nMetadataId(notification.getNotificationMetadata().getNMetadataId())
+                        .notificationTitle(notification.getNotificationTitle())
+                        .notificationMessage(notification.getNotificationMessage())
+                        .notificationUrl(notification.getNotificationUrl())
+                        .notificationStatus(notification.getNotificationStatus())
+                        .readAt(notification.getReadAt())
+                        .build())
+                .toList();
+    }
+
+    //TODO: 파라미터에 대한 dto 필요성 검토
+    public void createChatNotification(ChatNotificationCreatedEvent chatNotificationCreatedEvent){
+
+        //TODO: 하드코딩하면 안된다..
+        List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(chatNotificationCreatedEvent.getUserId(), chatNotificationCreatedEvent.getChatId());
+        NotificationMetadata chatNotificationMetadata = notificationMetadataRepository.findByNotificationCategory(CHAT_METADATA_CATEGORY).orElseThrow(
+                ()->new NoSuchElementException("Notification Metadata not found")
+        );
+
+        List<Long> userIds = chatPartList.stream()
+                .map(chatPart -> chatPart.getUser().getId())
+                .toList();
+
+//        List<Notification> notificationList = new ArrayList<>();
+        String message = chatNotificationCreatedEvent.getContent();
+        List<Notification> notificationList = chatPartList.stream()
+                .map(chatPart->Notification.builder()
+                        .user(chatPart.getUser())
+                        .notificationMetadata(chatNotificationMetadata)
+                        .notificationTitle(chatPart.getChatRoom().getBrand().getNameKo() + MESSAGE_FROM_CHAT_ROOM)
+                        .notificationMessage(Objects.isNull(message)?ATTACHED_FILE:message)
+                        .notificationUrl(CHAT_URL + chatPart.getChatRoom().getChatId()+"/")
+                        .build())
+                .toList();
+
+        notificationRepository.saveAll(notificationList);
+
+        if (fcmService != null) {
+            fcmService.sendMessageByToken(chatPartList.getFirst().getChatRoom().getBrand().getNameKo() + MESSAGE_FROM_CHAT_ROOM, message,firebaseTokenService.readFirebaseTokens(userIds));
+        } else {
+            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
         }
-        return result;
+    }
+
+    public int updateNotificationState(Long notificationId){
+        return notificationRepository.updateNotificationStatus(notificationId);
     }
 
 //    public void createNotification(Long userId,String notificationCategory) throws FirebaseMessagingException {
@@ -99,34 +141,6 @@ public class NotificationService {
 //        }
 //    }
 
-    //TODO: 파라미터에 대한 dto 필요성 검토
-    public void createChatNotification(Long userId, String title, String message, Long chatRoomId) throws FirebaseMessagingException {
-        //TODO: 하드코딩하면 안된다..
-        NotificationMetadata result = notificationMetadataRepository.findByNotificationCategory("CHAT").orElseThrow(
-                ()->new NoSuchElementException("Notification Metadata not found")
-        );
-        User resultUser = userRepository.findById(userId).orElseThrow(
-                ()->new NoSuchElementException("User not found")
-        );
-
-        Notification notification = Notification.builder()
-                .user(resultUser)
-                .notificationMetadata(result)
-                .notificationTitle(title + "채팅방에서 메세지가 왔습니다.")
-                .notificationMessage(Objects.isNull(message)?"첨부파일이 있습니다":message)
-                .notificationUrl("/chat/"+chatRoomId.toString()+"/")
-                .build();
-        notificationRepository.save(notification);
-        if (fcmService != null) {
-            fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
-        } else {
-            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
-        }
-    }
-
-    public int updateNotificationState(Long notificationId){
-        return notificationRepository.updateNotificationStatus(notificationId);
-    }
 
 //    public void createOutOfStockNote(Inventory inventory){
 //        ProductOption prodOption = productOptionRepository.findByInventory(inventory).orElseThrow(

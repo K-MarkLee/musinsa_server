@@ -1,7 +1,6 @@
 package com.mudosa.musinsa.fbtoken.repository;
 
 import com.mudosa.musinsa.fbtoken.model.FirebaseToken;
-import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,12 +14,12 @@ public interface FirebaseTokenRepository extends JpaRepository<FirebaseToken, Lo
 
     List<FirebaseToken> findByUserId(Long userId);
 
+    List<FirebaseToken> findByUserIdIn(List<Long> userIds);
+
     @Modifying
-    @Transactional
     @Query("UPDATE FirebaseToken f SET f.firebaseTokenKey = :ftKey WHERE f.tokenId = :tId")
     int updateFirebaseToken(@Param("ftKey") String ftKey, @Param("tId") Long tId);
 
     @Modifying
-    @Transactional
     void deleteByTokenId(Long id);
 }

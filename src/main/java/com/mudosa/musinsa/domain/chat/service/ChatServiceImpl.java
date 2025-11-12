@@ -15,7 +15,7 @@ import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.notification.domain.event.NotificationRequiredEvent;
+import com.mudosa.musinsa.notification.domain.event.NotificationEventPublisher;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +58,7 @@ public class ChatServiceImpl implements ChatService {
   private final UserRepository userRepository;
   private final BrandMemberRepository brandMemberRepository;
   private final ChatRoomMapper chatRoomMapper;
+  private final NotificationEventPublisher notificationEventPublisher;
 
   @Override
   public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
@@ -123,7 +124,7 @@ public class ChatServiceImpl implements ChatService {
     MessageResponse dto = MessageResponse.from(savedMessage, savedAttachments);
 
     // 6) 이벤트 발행 (AFTER_COMMIT 리스너에서 실제 전송)
-    publishMessageEvents(userId, chatId, dto, savedMessage.getContent());
+    publishMessageEvents(dto);
 
     return dto;
   }
@@ -421,12 +422,9 @@ public class ChatServiceImpl implements ChatService {
   }
 
   //event 발행
-  private void publishMessageEvents(Long userId,
-                                    Long chatId,
-                                    MessageResponse dto,
-                                    String content) {
+  private void publishMessageEvents(MessageResponse dto) {
     //TODO: 만약에 스프링 큐가 아닌 다른 큐를 쓴다면 관련 코드가 다 변경되어아햘지 않을까? OOP를 적용해보자!
     messageEventPublisher.publishMessageCreated(dto);
-    eventPublisher.publishEvent(new NotificationRequiredEvent(userId, chatId, content));
+    notificationEventPublisher.publishChatNotificationCreatedEvent(dto);
   }
 }
