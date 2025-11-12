@@ -17,12 +17,8 @@ public class NotificationEventListener {
     private final ChatPartRepository chatPartRepository;
 
     @TransactionalEventListener(phase= TransactionPhase.AFTER_COMMIT)
-    public void handleNotificationRequired(ChatNotificationCreatedEvent event){
-//        List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(event.getUserId(), event.getChatId());
+    public void handle(ChatNotificationCreatedEvent event){
         notificationService.createChatNotification(event);
             //TODO: DB 저장시 여러번 하는게 맞을까?
-//            for (ChatPart cp : chatPartList) {
-//                notificationService.createChatNotification(cp.getUser().getId(), cp.getChatRoom().getBrand().getNameKo(), event.message(), cp.getChatRoom().getChatId());
-//            }
     }
 }

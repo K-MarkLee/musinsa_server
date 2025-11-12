@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.notification.domain.service;
 
-import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.fbtoken.service.FirebaseTokenService;
@@ -10,8 +9,6 @@ import com.mudosa.musinsa.notification.domain.model.Notification;
 import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
 import com.mudosa.musinsa.notification.domain.repository.NotificationMetadataRepository;
 import com.mudosa.musinsa.notification.domain.repository.NotificationRepository;
-import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
-import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,12 +27,9 @@ import java.util.Objects;
 @Service
 public class NotificationService {
     private final NotificationRepository notificationRepository;
-    private final UserRepository userRepository;
     private final NotificationMetadataRepository notificationMetadataRepository;
     private final FcmService fcmService;
     private final FirebaseTokenService firebaseTokenService;
-    private final ProductOptionRepository productOptionRepository;
-    private final BrandMemberRepository brandMemberRepository;
     private final ChatPartRepository chatPartRepository;
     private final String CHAT_METADATA_CATEGORY = "CHAT";
     private final String MESSAGE_FROM_CHAT_ROOM = "채팅방에서 메세지가 왔습니다.";
@@ -45,20 +39,14 @@ public class NotificationService {
 
     public NotificationService(
             NotificationRepository notificationRepository,
-            UserRepository userRepository,
             NotificationMetadataRepository notificationMetadataRepository,
             @Autowired(required = false) FcmService fcmService,
             FirebaseTokenService firebaseTokenService,
-            ProductOptionRepository productOptionRepository,
-            BrandMemberRepository brandMemberRepository,
             ChatPartRepository chatPartRepository) {
         this.notificationRepository = notificationRepository;
-        this.userRepository = userRepository;
         this.notificationMetadataRepository = notificationMetadataRepository;
         this.fcmService = fcmService;
         this.firebaseTokenService = firebaseTokenService;
-        this.productOptionRepository = productOptionRepository;
-        this.brandMemberRepository = brandMemberRepository;
         this.chatPartRepository = chatPartRepository;
     }
 
@@ -90,7 +78,6 @@ public class NotificationService {
                 .map(chatPart -> chatPart.getUser().getId())
                 .toList();
 
-//        List<Notification> notificationList = new ArrayList<>();
         String message = chatNotificationCreatedEvent.getContent();
         List<Notification> notificationList = chatPartList.stream()
                 .map(chatPart->Notification.builder()
