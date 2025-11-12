@@ -12,6 +12,7 @@ import com.mudosa.musinsa.notification.domain.repository.NotificationRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -92,12 +93,13 @@ public class NotificationService {
         notificationRepository.saveAll(notificationList);
 
         if (fcmService != null) {
-            fcmService.sendMessageByToken(chatPartList.getFirst().getChatRoom().getBrand().getNameKo() + MESSAGE_FROM_CHAT_ROOM, message,firebaseTokenService.readFirebaseTokens(userIds));
+            fcmService.sendMessageByToken(notificationList.getFirst().getNotificationTitle(), message,firebaseTokenService.readFirebaseTokens(userIds));
         } else {
             log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
         }
     }
 
+    @Transactional
     public int updateNotificationState(Long notificationId){
         return notificationRepository.updateNotificationStatus(notificationId);
     }
