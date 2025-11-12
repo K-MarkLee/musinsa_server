@@ -92,10 +92,10 @@ public class NotificationService {
 
         notificationRepository.saveAll(notificationList);
 
-        if (fcmService != null) {
+        if (fcmService != null && !notificationList.isEmpty()) {
             fcmService.sendMessageByToken(notificationList.getFirst().getNotificationTitle(), message,firebaseTokenService.readFirebaseTokens(userIds));
         } else {
-            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
+            log.info("알림 생성 중 문제가 발생했습니다.");
         }
     }
 
