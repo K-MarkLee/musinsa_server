@@ -62,7 +62,6 @@ public class MessageResponse {
           .content(parent.getContent())
           .createdAt(parent.getCreatedAt())
           .attachments(parentAttachmentDtos)
-          .isDeleted(parent.getDeletedAt() != null)
           .build();
     }
 
@@ -73,10 +72,10 @@ public class MessageResponse {
         .toList();
 
     // 3) 발신자/식별자 널가드 (프록시 안전: 식별자만 꺼냄)
-    Long chatId = message.getChatRoom() != null ? message.getChatRoom().getChatId() : null;
-    Long chatPartId = message.getChatPart() != null ? message.getChatPart().getChatPartId() : null;
-    Long userId = message.getChatPart() != null ? message.getChatPart().getUser().getId() : null;
-    String userName = (message.getChatPart() != null) ? message.getChatPart().getUser().getUserName() : "Unknown"; // TODO: 실제 유저명 매핑
+    Long chatId = message.getChatPart().getChatRoom() != null ? message.getChatPart().getChatRoom().getChatId() : null;
+    Long chatPartId = message.getChatPart().getChatPartId();
+    Long userId = message.getChatPart().getUser().getId();
+    String userName = message.getChatPart().getUser().getUserName();
 
     return MessageResponse.builder()
         .messageId(message.getMessageId())
@@ -90,9 +89,5 @@ public class MessageResponse {
         .isDeleted(message.getDeletedAt() != null)
         .parent(parentDto)
         .build();
-  }
-
-  public void setManager(boolean manager) {
-    isManager = manager;
   }
 }

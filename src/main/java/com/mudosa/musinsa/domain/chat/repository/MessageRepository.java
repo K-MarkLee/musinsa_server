@@ -19,19 +19,21 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
       value = """
           select m
           from Message m
-          join fetch m.chatRoom cr
-          left join fetch m.chatPart cp
-          left join fetch cp.user u
-          left join fetch m.parent pm
-          left join fetch pm.chatPart pmcp
-          left join fetch pmcp.user pmu
+            join fetch m.chatPart cp
+            join fetch cp.chatRoom cr
+            left join fetch m.parent pm
+            left join fetch pm.chatPart pmcp
+            left join fetch pmcp.user pmu
+            left join fetch cp.user u
           where cr.chatId = :chatId
-          order by m.createdAt desc
+          order by m.createdAt desc, m.messageId desc
           """,
       countQuery = """
           select count(m)
           from Message m
-          where m.chatRoom.chatId = :chatId
+            join m.chatPart cp
+            join cp.chatRoom cr
+          where cr.chatId = :chatId
           """
   )
   Page<Message> findPageWithRelationsByChatId(

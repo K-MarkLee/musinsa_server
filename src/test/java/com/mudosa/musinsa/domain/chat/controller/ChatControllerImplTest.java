@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -379,7 +380,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
 
       Page<MessageResponse> response = new PageImpl<>(new ArrayList<>(messages));
 
-      given(chatService.getChatMessages(chatId, userDetails.getUserId(), page, size))
+      given(chatService.getChatMessages(chatId, page, size))
           .willReturn(response);
 
       // when & then
@@ -394,7 +395,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
           .andExpect(jsonPath("$.data.size").value(size))
           .andExpect(jsonPath("$.data.content", hasSize(size)));
 
-      verify(chatService).getChatMessages(chatId, userDetails.getUserId(), page, size);
+      verify(chatService).getChatMessages(chatId, page, size);
     }
 
     @DisplayName("채팅방 이전 메시지가 없으면 빈 페이지 정보를 반환한다")
@@ -407,7 +408,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       int size = 20;
       Page<MessageResponse> response = new PageImpl<>(new ArrayList<>());
 
-      given(chatService.getChatMessages(chatId, userDetails.getUserId(), page, size))
+      given(chatService.getChatMessages(chatId, page, size))
           .willReturn(response);
 
       // when & then
@@ -419,7 +420,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.data.content", hasSize(0)));
 
-      verify(chatService).getChatMessages(chatId, userDetails.getUserId(), page, size);
+      verify(chatService).getChatMessages(chatId, page, size);
     }
 
     @DisplayName("page, size 미지정 시 기본값(0, 20)으로 메시지를 조회한다")
@@ -430,7 +431,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       int page = 0;
       int size = 20;
 
-      given(chatService.getChatMessages(chatId, userDetails.getUserId(), page, size))
+      given(chatService.getChatMessages(chatId, page, size))
           .willReturn(new PageImpl<>(List.of()));
 
       // when & then
@@ -439,7 +440,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
           .andDo(print())
           .andExpect(status().isOk());
 
-      verify(chatService).getChatMessages(chatId, userDetails.getUserId(), page, size);
+      verify(chatService).getChatMessages(chatId, page, size);
     }
 
     @DisplayName("인증되지 않은 사용자가 메시지 조회를 요청하면 401을 반환한다")
@@ -483,7 +484,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           eq(parentId),
           eq(content),
-          anyList()
+          anyList(),
+          any(LocalDateTime.class)
       )).willReturn(messageResponse);
 
       // when & then
@@ -506,7 +508,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           eq(parentId),
           eq(content),
-          anyList()
+          anyList(),
+          any(LocalDateTime.class)
       );
     }
 
@@ -529,7 +532,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           isNull(),
           eq(content),
-          anyList()
+          anyList(),
+          any(LocalDateTime.class)
       )).willReturn(messageResponse);
 
       // when & then
@@ -551,7 +555,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           isNull(),
           eq(content),
-          anyList()
+          anyList(),
+          any(LocalDateTime.class)
       );
     }
 
@@ -573,7 +578,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           eq(parentId),
           eq(content),
-          isNull()
+          isNull(),
+          any(LocalDateTime.class)
       )).willReturn(messageResponse);
 
       // when & then
@@ -594,7 +600,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           eq(parentId),
           eq(content),
-          isNull()
+          isNull(),
+          any(LocalDateTime.class)
       );
     }
 
@@ -615,7 +622,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           isNull(),
           eq(content),
-          isNull()
+          isNull(),
+          any(LocalDateTime.class)
       )).willReturn(messageResponse);
 
       // when & then
@@ -635,7 +643,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           isNull(),
           eq(content),
-          isNull()
+          isNull(),
+          any(LocalDateTime.class)
       );
     }
 
@@ -659,7 +668,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           eq(parentId),
           isNull(),
-          anyList()
+          anyList(),
+          any(LocalDateTime.class)
       )).willReturn(messageResponse);
 
       // when & then
@@ -681,7 +691,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           eq(parentId),
           isNull(),
-          anyList()
+          anyList(),
+          any(LocalDateTime.class)
       );
     }
 
@@ -702,7 +713,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           isNull(),
           isNull(),
-          anyList()
+          anyList(),
+          any(LocalDateTime.class)
       )).willReturn(messageResponse);
 
       // when & then
@@ -723,7 +735,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
           eq(userDetails.getUserId()),
           isNull(),
           isNull(),
-          anyList()
+          anyList(),
+          any(LocalDateTime.class)
       );
     }
 

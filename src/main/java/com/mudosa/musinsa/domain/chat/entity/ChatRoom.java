@@ -26,7 +26,7 @@ public class ChatRoom {
   @Enumerated(EnumType.STRING)
   @Column(name = "type", nullable = false, length = 10)
   private ChatRoomType type; // GROUP, DM
-  
+
   @Setter
   @Column(name = "last_message_at")
   private LocalDateTime lastMessageAt;
@@ -49,8 +49,4 @@ public class ChatRoom {
   @Builder.Default
   @Where(clause = "deleted_at IS NULL")
   private List<ChatPart> parts = new ArrayList<>();
-
-  @OneToMany(mappedBy = "chatRoom", orphanRemoval = false)
-  @Builder.Default
-  private List<Message> messages = new ArrayList<>();
 }

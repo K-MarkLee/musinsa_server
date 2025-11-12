@@ -15,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -58,7 +59,8 @@ public class ChatControllerImpl implements ChatController {
         (files != null ? files.size() : 0)
     );
 
-    MessageResponse savedMessage = chatService.saveMessage(chatId, userId, parentId, message, files);
+    LocalDateTime now = LocalDateTime.now();
+    MessageResponse savedMessage = chatService.saveMessage(chatId, userId, parentId, message, files, now);
     return ApiResponse.success(savedMessage, "메시지를 성공적으로 전송했습니다.");
   }
 
@@ -79,7 +81,7 @@ public class ChatControllerImpl implements ChatController {
     log.info("[API][GET] /api/chat/{}/messages userId={} page={} size={}",
         chatId, userId, page, size);
 
-    Page<MessageResponse> messages = chatService.getChatMessages(chatId, userId, page, size);
+    Page<MessageResponse> messages = chatService.getChatMessages(chatId, page, size);
 
     return ApiResponse.success(
         messages,
