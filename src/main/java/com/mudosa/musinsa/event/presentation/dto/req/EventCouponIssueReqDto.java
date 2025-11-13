@@ -10,7 +10,8 @@ import lombok.Setter;
 
 public class EventCouponIssueReqDto {
 
-    private Long productId;
+    //private Long productId;
+    @NotNull(message = "상품 옵션 ID는 필수입니다.")
     private Long productOptionId;
     //private long eventId;
 

@@ -449,6 +449,6 @@ public class ChatServiceImpl implements ChatService {
     //TODO: 만약에 스프링 큐가 아닌 다른 큐를 쓴다면 관련 코드가 다 변경되어아햘지 않을까? OOP를 적용해보자!
     messageEventPublisher.publishMessageCreated(dto);
     notificationEventPublisher.publishChatNotificationCreatedEvent(dto);
-    log.info("[chatId={}][userId={}] 이벤트 발행 완료. messageId={}", chatId, userId, dto.getMessageId());
+    log.info("[chatId={}][userId={}] 이벤트 발행 완료. messageId={}", dto.getMessageId());
   }
 }
