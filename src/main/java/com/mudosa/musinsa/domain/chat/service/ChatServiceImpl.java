@@ -123,14 +123,16 @@ public class ChatServiceImpl implements ChatService {
 
     Message savedMessage = messageRepository.save(message);
 
-    // 채팅방 마지막 메시지 시간 갱신
-    chatRoom.setLastMessageAt(now);
+
     log.info("[chatId={}][userId={}] 메시지 저장 완료. messageId={}", chatId, userId, savedMessage.getMessageId());
 
     // 4) 첨부파일 저장
     List<MessageAttachment> savedAttachments = saveAttachments(chatId, savedMessage.getMessageId(), files, savedMessage);
     log.info("[chatId={}][userId={}] 첨부파일 {}개 저장 완료", chatId, userId, savedAttachments.size());
 
+    // 채팅방 마지막 메시지 시간 갱신
+    chatRoom.setLastMessageAt(now);
+    
     // 5) 응답 생성
     MessageResponse dto = MessageResponse.from(savedMessage, savedAttachments);
 
