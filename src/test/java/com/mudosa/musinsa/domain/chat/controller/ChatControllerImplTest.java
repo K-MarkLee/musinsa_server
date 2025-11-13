@@ -806,7 +806,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       );
     }
 
-    @DisplayName("채팅방을 나갈 때 채팅 ID는 숫자여야 한다")
+    @DisplayName("메시지 전송 시 채팅 ID는 숫자여야 한다")
     @Test
     void sendMessage_invalidChatId() throws Exception {
       // given
@@ -827,7 +827,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
     }
 
 
-    @DisplayName(" 메시지 전송 시 채팅 ID는 숫자여야 한다")
+    @DisplayName("인증되지 않은 사용자가 메시지 전송을 요청하면 401을 반환한다")
     @Test
     void sendMessage_unauthenticated() throws Exception {
       // given
