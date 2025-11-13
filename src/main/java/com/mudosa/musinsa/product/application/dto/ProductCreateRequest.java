@@ -1,5 +1,7 @@
 package com.mudosa.musinsa.product.application.dto;
 
+import com.mudosa.musinsa.common.vo.Money;
+import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -11,7 +13,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 // 상품 등록 요청 정보를 담아 서비스 계층으로 전달하는 DTO이다.
@@ -21,9 +22,6 @@ import java.util.List;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductCreateRequest {
 
-    @NotNull(message = "브랜드 ID는 필수입니다.")
-    private Long brandId;
-
     @NotBlank(message = "상품명은 필수입니다.")
     private String productName;
 
@@ -31,18 +29,12 @@ public class ProductCreateRequest {
     private String productInfo;
 
     @NotNull(message = "상품 성별 타입은 필수입니다.")
-    private String productGenderType;
-
-    @NotBlank(message = "브랜드명은 필수입니다.")
-    private String brandName;
+    private ProductGenderType productGenderType;
 
     @NotBlank(message = "카테고리 경로는 필수입니다.")
     private String categoryPath;
 
     private Boolean isAvailable;
-
-    @NotNull(message = "카테고리 ID는 필수입니다.")
-    private Long categoryId;
 
     @Size(min = 1, message = "상품 이미지는 최소 1장 이상 등록해야 합니다.")
     @Valid
@@ -73,7 +65,7 @@ public class ProductCreateRequest {
     public static class OptionCreateRequest {
 
         @NotNull(message = "옵션 가격은 필수입니다.")
-        private BigDecimal productPrice;
+        private Money productPrice;
 
         @NotNull(message = "재고 수량은 필수입니다.")
         private Integer stockQuantity;

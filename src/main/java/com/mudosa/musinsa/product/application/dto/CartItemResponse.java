@@ -1,7 +1,7 @@
 package com.mudosa.musinsa.product.application.dto;
 
+import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.domain.model.CartItem;
-import java.math.BigDecimal;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +19,7 @@ public class CartItemResponse {
     private Long userId;
     private Long productOptionId;
     private Integer quantity;
-    private BigDecimal unitPrice;
+    private Money unitPrice;
 
     public static CartItemResponse from(CartItem cartItem) {
         return CartItemResponse.builder()
@@ -30,7 +30,7 @@ public class CartItemResponse {
                 : null)
             .quantity(cartItem.getQuantity())
             .unitPrice(cartItem.getProductOption() != null && cartItem.getProductOption().getProductPrice() != null
-                ? cartItem.getProductOption().getProductPrice().getAmount()
+                ? cartItem.getProductOption().getProductPrice()
                 : null)
             .build();
     }

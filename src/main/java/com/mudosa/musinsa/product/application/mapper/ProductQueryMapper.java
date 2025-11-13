@@ -106,7 +106,7 @@ public final class ProductQueryMapper {
 
 		return ProductDetailResponse.OptionDetail.builder()
 			.optionId(option.getProductOptionId())
-			.productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
+			.productPrice(option.getProductPrice())
 			.stockQuantity(stockQuantity)
 			.hasStock(hasStock)
 			.optionValues(optionValueDetails)

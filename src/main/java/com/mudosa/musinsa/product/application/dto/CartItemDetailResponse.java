@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.product.application.dto;
 
+import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.domain.model.CartItem;
 import com.mudosa.musinsa.product.domain.model.Image;
 
@@ -7,7 +8,6 @@ import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +33,7 @@ public class CartItemDetailResponse {
     private String productInfo;
     private String brandName;
     private Integer quantity;
-    private BigDecimal unitPrice;
+    private Money unitPrice;
     private Integer stockQuantity;
     private Boolean hasStock;
     private String thumbnailUrl;
@@ -90,10 +90,8 @@ public class CartItemDetailResponse {
             })
             .collect(Collectors.toList());
 
-        BigDecimal unitAmount = productOption.getProductPrice() != null
-            ? productOption.getProductPrice().getAmount()
-            : null;
-
+        Money unitAmount = productOption.getProductPrice();
+            
         return CartItemDetailResponse.builder()
             .cartItemId(cartItem.getCartItemId())
             .userId(cartItem.getUser() != null ? cartItem.getUser().getId() : null)

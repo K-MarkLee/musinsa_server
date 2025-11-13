@@ -2,7 +2,6 @@ package com.mudosa.musinsa.product.domain.model;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -66,16 +65,18 @@ public class ProductOptionValue {
     }
 
     // 옵션과 옵션 값을 연결하며 식별자를 초기화한다.
-    @Builder
-    public ProductOptionValue(ProductOption productOption, OptionValue optionValue) {
-        // 필수 파라미터를 확인해 무결성을 보장한다.
+    public static ProductOptionValue create(ProductOption productOption, OptionValue optionValue) {
+        return new ProductOptionValue(productOption, optionValue);
+    }
+
+    ProductOptionValue(ProductOption productOption, OptionValue optionValue) {
         if (productOption == null) {
             throw new IllegalArgumentException("상품 옵션은 필수입니다.");
         }
         if (optionValue == null) {
             throw new IllegalArgumentException("옵션 값은 필수입니다.");
         }
-        
+
         this.productOption = productOption;
         this.optionValue = optionValue;
         refreshIdentifiers();
