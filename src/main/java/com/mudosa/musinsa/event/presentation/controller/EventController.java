@@ -24,7 +24,7 @@ import java.util.List;
 //@Controller -> ViewResolver
 @RestController
 @RequestMapping("/api/events")
-//@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 @Slf4j
 
@@ -78,7 +78,6 @@ public class EventController {
 
         log.info("쿠폰 발급 요청 - eventId: {}, userId: {}", eventId, user != null ? user.getUserId() : "null");
         log.info("Request body - productOptionId: {}", request.getProductOptionId());
-        log.info("Request body: {}", request);
 
 
         EventCouponService.EventCouponIssueResult result = eventCouponService.issueCoupon(
