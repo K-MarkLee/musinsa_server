@@ -21,17 +21,6 @@ class LocalFileStoreTest extends ServiceConfig {
   @Autowired
   private LocalFileStore fileStore;
 
-  @DisplayName("동작 테스트")
-  @Test
-  void test() {
-    // given
-
-    // when
-
-    // then
-    assertThat(1L).isEqualTo(1L);
-  }
-
   //파일 생성
   private MultipartFile createFilePart(String filename, String content) {
     return new MockMultipartFile("files", filename, "image/png", content.getBytes());
@@ -40,7 +29,7 @@ class LocalFileStoreTest extends ServiceConfig {
   @Nested
   @DisplayName("로컬에 파일 저장")
   class storeMessageFile {
-    @DisplayName("로컬에 파일을 저장 후 저장 경로를 반환합니다.")
+    @DisplayName("로컬에 파일을 저장 후 저장 경로를 반환합니다")
     @Test
     void storeMessageFile_Success() throws IOException {
       // given
@@ -60,7 +49,6 @@ class LocalFileStoreTest extends ServiceConfig {
 
       Path storedPath = Paths.get(new ClassPathResource("static/").getFile().getAbsolutePath(), url);
       assertThat(Files.exists(storedPath)).isTrue();
-
     }
   }
 }
