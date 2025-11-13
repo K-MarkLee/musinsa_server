@@ -1,8 +1,5 @@
 package com.mudosa.musinsa.event.presentation.controller;
 
-//import com.mudosa.musinsa.event.presentation.dto.req.EventCouponIssueRequest;
-//import com.mudosa.musinsa.event.presentation.dto.res.EventCouponIssueResponse;
-
 import com.mudosa.musinsa.event.model.Event;
 
 import com.mudosa.musinsa.event.presentation.dto.req.EventCouponIssueReqDto;
@@ -27,7 +24,7 @@ import java.util.List;
 //@Controller -> ViewResolver
 @RestController
 @RequestMapping("/api/events")
-@CrossOrigin(origins = "http://localhost:5173")
+//@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 @Slf4j
 
@@ -60,6 +57,7 @@ public class EventController {
 //            return ResponseEntity.badRequest().build();  // 400 잘못된 요청
 //        }
         //String text = new String("test setes");
+        log.info("이벤트 목록 조회 요청 - type: {}", type);
         List<EventListResDto> eventList = eventService.getEventListByType(type); // EventService에 만들어야됨
         return ResponseEntity.ok(eventList);
     }
@@ -70,23 +68,30 @@ public class EventController {
     *
     */
 
-    @PostMapping("/coupon/issue")
+    @PostMapping("/{eventId}/coupons/issue")
     public ResponseEntity<EventCouponIssueResDto> issueCoupon(
+            @PathVariable Long eventId,
             @Valid @RequestBody EventCouponIssueReqDto request,
             @AuthenticationPrincipal CustomUserDetails user
 
     ) {
+
+        log.info("쿠폰 발급 요청 - eventId: {}, userId: {}", eventId, user != null ? user.getUserId() : "null");
+        log.info("Request body - productOptionId: {}", request.getProductOptionId());
+        log.info("Request body: {}", request);
+
+
         EventCouponService.EventCouponIssueResult result = eventCouponService.issueCoupon(
 
-                        request.getEventId(),
-                        request.getEventOptionId(),
+                        eventId,
+                        request.getProductOptionId(),
                         user.getUserId()
 
                 //이벤트 id, 이벤트상품옵션 id, 사용자 id
         );
 
         EventCouponIssueResDto response = EventCouponIssueResDto.from(result);
-
+        return ResponseEntity.ok(response);
     }
 
 

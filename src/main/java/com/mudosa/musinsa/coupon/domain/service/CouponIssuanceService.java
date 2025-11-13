@@ -56,27 +56,14 @@ public class CouponIssuanceService {
         LocalDateTime now = LocalDateTime.now();
         coupon.validateIssuable(now);
 
-        // 상품 적용 가능 여부 검증
-        if(!couponProductService.isApplicableToProduct(couponId,productId)){
-            throw new BusinessException(
-                    ErrorCode.EVENT_PRODUCT_MISMATCH
-                    , "쿠폰이 해당 상품에 적용되지 않습니다"
-            );
-        }
-
-//        //  멱등 처리 : 기존 발급 있으면 그대로 반환
-//        Optional <MemberCoupon> existing = memberCouponRepository.findByUserIdAndCouponId(userId, couponId);
-//        if (existing.isPresent()) {
-//            MemberCoupon memberCoupon = existing.get();
-//            log.info("기존 발급 쿠폰 재사용 - userId: {}, couponId: {}", userId, couponId);
-//            return CouponIssuanceResult.duplicate(
-//                    memberCoupon.getId(),
-//                    couponId,
-//                    memberCoupon.getExpiredAt(),
-//                    memberCoupon.getCreatedAt()
+//        // 상품 적용 가능 여부 검증
+//        if(!couponProductService.isApplicableToProduct(couponId,productId)){
+//            throw new BusinessException(
+//                    ErrorCode.EVENT_PRODUCT_MISMATCH
+//                    , "쿠폰이 해당 상품에 적용되지 않습니다"
 //            );
 //        }
-//        return createMemberCoupon(userId,coupon);
+
 
         return memberCouponRepository.findByUserIdAndCouponId(userId, couponId)
                 .map(mc -> {

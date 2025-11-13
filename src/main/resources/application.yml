@@ -17,7 +17,13 @@ spring:
         format_sql: true  # SQL 포맷팅
         use_sql_comments: true  # SQL에 주석 추가
         highlight_sql: true  # SQL 하이라이트
-#        jdbc:
+
+  logging:
+    level:
+      org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: debug
+
+
+  #        jdbc:
 #          batch_size: 100  # 배치 처리 최적화
 #          fetch_size: 50  # 페치 사이즈
 #        order_inserts: true  # INSERT 순서 최적화

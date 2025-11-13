@@ -10,12 +10,17 @@ import lombok.Setter;
 
 public class EventCouponIssueReqDto {
 
-    @NotNull(message = "사용자 ID는 필수입니다")
-    private Long userId;
-    @NotNull(message = "이벤트 옵션 ID는 필수입니다")
-    private Long eventOptionId;
-    @NotNull(message = "이벤트 ID는 필수입니다 ")
-    private Long eventId;
+    private Long productId;
+    private Long productOptionId;
+    //private long eventId;
+
+
+    //@NotNull(message = "사용자 ID는 필수입니다")
+    //private Long userId;
+    //@NotNull(message = "이벤트 상품 옵션 ID는 필수입니다")
+    //private Long productOptionId;
+    //@NotNull(message = "이벤트 ID는 필수입니다 ")
+    //private Long eventId;
 
 
 }
