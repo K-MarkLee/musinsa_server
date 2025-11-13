@@ -16,8 +16,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.verify;
 @DisplayName("MessageCreatedEventListener 테스트")
 class MessageCreatedEventListenerTest extends ServiceConfig {
 
-  @MockBean
+  @MockitoBean
   protected SimpMessagingTemplate messagingTemplate;
 
   @Autowired
@@ -85,7 +85,7 @@ class MessageCreatedEventListenerTest extends ServiceConfig {
     @Test
     void handle_shouldSendMessageOverWebSocket() {
       // given
-      User user = saveUser("철수");
+      User user = saveUser("user");
       Brand brand = saveBrand("브랜드1", "Brand1");
       ChatRoom chatRoom = saveChatRoom(brand);
       ChatPart chatPart = saveChatPartOfUser(chatRoom, user);
