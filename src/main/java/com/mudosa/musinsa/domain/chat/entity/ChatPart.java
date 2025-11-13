@@ -41,8 +41,17 @@ public class ChatPart {
   @Setter
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
-  
+
   @OneToMany(mappedBy = "chatPart", orphanRemoval = false)
   @Builder.Default
   private List<Message> messages = new ArrayList<>();
+
+  public static ChatPart create(ChatRoom chatRoom, User user) {
+    return ChatPart.builder()
+        .chatRoom(chatRoom)
+        .user(user)
+        .role(ChatPartRole.USER)
+        .build();
+  }
+
 }

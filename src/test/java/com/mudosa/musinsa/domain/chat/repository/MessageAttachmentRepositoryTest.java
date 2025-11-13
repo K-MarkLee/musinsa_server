@@ -105,7 +105,7 @@ class MessageAttachmentRepositoryTest extends JpaConfig {
         .build();
   }
 
-  /* ===  === */
+  /* === findAllByMessageIdIn 메서드 테스트 === */
   @Nested
   @DisplayName("메시지 ID 목록으로 첨부파일들을 조회한다")
   class findAllByMessageIdIn {
@@ -114,7 +114,7 @@ class MessageAttachmentRepositoryTest extends JpaConfig {
     void findAllByMessageIdIn() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user");
 
       // 2. 브랜드 먼저 저장
       Brand brand = saveBrand("브랜드", "Brand");
@@ -153,7 +153,7 @@ class MessageAttachmentRepositoryTest extends JpaConfig {
     void findAllByMessageIdIn_emptyIds() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user");
 
       // 2. 브랜드 먼저 저장
       Brand brand = saveBrand("브랜드", "Brand");
@@ -171,7 +171,8 @@ class MessageAttachmentRepositoryTest extends JpaConfig {
       Message message = saveMessageWithAttachments(p, "안녕", List.of(m1_a1, m1_a2, m1_a3));
 
       // when
-      List<MessageAttachment> result = attachmentRepository.findAllByMessageIdIn(List.of());
+      List<Long> messageIds = List.of();
+      List<MessageAttachment> result = attachmentRepository.findAllByMessageIdIn(messageIds);
 
       // then
       assertThat(result).isEmpty();
@@ -181,6 +182,23 @@ class MessageAttachmentRepositoryTest extends JpaConfig {
     @Test
     void findAllByMessageIdIn_notFoundIds() {
       // given
+      User user = saveUser("user");
+
+      // 2. 브랜드 먼저 저장
+      Brand brand = saveBrand("브랜드", "Brand");
+
+      // 3. 이제 이 '영속된' 브랜드들을 채팅방에 달아준다
+      ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
+
+      // 4. 참가자 저장
+      ChatPart p = saveChatPart(chatRoom, user);
+
+      // 메시지1 생성 (첨부 3)
+      MessageAttachment m1_a1 = createMessageAttachment("image1_1");
+      MessageAttachment m1_a2 = createMessageAttachment("image1_2");
+      MessageAttachment m1_a3 = createMessageAttachment("image1_3");
+      Message message = saveMessageWithAttachments(p, "안녕", List.of(m1_a1, m1_a2, m1_a3));
+
       List<Long> messageIds = List.of(999L, 1000L);
 
       // when
@@ -195,7 +213,7 @@ class MessageAttachmentRepositoryTest extends JpaConfig {
     void findAllByMessageIdIn_mixedWithMessageWithoutAttachments() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user");
 
       // 2. 브랜드 먼저 저장
       Brand brand = saveBrand("브랜드", "Brand");
@@ -232,7 +250,7 @@ class MessageAttachmentRepositoryTest extends JpaConfig {
     void findAllByMessageIdIn_duplicatedIds() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user");
 
       // 2. 브랜드 먼저 저장
       Brand brand = saveBrand("브랜드", "Brand");
@@ -266,7 +284,7 @@ class MessageAttachmentRepositoryTest extends JpaConfig {
     void findAllByMessageIdIn_differentChatRooms() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user");
 
       // 2. 브랜드 먼저 저장
       Brand brand = saveBrand("브랜드", "Brand");
