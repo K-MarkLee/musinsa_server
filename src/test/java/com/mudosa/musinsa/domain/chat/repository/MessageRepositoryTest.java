@@ -96,15 +96,35 @@ class MessageRepositoryTest extends JpaConfig {
     return message;
   }
 
+  /* === findPageWithRelationsByChatId 메서드 테스트  === */
   @Nested
   @DisplayName("채팅방 메시지 페이징 조회")
   class findPageWithRelationsByChatId {
+
+    private static void assertPage_hasNext(Page<Message> messages, int size, int count, int page) {
+      assertThat(messages).hasSize(size);
+      assertThat(messages.getTotalElements()).isEqualTo(count);
+      assertThat(messages.getNumber()).isEqualTo(page);
+      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
+      assertThat(messages.hasNext()).isTrue();
+      assertThat(messages.hasPrevious()).isFalse();
+    }
+
+    private static void assertPage_theEnd(Page<Message> messages, int count, int page, int size) {
+      assertThat(messages).hasSize(count);
+      assertThat(messages.getTotalElements()).isEqualTo(count);
+      assertThat(messages.getNumber()).isEqualTo(page);
+      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
+      assertThat(messages.hasNext()).isFalse();
+      assertThat(messages.hasPrevious()).isFalse();
+    }
+
     @DisplayName("메시지가 존재할 경우 최신순으로 정렬된 결과를 반환한다")
     @Test
     void findPageWithRelationsByChatId_Success() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user");
 
       // 2. 브랜드 먼저 저장
       Brand brand = saveBrand("브랜드", "Brand");
@@ -131,12 +151,7 @@ class MessageRepositoryTest extends JpaConfig {
 
       // then
       // 기본 페이징 정보 검증
-      assertThat(messages).hasSize(size);
-      assertThat(messages.getTotalElements()).isEqualTo(count);
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
-      assertThat(messages.hasNext()).isTrue();
-      assertThat(messages.hasPrevious()).isFalse();
+      assertPage_hasNext(messages, size, count, page);
 
       // 최신순 정렬 검증
       assertThat(messages.getContent())
@@ -146,16 +161,17 @@ class MessageRepositoryTest extends JpaConfig {
               "안녕25", "안녕24", "안녕23", "안녕22", "안녕21"
           );
       assertThat(messages.getContent())
-          .extracting(Message::getCreatedAt)
+          .extracting(Message::getMessageId)
           .isSortedAccordingTo(Comparator.reverseOrder());
     }
+
 
     @DisplayName("같은 시간 메시지가 존재할 경우 messageId순으로 정렬된 결과를 반환한다")
     @Test
     void findPageWithRelationsByChatId_withSameTime() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user");
 
       // 2. 브랜드 먼저 저장
       Brand brand = saveBrand("브랜드", "Brand");
@@ -182,12 +198,7 @@ class MessageRepositoryTest extends JpaConfig {
 
       // then
       // 기본 페이징 정보 검증
-      assertThat(messages).hasSize(size);
-      assertThat(messages.getTotalElements()).isEqualTo(count);
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
-      assertThat(messages.hasNext()).isTrue();
-      assertThat(messages.hasPrevious()).isFalse();
+      assertPage_hasNext(messages, size, count, page);
 
       // 최신순 정렬 검증
       assertThat(messages.getContent())
@@ -205,7 +216,7 @@ class MessageRepositoryTest extends JpaConfig {
     @Test
     void findPage_emptyResult() {
       // given
-      User user = saveUser("철수");
+      User user = saveUser("user");
       Brand brand = saveBrand("브랜드", "Brand");
       ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
       saveChatPart(chatRoom, user);
@@ -221,24 +232,20 @@ class MessageRepositoryTest extends JpaConfig {
 
       // then
       // 기본 페이징 정보 검증
-      assertThat(messages).hasSize(count);
-      assertThat(messages.getTotalElements()).isEqualTo(count);
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
-      assertThat(messages.hasNext()).isFalse();
-      assertThat(messages.hasPrevious()).isFalse();
+      assertPage_theEnd(messages, count, page, size);
 
       // 메시지 존재 X
       assertThat(messages.getContent())
           .isEmpty();
     }
 
+
     @Test
-    @DisplayName("메시지가 한 건만 존재할 경우 올바르게 반환한다")
-    void findPage_singleMessage() {
+    @DisplayName("메시지 개수가 페이지 크기보다 적을 경우, 모든 메시지를 반환한다")
+    void findPage_lessMessageThanSize() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user");
 
       // 2. 브랜드 먼저 저장
       Brand brand = saveBrand("브랜드", "Brand");
@@ -255,7 +262,7 @@ class MessageRepositoryTest extends JpaConfig {
       saveMessage(p, "안녕" + count, base);
 
       int page = 0;
-      int size = 10;
+      int size = 2;
       Pageable pageable = PageRequest.of(page, size);
 
       // when
@@ -263,22 +270,19 @@ class MessageRepositoryTest extends JpaConfig {
 
       // then
       // 기본 페이징 정보 검증
-      assertThat(messages).hasSize(count);
-      assertThat(messages.getTotalElements()).isEqualTo(count);
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
-      assertThat(messages.hasNext()).isFalse();
-      assertThat(messages.hasPrevious()).isFalse();
+      assertPage_theEnd(messages, count, page, size);
 
       // 메시지 1건
-      assertThat(messages.getContent()).extracting(Message::getContent).containsExactly("안녕1");
+      assertThat(messages.getContent())
+          .hasSize(count)
+          .extracting(Message::getContent).containsExactly("안녕1");
     }
 
     @DisplayName("여러 채팅방이 존재해도 조회한 채팅방의 메시지만 페이징된다")
     @Test
     void findPageWithRelationsByChatId_ignoreOtherChatRooms() {
       // given
-      User user = saveUser("철수");
+      User user = saveUser("user");
       Brand brand = saveBrand("브랜드", "Brand");
       ChatRoom chatRoom1 = saveChatRoom(brand, ChatRoomType.GROUP);
       ChatPart p1 = saveChatPart(chatRoom1, user);
@@ -313,11 +317,11 @@ class MessageRepositoryTest extends JpaConfig {
           .allMatch(c -> c.startsWith("room1-"));
     }
 
-    @DisplayName("두 번째 페이지를 조회할 때도 최신순이 유지된다")
+    @DisplayName("첫 번째 페이지가 아닌 페이지를 조회할 때도 최신순이 유지된다")
     @Test
-    void findPage_secondPage() {
+    void findPage_noFirstPage() {
       // given
-      User user = saveUser("철수");
+      User user = saveUser("user");
       Brand brand = saveBrand("브랜드", "Brand");
       ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
       ChatPart p = saveChatPart(chatRoom, user);
@@ -353,7 +357,7 @@ class MessageRepositoryTest extends JpaConfig {
     @Test
     void findPageWithUserFetched() {
       // given
-      User user = saveUser("철수");
+      User user = saveUser("user");
       Brand brand = saveBrand("브랜드", "Brand");
       ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
       ChatPart p = saveChatPart(chatRoom, user);
@@ -368,13 +372,22 @@ class MessageRepositoryTest extends JpaConfig {
 
       // then
       // 실제 유저가 붙어있는지 확인
-      assertThat(messages.getContent().getFirst().getChatPart().getUser().getUserName()).isEqualTo("철수");
+      assertThat(messages.getContent().getFirst().getChatPart().getUser().getUserName()).isEqualTo(user.getUserName());
+      assertThat(messages.getContent().getFirst().getChatPart().getUser().getId()).isEqualTo(user.getId());
     }
 
     @DisplayName("존재하지 않는 채팅방 ID로 조회해도 빈 페이지를 반환한다")
     @Test
     void findPage_notExistsChatId() {
       // given
+      User user = saveUser("user");
+      Brand brand = saveBrand("브랜드", "Brand");
+      ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
+      ChatPart p = saveChatPart(chatRoom, user);
+
+      LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
+      saveMessage(p, "안녕", base);
+
       Pageable pageable = PageRequest.of(0, 10);
 
       // when
@@ -389,7 +402,7 @@ class MessageRepositoryTest extends JpaConfig {
     @Test
     void findPage_withParentMessage() {
       // given
-      User user = saveUser("철수");
+      User user = saveUser("user");
       Brand brand = saveBrand("브랜드", "Brand");
       ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
       ChatPart p = saveChatPart(chatRoom, user);
@@ -407,13 +420,14 @@ class MessageRepositoryTest extends JpaConfig {
       // then
       assertThat(messages.getContent().getFirst().getParent()).isNotNull();
       assertThat(messages.getContent().getFirst().getParent().getContent()).isEqualTo("부모");
+      assertThat(messages.getContent().getFirst().getContent()).isEqualTo("자식");
     }
 
     @DisplayName("삭제된 메시지는 조회 결과에 포함되지 않는다")
     @Test
     void findPage_excludeDeletedMessages() {
       // given
-      User user = saveUser("철수");
+      User user = saveUser("user");
       Brand brand = saveBrand("브랜드", "Brand");
       ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
       ChatPart p = saveChatPart(chatRoom, user);
