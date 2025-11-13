@@ -30,11 +30,13 @@ import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.BDDMockito;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -43,15 +45,16 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.BDDAssertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.*;
 
 @DisplayName("ChatService 테스트")
+@Transactional
 class ChatServiceImplTest extends ServiceConfig {
 
   @Autowired
@@ -78,6 +81,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
   @MockitoBean
   protected FileStore fileStore;
+
 
   /**
    * === Test Helper ===
@@ -117,16 +121,7 @@ class ChatServiceImplTest extends ServiceConfig {
     return chatPartRepository.save(chatPart);
   }
 
-  private ChatPart saveChatPartWithRole(ChatRoom chatRoom, User user, ChatPartRole role) {
-    ChatPart chatPart = ChatPart.builder()
-        .chatRoom(chatRoom)
-        .user(user)
-        .role(role)
-        .build();
-    return chatPartRepository.save(chatPart);
-  }
-
-  //메시지 생성
+  // 메시지 생성
   private Message saveMessage(ChatPart chatPart, String content, LocalDateTime timestamp) {
     // 1. Message 생성 및 저장
     Message message = Message.builder()
@@ -140,21 +135,20 @@ class ChatServiceImplTest extends ServiceConfig {
     return message;
   }
 
-  private Message saveMessageWithParent(ChatPart chatPart, String content, LocalDateTime timestamp, Message parent) {
+  private void saveMessageWithParent(ChatPart chatPart, LocalDateTime timestamp, Message parent) {
     // 1. Message 생성 및 저장
     Message message = Message.builder()
         .parent(parent)
         .chatPart(chatPart)
-        .content(content)
+        .content("child")
         .createdAt(timestamp)
         .build();
 
     messageRepository.save(message); // id 확보
 
-    return message;
   }
 
-  private Message saveMessageWithAttachments(ChatPart chatPart, String content, LocalDateTime timestamp, List<MessageAttachment> attachments) {
+  private void saveMessageWithAttachments(ChatPart chatPart, String content, LocalDateTime timestamp, List<MessageAttachment> attachments) {
     // 1. Message 생성 및 저장
     Message message = Message.builder()
         .chatPart(chatPart)
@@ -173,10 +167,9 @@ class ChatServiceImplTest extends ServiceConfig {
     // 3. 첨부파일 저장
     attachmentRepository.saveAll(attachments);
 
-    return message;
   }
 
-  //파일 생성
+  // 파일 생성
   private MultipartFile createFilePart(String filename, String content) {
     return new MockMultipartFile("files", filename, "image/png", content.getBytes());
   }
@@ -187,6 +180,21 @@ class ChatServiceImplTest extends ServiceConfig {
         .mimeType("image/png")
         .sizeBytes(123L)
         .build();
+  }
+
+  // page 관련 검증
+  private void assertPage(Page<MessageResponse> messages, int count, int size, int page) {
+    assertThat(messages.getTotalElements()).isEqualTo(count);
+    assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
+    assertThat(messages.getNumber()).isEqualTo(page);
+    assertThat(messages.getSize()).isEqualTo(size);
+  }
+
+  // 최신순 정렬 검증
+  private void assertLatest(Page<MessageResponse> messages) {
+    assertThat(messages.getContent())
+        .extracting(MessageResponse::getCreatedAt)
+        .isSortedAccordingTo(Comparator.reverseOrder());
   }
 
   /**
@@ -222,6 +230,7 @@ class ChatServiceImplTest extends ServiceConfig {
           .extracting("content", "userId", "createdAt", "isDeleted", "chatId", "chatPartId")
           .containsExactly(content, user.getId(), now, false, chatRoom1.getChatId(), chatPart1.getChatPartId());
       assertThat(chatRoom1.getLastMessageAt()).isEqualTo(now); //채팅 마지막 메시지 시간 업데이트 여부 확인
+      assertThat(response.getAttachments()).isEmpty();
 
       verify(messageEventPublisher, times(1)).publishMessageCreated(any());
     }
@@ -243,7 +252,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
 
-      BDDMockito.given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
+      given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
           .willAnswer(inv -> {
             MultipartFile mf = inv.getArgument(2);
             return "/test-storage/" + mf.getOriginalFilename();
@@ -262,8 +271,8 @@ class ChatServiceImplTest extends ServiceConfig {
       // attachment url 검증을 포맷 가정에 덜 민감하게 변경
       assertThat(response.getAttachments()).hasSize(2)
           .extracting("attachmentUrl", String.class)
-          .anyMatch(url -> url.contains(file1.getOriginalFilename()))
-          .anyMatch(url -> url.contains(file2.getOriginalFilename()));
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file1.getOriginalFilename())))
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file2.getOriginalFilename())));
 
       verify(messageEventPublisher, times(1)).publishMessageCreated(any());
     }
@@ -271,7 +280,7 @@ class ChatServiceImplTest extends ServiceConfig {
     @DisplayName("메시지와 파일을 모두 포함한 메시지를 보낸 후 해당 메시지를 반환한다")
     @Test
     void saveMessage_withContentAndFiles() throws Exception {
-      // given (테스트 헬퍼로 엔티티 저장했다고 가정)
+      // given
       User user = saveUser("user");
       Brand brand1 = saveBrand("브랜드1", "Brand1");
       ChatRoom chatRoom1 = saveChatRoom(brand1);
@@ -286,25 +295,15 @@ class ChatServiceImplTest extends ServiceConfig {
       LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
 
       // 반드시 테스트에서 fileStore의 반환값을 제어한다 (Mock 또는 Test implementation)
-      BDDMockito.given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
+      given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
           .willAnswer(inv -> {
             MultipartFile mf = inv.getArgument(2);
             // 테스트에서 예측 가능한 URL 포맷으로 리턴
             return "/test-storage/" + mf.getOriginalFilename();
           });
 
-      // messageEventPublisher는 외부 호출을 하지 않도록 mock으로 주입되어 있어야 함.
-      // (통합 @SpringBootTest 환경이라면 @MockBean으로 교체)
-
       // when
-      MessageResponse response = chatService.saveMessage(
-          chatRoom1.getChatId(),
-          user.getId(),
-          null,
-          content,
-          files,
-          now
-      );
+      MessageResponse response = chatService.saveMessage(chatRoom1.getChatId(), user.getId(), null, content, files, now);
 
       // then
       // 1) 프로퍼티 검증 — isDeleted 제거 (MessageResponse에 없는 경우)
@@ -319,8 +318,8 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(response.getAttachments())
           .extracting("attachmentUrl", String.class)
           .hasSize(2)
-          .anyMatch(url -> url.contains(file1.getOriginalFilename()))
-          .anyMatch(url -> url.contains(file2.getOriginalFilename()));
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file1.getOriginalFilename())))
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file2.getOriginalFilename())));
 
       // 4) 이벤트 발행 검증 (mock으로 바꿨을 때만 유효)
       verify(messageEventPublisher, times(1)).publishMessageCreated(any());
@@ -345,7 +344,7 @@ class ChatServiceImplTest extends ServiceConfig {
       Message parent = saveMessage(chatPart1, "parent", now);
 
       // fileStore를 예측 가능한 값으로 스텁 (필수)
-      BDDMockito.given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
+      given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
           .willAnswer(inv -> {
             MultipartFile mf = inv.getArgument(2);
             return "/test-storage/" + mf.getOriginalFilename();
@@ -369,8 +368,9 @@ class ChatServiceImplTest extends ServiceConfig {
 
       // 2) parent DTO 검증 (parent 내부의 isDeleted는 여기에 있음)
       assertThat(response.getParent()).isNotNull();
-      assertThat(response.getParent().getMessageId()).isEqualTo(parent.getMessageId());
-      assertThat(response.getParent().getContent()).isEqualTo(parent.getContent());
+      assertThat(response.getParent())
+          .extracting("messageId", "content")
+          .containsExactly(parent.getMessageId(), parent.getContent());
 
       // 3) 채팅방 마지막 메시지 시간 업데이트 확인
       assertThat(chatRoom1.getLastMessageAt()).isEqualTo(now);
@@ -378,8 +378,8 @@ class ChatServiceImplTest extends ServiceConfig {
       // 4) 첨부파일 URL 검증 (포맷 민감도 완화)
       assertThat(response.getAttachments()).hasSize(2)
           .extracting("attachmentUrl", String.class)
-          .anyMatch(url -> url.contains(file1.getOriginalFilename()))
-          .anyMatch(url -> url.contains(file2.getOriginalFilename()));
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file1.getOriginalFilename())))
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file2.getOriginalFilename())));
 
       // 5) 이벤트 발행 검증
       verify(messageEventPublisher, times(1)).publishMessageCreated(any());
@@ -399,13 +399,11 @@ class ChatServiceImplTest extends ServiceConfig {
 
       String content = "content";
 
-      List<MultipartFile> files = null;
-
       LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
       Message parent = saveMessage(chatPart1, "parent", now);
 
       // when
-      MessageResponse response = chatService.saveMessage(chatRoom1.getChatId(), user.getId(), parent.getMessageId(), content, files, now);
+      MessageResponse response = chatService.saveMessage(chatRoom1.getChatId(), user.getId(), parent.getMessageId(), content, null, now);
 
       // then
       assertThat(response)
@@ -436,8 +434,7 @@ class ChatServiceImplTest extends ServiceConfig {
       LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
       Message parent = saveMessage(chatPart1, "parent", now);
 
-      // --- 반드시 파일 저장 동작을 제어(스텁) ---
-      BDDMockito.given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
+      given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
           .willAnswer(inv -> {
             MultipartFile mf = inv.getArgument(2);
             // 테스트에서 예측 가능한 URL 반환
@@ -457,12 +454,12 @@ class ChatServiceImplTest extends ServiceConfig {
       );
 
       // then
-      // (1) 최상위 프로퍼티 검증 — isDeleted 제거
+      // (1) 최상위 프로퍼티 검증 —
       assertThat(response)
           .extracting("content", "userId", "createdAt", "chatId", "chatPartId")
           .containsExactly(null, user.getId(), now, chatRoom1.getChatId(), chatPart1.getChatPartId());
 
-      // (2) parent DTO 검증 (parent 내부의 isDeleted 포함)
+      // (2) parent DTO 검증
       assertThat(response.getParent()).isNotNull();
       assertThat(response.getParent().getMessageId()).isEqualTo(parent.getMessageId());
       assertThat(response.getParent().getContent()).isEqualTo(parent.getContent());
@@ -473,8 +470,8 @@ class ChatServiceImplTest extends ServiceConfig {
       // (4) 첨부파일 URL 검증 — 저장 포맷 변화에 덜 민감하게 contains 사용
       assertThat(response.getAttachments()).hasSize(2)
           .extracting("attachmentUrl", String.class)
-          .anyMatch(url -> url.contains(file1.getOriginalFilename()))
-          .anyMatch(url -> url.contains(file2.getOriginalFilename()));
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file1.getOriginalFilename())))
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file2.getOriginalFilename())));
 
       // (5) 이벤트 발행 검증 (mock 상태에서만 유효)
       verify(messageEventPublisher, times(1)).publishMessageCreated(any());
@@ -490,16 +487,14 @@ class ChatServiceImplTest extends ServiceConfig {
 
       ChatRoom chatRoom1 = saveChatRoom(brand1);
 
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
+      saveChatPartOfUser(chatRoom1, user);
 
       String content = "";
-
-      List<MultipartFile> files = null;
 
       LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
 
       // when & then
-      assertThatThrownBy(() -> chatService.saveMessage(chatRoom1.getChatId(), user.getId(), null, content, files, now))
+      assertThatThrownBy(() -> chatService.saveMessage(chatRoom1.getChatId(), user.getId(), null, content, null, now))
           .isInstanceOf(BusinessException.class)
           .extracting("ErrorCode").isEqualTo(ErrorCode.MESSAGE_OR_FILE_REQUIRED);
 
@@ -517,38 +512,11 @@ class ChatServiceImplTest extends ServiceConfig {
 
       ChatRoom chatRoom1 = saveChatRoom(brand1);
 
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
-
-      String content = "";
-
-      List<MultipartFile> files = List.of();
-
-      LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
-
-      // when & then
-      assertThatThrownBy(() -> chatService.saveMessage(chatRoom1.getChatId(), user.getId(), null, content, files, now))
-          .isInstanceOf(BusinessException.class)
-          .extracting("ErrorCode").isEqualTo(ErrorCode.MESSAGE_OR_FILE_REQUIRED);
-
-      assertThat(chatRoom1.getLastMessageAt()).isNull();
-      verify(messageEventPublisher, never()).publishMessageCreated(any());
-    }
-
-    @DisplayName("메시지와 파일이 모두 없다면 오류를 반환한다")
-    @Test
-    void saveMessage_without_Message_And_Files() {
-      // given
-      User user = saveUser("user");
-
-      Brand brand1 = saveBrand("브랜드1", "Brand1");
-
-      ChatRoom chatRoom1 = saveChatRoom(brand1);
-
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
+      saveChatPartOfUser(chatRoom1, user);
 
       String content = null;
 
-      List<MultipartFile> files = new ArrayList<>();
+      List<MultipartFile> files = List.of();
 
       LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
 
@@ -571,7 +539,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       ChatRoom chatRoom1 = saveChatRoom(brand1);
 
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
+      saveChatPartOfUser(chatRoom1, user);
 
       String content = "        \n";
 
@@ -601,7 +569,7 @@ class ChatServiceImplTest extends ServiceConfig {
       LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
 
       // when & then
-      assertThatThrownBy(() -> chatService.saveMessage(1L, user.getId(), null, content, files, now))
+      assertThatThrownBy(() -> chatService.saveMessage(99999L, user.getId(), null, content, files, now))
           .isInstanceOf(BusinessException.class)
           .extracting("ErrorCode").isEqualTo(ErrorCode.CHAT_NOT_FOUND);
 
@@ -643,7 +611,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       ChatRoom chatRoom1 = saveChatRoom(brand1);
 
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
+      saveChatPartOfUser(chatRoom1, user);
 
       String content = "content";
       LocalDateTime base = LocalDateTime.of(2020, 1, 1, 1, 1);
@@ -671,7 +639,7 @@ class ChatServiceImplTest extends ServiceConfig {
       ChatRoom chatRoom1 = saveChatRoom(brand1);
       ChatRoom chatRoom2 = saveChatRoom(brand2);
 
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
+      saveChatPartOfUser(chatRoom1, user);
       ChatPart chatPart2 = saveChatPartOfUser(chatRoom2, user);
 
       String content = "content";
@@ -692,7 +660,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
     @DisplayName("파일 첨부 메시지에서 첨부 파일 저장 과정에 문제가 발생하면 오류를 반환한다")
     @Test
-    void saveMessage_withFileSaveError_() throws IOException {
+    void saveMessage_withFileSaveError() throws IOException {
       // given
       User user = saveUser("user");
 
@@ -700,9 +668,9 @@ class ChatServiceImplTest extends ServiceConfig {
 
       ChatRoom chatRoom1 = saveChatRoom(brand1);
 
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
+      ChatPart chatPart = saveChatPartOfUser(chatRoom1, user);
 
-      String content = "";
+      String content = "content";
 
       MultipartFile file1 = createFilePart("a.png", "hello");
       MultipartFile file2 = createFilePart("b.png", "world");
@@ -718,6 +686,10 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThatThrownBy(() -> chatService.saveMessage(chatRoom1.getChatId(), user.getId(), null, content, files, now))
           .isInstanceOf(BusinessException.class)
           .extracting("ErrorCode").isEqualTo(ErrorCode.FILE_SAVE_FAILED);
+
+      assertThat(chatRoom1.getLastMessageAt()).isNull();
+      assertThat(chatPart.getMessages()).isEmpty();
+
       verify(messageEventPublisher, never()).publishMessageCreated(any());
     }
 
@@ -744,26 +716,16 @@ class ChatServiceImplTest extends ServiceConfig {
 
       LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
 
-      // 반드시 테스트에서 fileStore의 반환값을 제어한다 (Mock 또는 Test implementation)
-      BDDMockito.given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
+      // 반드시 테스트에서 fileStore의 반환값을 제어한다
+      given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
           .willAnswer(inv -> {
             MultipartFile mf = inv.getArgument(2);
             // 테스트에서 예측 가능한 URL 포맷으로 리턴
             return "/test-storage/" + mf.getOriginalFilename();
           });
 
-      // messageEventPublisher는 외부 호출을 하지 않도록 mock으로 주입되어 있어야 함.
-      // (통합 @SpringBootTest 환경이라면 @MockBean으로 교체)
-
       // when
-      MessageResponse response = chatService.saveMessage(
-          chatRoom1.getChatId(),
-          user.getId(),
-          null,
-          content,
-          files,
-          now
-      );
+      MessageResponse response = chatService.saveMessage(chatRoom1.getChatId(), user.getId(), null, content, files, now);
 
       // then
       // 1) 프로퍼티 검증 — isDeleted 제거 (MessageResponse에 없는 경우)
@@ -778,7 +740,7 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(response.getAttachments())
           .extracting("attachmentUrl", String.class)
           .hasSize(1)
-          .anyMatch(url -> url.contains(file1.getOriginalFilename()));
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file1.getOriginalFilename())));
 
       // 4) 이벤트 발행 검증 (mock으로 바꿨을 때만 유효)
       verify(messageEventPublisher, times(1)).publishMessageCreated(any());
@@ -804,7 +766,7 @@ class ChatServiceImplTest extends ServiceConfig {
       LocalDateTime now = LocalDateTime.of(2020, 1, 1, 1, 1);
 
       // 반드시 테스트에서 fileStore의 반환값을 제어한다 (Mock 또는 Test implementation)
-      BDDMockito.given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
+      given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
           .willAnswer(inv -> {
             MultipartFile mf = inv.getArgument(2);
             // 테스트에서 예측 가능한 URL 포맷으로 리턴
@@ -837,11 +799,62 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(response.getAttachments())
           .extracting("attachmentUrl", String.class)
           .hasSize(1)
-          .anyMatch(url -> url.contains(file1.getOriginalFilename()));
+          .anyMatch(url -> url.contains(Objects.requireNonNull(file1.getOriginalFilename())));
 
       // 4) 이벤트 발행 검증 (mock으로 바꿨을 때만 유효)
       verify(messageEventPublisher, times(1)).publishMessageCreated(any());
     }
+
+
+    @ParameterizedTest(name = "{index} -> messageCount={0}, filesPerMessage={1}")
+    @CsvSource({
+        "1000, 3",
+        "10000, 2"
+    })
+    void saveMessagesParameterized(int messageCount, int filesPerMessage) throws Exception {
+      // given
+      User user = saveUser("user");
+      Brand brand1 = saveBrand("브랜드1", "Brand1");
+      ChatRoom chatRoom1 = saveChatRoom(brand1);
+      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
+
+      LocalDateTime baseTime = LocalDateTime.of(2020, 1, 1, 1, 0);
+
+      given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
+          .willAnswer(inv -> "/test-storage/" + ((MultipartFile) inv.getArgument(2)).getOriginalFilename());
+
+      // when
+      for (int i = 0; i < messageCount; i++) {
+        String content = "메시지 #" + i;
+
+        List<MultipartFile> files = new ArrayList<>();
+        for (int f = 0; f < filesPerMessage; f++) {
+          files.add(new MockMultipartFile("file", "file_" + i + "_" + f + ".png", "image/png",
+              ("data" + i + f).getBytes()));
+        }
+
+        chatService.saveMessage(
+            chatRoom1.getChatId(),
+            user.getId(),
+            null,
+            content,
+            files,
+            baseTime.plusSeconds(i)
+        );
+      }
+
+      // then
+      Page<MessageResponse> savedMessages = chatService.getChatMessages(chatRoom1.getChatId(), 0, messageCount);
+      assertThat(savedMessages).hasSize(messageCount);
+
+      // 마지막 메시지 시간 검증
+      assertThat(chatRoom1.getLastMessageAt()).isEqualTo(baseTime.plusSeconds(messageCount - 1));
+
+      // 이벤트 발행 검증
+      verify(messageEventPublisher, times(messageCount)).publishMessageCreated(any());
+    }
+
+
   }
 
   /**
@@ -879,7 +892,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       // then
       assertThat(messages).isNotNull();
-      assertThat(messages.getContent()).hasSize(size);
+      assertThat(messages.getContent()).hasSize(Math.min(size, count));
 
       assertThat(messages.getContent().get(0).getContent()).isEqualTo("안녕30");
       assertThat(messages.getContent().get(1).getContent()).isEqualTo("안녕29");
@@ -887,15 +900,10 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(messages.getContent().get(19).getContent()).isEqualTo("안녕11");
 
       // 최신순 확인
-      assertThat(messages.getContent())
-          .extracting(MessageResponse::getCreatedAt)
-          .isSortedAccordingTo(Comparator.reverseOrder());
+      assertLatest(messages);
 
       // 페이지 메타데이터 확인
-      assertThat(messages.getTotalElements()).isEqualTo(count);
-      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getSize()).isEqualTo(size);
+      assertPage(messages, count, size, page);
     }
 
     @DisplayName("여러 채팅방의 채팅이 존재할 때 특정 채팅방의 메시지만을 성공적으로 반환한다")
@@ -930,7 +938,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       // then
       assertThat(messages).isNotNull();
-      assertThat(messages.getContent()).hasSize(size);
+      assertThat(messages.getContent()).hasSize(Math.min(size, count));
 
       assertThat(messages.getContent().get(0).getContent()).isEqualTo("안녕30");
       assertThat(messages.getContent().get(1).getContent()).isEqualTo("안녕29");
@@ -938,20 +946,14 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(messages.getContent().get(19).getContent()).isEqualTo("안녕11");
 
       // 최신순 확인
-      assertThat(messages.getContent())
-          .extracting(MessageResponse::getCreatedAt)
-          .isSortedAccordingTo(Comparator.reverseOrder());
+      assertLatest(messages);
 
       // 페이지 메타데이터 확인
-      assertThat(messages.getTotalElements()).isEqualTo(count);
-      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getSize()).isEqualTo(size);
+      assertPage(messages, count, size, page);
 
       assertThat(messages.getContent())
           .extracting(MessageResponse::getChatId)
           .containsOnly(chatRoom1.getChatId());
-
     }
 
     @DisplayName("여러 유저의 채팅이 존재할 때 특정 채팅방의 메시지만을 성공적으로 반환한다")
@@ -981,12 +983,15 @@ class ChatServiceImplTest extends ServiceConfig {
       int page = 0;
       int size = 20;
 
+      // 페이지 메타데이터 확인
+      int totalCount = count * 2;
+
       // when
       Page<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
 
       // then
       assertThat(messages).isNotNull();
-      assertThat(messages.getContent()).hasSize(size);
+      assertThat(messages.getContent()).hasSize(Math.min(size, totalCount));
 
       assertThat(messages.getContent().get(0).getContent()).isEqualTo("바이30");
       assertThat(messages.getContent().get(1).getContent()).isEqualTo("안녕30");
@@ -995,15 +1000,8 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(messages.getContent().get(19).getContent()).isEqualTo("안녕21");
 
       // 최신순 확인
-      assertThat(messages.getContent())
-          .extracting(MessageResponse::getCreatedAt)
-          .isSortedAccordingTo(Comparator.reverseOrder());
-
-      // 페이지 메타데이터 확인
-      assertThat(messages.getTotalElements()).isEqualTo(count * 2);
-      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) (count * 2) / size));
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getSize()).isEqualTo(size);
+      assertLatest(messages);
+      assertPage(messages, totalCount, size, page);
     }
 
     @DisplayName("관리자 채팅은 isManager가 true, 사용자 채팅은 false로 반환한다")
@@ -1041,7 +1039,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       // then
       assertThat(messages).isNotNull();
-      assertThat(messages.getContent()).hasSize(size);
+      assertThat(messages.getContent()).hasSize(Math.min(size, totalCount));
 
       assertThat(messages.getContent().get(0)).extracting("content", "isManager").containsExactly("사용", false);
       assertThat(messages.getContent().get(1)).extracting("content", "isManager").containsExactly("관리29", true);
@@ -1053,15 +1051,10 @@ class ChatServiceImplTest extends ServiceConfig {
 
 
       // 최신순 확인
-      assertThat(messages.getContent())
-          .extracting(MessageResponse::getCreatedAt)
-          .isSortedAccordingTo(Comparator.reverseOrder());
+      assertLatest(messages);
 
       // 페이지 메타데이터 확인
-      assertThat(messages.getTotalElements()).isEqualTo(totalCount);
-      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) totalCount / size));
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getSize()).isEqualTo(size);
+      assertPage(messages, totalCount, size, page);
     }
 
     @DisplayName("답장 메시지인 경우 부모 메시지와 함께 반환한다")
@@ -1079,33 +1072,30 @@ class ChatServiceImplTest extends ServiceConfig {
 
       LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
 
-      Message parent = saveMessage(chatPart1, "부모", base);
-      Message child = saveMessageWithParent(chatPart1, "자식", base.plusSeconds(1), parent);
+      Message parent = saveMessage(chatPart1, "parent", base);
+      saveMessageWithParent(chatPart1, base.plusSeconds(1), parent);
 
       // 페이지네이션 정보
       int page = 0;
       int size = 2;
+
+      int count = 2;
 
       // when
       Page<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
 
       // then
       assertThat(messages).isNotNull();
-      assertThat(messages.getContent()).hasSize(size);
+      assertThat(messages.getContent()).hasSize(Math.min(size, count));
 
-      assertThat(messages.getContent().get(0)).extracting("content", "parent.content").containsExactly("자식", "부모");
-      assertThat(messages.getContent().get(1)).extracting("content", "parent.content").containsExactly("부모", null);
+      assertThat(messages.getContent().get(0)).extracting("content", "parent.content").containsExactly("child", "parent");
+      assertThat(messages.getContent().get(1)).extracting("content", "parent.content").containsExactly("parent", null);
 
       // 최신순 확인
-      assertThat(messages.getContent())
-          .extracting(MessageResponse::getCreatedAt)
-          .isSortedAccordingTo(Comparator.reverseOrder());
+      assertLatest(messages);
 
       // 페이지 메타데이터 확인
-      assertThat(messages.getTotalElements()).isEqualTo(2);
-      assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) 2 / size));
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getSize()).isEqualTo(size);
+      assertPage(messages, count, size, page);
     }
 
     @DisplayName("파일을 포함한 메시지인 경우 파일 목록과 함께 반환한다")
@@ -1130,14 +1120,16 @@ class ChatServiceImplTest extends ServiceConfig {
       int page = 0;
       int size = 2;
 
+      int count = 2;
+
       // when
       Page<MessageResponse> messages = chatService.getChatMessages(chatRoom.getChatId(), page, size);
 
       // then
       assertThat(messages).isNotNull();
-      assertThat(messages.getContent()).hasSize(2);
+      assertThat(messages.getContent()).hasSize(Math.min(size, count));
 
-      MessageResponse first = messages.getContent().get(0);
+      MessageResponse first = messages.getContent().getFirst();
       assertThat(first.getContent()).isEqualTo("파일 포함 메시지2");
       assertThat(first.getAttachments()).hasSize(2);
 
@@ -1145,14 +1137,9 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(second.getContent()).isEqualTo("파일 포함 메시지");
       assertThat(second.getAttachments()).hasSize(3);
 
-      assertThat(messages.getContent())
-          .extracting(MessageResponse::getCreatedAt)
-          .isSortedAccordingTo(Comparator.reverseOrder());
+      assertLatest(messages);
 
-      assertThat(messages.getTotalElements()).isEqualTo(2);
-      assertThat(messages.getTotalPages()).isEqualTo(1);
-      assertThat(messages.getNumber()).isEqualTo(page);
-      assertThat(messages.getSize()).isEqualTo(size);
+      assertPage(messages, count, size, page);
     }
 
     @DisplayName("특정 채팅방의 메시지가 없으면 빈 페이지를 반환한다")
@@ -1209,7 +1196,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       ChatRoom chatRoom1 = saveChatRoom(brand1);
 
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
+      saveChatPartOfUser(chatRoom1, user);
 
       // when
       ChatRoomInfoResponse response = chatService.getChatRoomInfoByChatId(chatRoom1.getChatId(), user.getId());
@@ -1243,7 +1230,7 @@ class ChatServiceImplTest extends ServiceConfig {
       // given
       User user = saveUser("user");
 
-      Brand brand1 = saveBrand("브랜드1", "Brand1");
+      saveBrand("브랜드1", "Brand1");
 
       // when & then
       assertThatThrownBy(() -> chatService.getChatRoomInfoByChatId(9999L, user.getId()))
@@ -1278,7 +1265,6 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(response).extracting("chatId", "partNum", "brandId", "isParticipate")
           .containsExactly(chatRoom.getChatId(), 1L, brand.getBrandId(), true);
     }
-
 
     @DisplayName("여러 참여자가 있어도 조회 사용자가 참여자가 아니면 isParticipate는 false다")
     @Test
@@ -1320,6 +1306,27 @@ class ChatServiceImplTest extends ServiceConfig {
       Brand brand = saveBrand("브랜드", "Brand");
 
       ChatRoom chatRoom = saveChatRoom(brand);
+
+      // when
+      ChatPartResponse response = chatService.addParticipant(chatRoom.getChatId(), user.getId());
+
+      // then
+      assertThat(response).extracting("chatId", "userId")
+          .containsExactly(chatRoom.getChatId(), user.getId());
+    }
+
+    @DisplayName("나간 채팅에 다시 참여할 수 있다")
+    @Test
+    void addParticipant_reParticipant_createNew() {
+      // given
+      User user = saveUser("user");
+
+      Brand brand = saveBrand("브랜드", "Brand");
+      ChatRoom chatRoom = saveChatRoom(brand);
+
+      ChatPart chatPart = saveChatPartOfUser(chatRoom, user);
+      LocalDateTime now = LocalDateTime.of(2000, 1, 1, 0, 0);
+      chatPart.setDeletedAt(now);
 
       // when
       ChatPartResponse response = chatService.addParticipant(chatRoom.getChatId(), user.getId());
@@ -1374,28 +1381,6 @@ class ChatServiceImplTest extends ServiceConfig {
           .extracting("errorCode")
           .isEqualTo(ErrorCode.CHAT_PARTICIPANT_ALREADY_EXISTS);
     }
-
-    @DisplayName("나간 채팅에 다시 참여할 수 있다")
-    @Test
-    void addParticipant_reParticipant_createNew() {
-      // given
-      User user = saveUser("user");
-
-      Brand brand = saveBrand("브랜드", "Brand");
-      ChatRoom chatRoom = saveChatRoom(brand);
-
-      ChatPart chatPart = saveChatPartOfUser(chatRoom, user);
-      LocalDateTime now = LocalDateTime.of(2000, 1, 1, 0, 0);
-      chatPart.setDeletedAt(now);
-
-      // when
-      ChatPartResponse response = chatService.addParticipant(chatRoom.getChatId(), user.getId());
-
-      // then
-      assertThat(response).extracting("chatId", "userId")
-          .containsExactly(chatRoom.getChatId(), user.getId());
-    }
-
   }
 
   /**
@@ -1418,15 +1403,14 @@ class ChatServiceImplTest extends ServiceConfig {
 
       // when
       chatService.leaveChat(chatRoom.getChatId(), user.getId());
-
-      // then
       ChatPart reloaded = chatPartRepository
           .findById(chatPart.getChatPartId())
           .orElseThrow();
+
+      // then
       assertThat(reloaded.getDeletedAt()).isNotNull();
       assertThat(reloaded.getUser().getId()).isEqualTo(chatPart.getUser().getId());
       assertThat(reloaded.getChatRoom().getChatId()).isEqualTo(chatPart.getChatRoom().getChatId());
-
     }
 
     @DisplayName("떠날 채팅방이 없으면 오류를 반환한다")
@@ -1460,7 +1444,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
     @DisplayName("나간 채팅을 다시 나가면 오류를 반환한다")
     @Test
-    void leaveChat_reTry() {
+    void leaveChat_ReTry() {
       // given
       User user = saveUser("user");
 
@@ -1490,7 +1474,7 @@ class ChatServiceImplTest extends ServiceConfig {
   class getChatRoomByUserId {
     @DisplayName("내가 참여 중인 모든 채팅방을 조회한다")
     @Test
-    void getChatRoomByUserId_TwoChatRooms() {
+    void getChatRoomByUserId_Part() {
       // given
       User user = saveUser("user");
 
@@ -1500,8 +1484,8 @@ class ChatServiceImplTest extends ServiceConfig {
       ChatRoom chatRoom1 = saveChatRoom(brand1);
       ChatRoom chatRoom2 = saveChatRoom(brand2);
 
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
-      ChatPart chatPart2 = saveChatPartOfUser(chatRoom2, user);
+      saveChatPartOfUser(chatRoom1, user);
+      saveChatPartOfUser(chatRoom2, user);
 
       // when
       List<ChatRoomInfoResponse> chatRooms = chatService.getChatRoomByUserId(user.getId());
@@ -1526,7 +1510,7 @@ class ChatServiceImplTest extends ServiceConfig {
       ChatRoom chatRoom2 = saveChatRoom(brand2);
 
       ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
-      ChatPart chatPart2 = saveChatPartOfUser(chatRoom2, user);
+      saveChatPartOfUser(chatRoom2, user);
 
       LocalDateTime deletedAt = LocalDateTime.of(2020, 1, 1, 1, 1);
       chatPart1.setDeletedAt(deletedAt);
@@ -1555,7 +1539,7 @@ class ChatServiceImplTest extends ServiceConfig {
       ChatRoom chatRoom2 = saveChatRoom(brand2);
 
       ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
-      ChatPart chatPart2 = saveChatPartOfUser(chatRoom2, user);
+      saveChatPartOfUser(chatRoom2, user);
 
       LocalDateTime deletedAt = LocalDateTime.of(2020, 1, 1, 1, 1);
       chatPart1.setDeletedAt(deletedAt);
@@ -1570,7 +1554,6 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(chatRooms).hasSize(2)
           .extracting("chatId", "isParticipate")
           .containsExactlyInAnyOrder(tuple(chatRoom1.getChatId(), true), tuple(chatRoom2.getChatId(), true));
-
     }
 
     @DisplayName("모든 채팅방을 나간 경우 빈배열이 조회된다")
@@ -1603,7 +1586,7 @@ class ChatServiceImplTest extends ServiceConfig {
       User user = saveUser("user");
 
       Brand brand1 = saveBrand("브랜드1", "Brand1");
-      ChatRoom chatRoom1 = saveChatRoom(brand1);
+      saveChatRoom(brand1);
 
       // when
       List<ChatRoomInfoResponse> chatRooms = chatService.getChatRoomByUserId(user.getId());
@@ -1622,7 +1605,7 @@ class ChatServiceImplTest extends ServiceConfig {
       Brand brand1 = saveBrand("브랜드1", "Brand1");
       ChatRoom chatRoom1 = saveChatRoom(brand1);
 
-      ChatPart chatPart = saveChatPartOfUser(chatRoom1, other);
+      saveChatPartOfUser(chatRoom1, other);
 
       // when
       List<ChatRoomInfoResponse> chatRooms = chatService.getChatRoomByUserId(me.getId());
