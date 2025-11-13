@@ -41,9 +41,10 @@ public interface EventOptionRepository extends JpaRepository<EventOption, Long> 
         from EventOption eo
         join fetch eo.event e
         left join fetch e.coupon
+        join eo.productOption po
         where e.id = :eventId
-          and eo.id = :eventOptionId
+          and po.id = :productOptionId
         """)
     Optional<EventOption> findByEventIdAndIdForUpdate(@Param("eventId") Long eventId,
-                                                      @Param("eventOptionId") Long eventOptionId);
+                                                      @Param("productOptionId") Long productOptionId);
 }

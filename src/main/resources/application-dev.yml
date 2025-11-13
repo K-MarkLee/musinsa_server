@@ -33,6 +33,11 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
+  logging:
+    level:
+      org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: debug
+
+
   # MyBatis 개발 환경 설정
 #  mybatis:
 #    configuration:

@@ -41,14 +41,14 @@ public class EventCouponService {
     // 이벤트 쿠폰 발급 => 쿠폰 발급 버튼을 눌렀을 때 실행
     @Transactional
     public EventCouponIssueResult issueCoupon(Long eventId,
-                                              Long eventOptionId,
+                                              Long productOptionId,
                                               Long userId ){
 
         // 1. 동시성 제어 : 같은 유저의 중복 요청 방지
         try (EventEntryService.EventEntryToken ignored = eventEntryService.acquireSlot(eventId, userId)){
 
             // 2. 이벤트 옵션 조회 ( 비관적 락 )
-            EventOption eventOption = eventOptionRepository.findByEventIdAndIdForUpdate(eventId,eventOptionId)
+            EventOption eventOption = eventOptionRepository.findByEventIdAndIdForUpdate(eventId,productOptionId)
                     // 레포에 생성 필요 -1
                     .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_NOT_FOUND));
 
