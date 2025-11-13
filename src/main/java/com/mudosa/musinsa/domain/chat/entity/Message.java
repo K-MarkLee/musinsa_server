@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -52,6 +53,15 @@ public class Message {
   @Builder.Default
   @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<MessageAttachment> attachments = new ArrayList<>();
+
+  public static Message createMessage(String content, LocalDateTime now, ChatPart chatPart, Message parent) {
+    return Message.builder()
+        .chatPart(chatPart)
+        .content(StringUtils.hasText(content) ? content.trim() : null)
+        .parent(parent)
+        .createdAt(now)
+        .build();
+  }
 
   public boolean isSameRoom(Long chatId) {
     ChatPart cp = this.getChatPart();
