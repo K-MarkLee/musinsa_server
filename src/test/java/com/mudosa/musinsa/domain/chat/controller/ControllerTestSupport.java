@@ -7,7 +7,7 @@ import com.mudosa.musinsa.settlement.domain.repository.SettlementPerTransactionM
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 // 컨트롤러 공통 테스트 설정 분리 (임시적으로 채팅 컨트롤러만)
@@ -17,16 +17,16 @@ public abstract class ControllerTestSupport {
   @Autowired
   MockMvc mockMvc;
 
-  @MockBean
+  @MockitoBean
   ChatService chatService;
 
   /**
    * 실제로는 안 쓰지만, 프로젝트 전체에서 스캔돼서 요구하니까 임시 Mock
    */
-  @MockBean
+  @MockitoBean
   SettlementDailyMapper settlementDailyMapper;
-  @MockBean
+  @MockitoBean
   SettlementMonthlyMapper settlementMonthlyMapper;
-  @MockBean
+  @MockitoBean
   SettlementPerTransactionMapper settlementPerTransactionMapper;
 }

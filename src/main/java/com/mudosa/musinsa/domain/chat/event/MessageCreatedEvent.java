@@ -23,15 +23,4 @@ public record MessageCreatedEvent(MessageResponse messageResponse, long timestam
         messageResponse.getChatId(), messageResponse.getMessageId(), this.timestamp);
 
   }
-
-  /**
-   * 빠른 접근을 위한 헬퍼 메서드
-   */
-  public Long getMessageId() {
-    return messageResponse.getMessageId();
-  }
-
-  public Long getChatId() {
-    return messageResponse.getChatId();
-  }
 }

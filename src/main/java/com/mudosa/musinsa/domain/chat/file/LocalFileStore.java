@@ -31,51 +31,5 @@ public class LocalFileStore implements FileStore {
 
     return "/chat/" + chatId + "/message/" + messageId + "/" + safeName;
   }
-
-  /**
-   * 저장된 메시지 파일 삭제
-   *
-   * @param relativePath "/chat/{chatId}/message/{messageId}/filename.ext" 형태
-   */
-  @Override
-  public boolean deleteMessageFile(String relativePath) {
-    try {
-      // ClassPathResource로 실제 절대 경로 변환
-      String baseDir = new ClassPathResource("static/").getFile().getAbsolutePath();
-      Path filePath = Paths.get(baseDir + relativePath).normalize();
-
-      return Files.deleteIfExists(filePath);
-    } catch (IOException e) {
-      log.error("Failed to delete file: {}", relativePath, e);
-      return false;
-    }
-  }
-
-  /**
-   * 메시지 전체 폴더 삭제 (예: 메시지 삭제 시 첨부파일 폴더 제거)
-   */
-  @Override
-  public boolean deleteMessageFolder(Long chatId, Long messageId) {
-    try {
-      String baseDir = new ClassPathResource("static/").getFile().getAbsolutePath();
-      Path folderPath = Paths.get(baseDir + "/chat/" + chatId + "/message/" + messageId).normalize();
-
-      if (Files.exists(folderPath)) {
-        Files.walk(folderPath)
-            .sorted((a, b) -> b.compareTo(a)) // 하위 파일 먼저 삭제
-            .forEach(path -> {
-              try {
-                Files.deleteIfExists(path);
-              } catch (IOException e) {
-                log.error("Failed to delete folder: {}", folderPath, e);
-              }
-            });
-        return true;
-      }
-      return false;
-    } catch (IOException e) {
-      log.error("Failed to delete folder: chat {} - message {}", chatId, messageId, e);
-      return false;
-    }
-  }
+ 
 }

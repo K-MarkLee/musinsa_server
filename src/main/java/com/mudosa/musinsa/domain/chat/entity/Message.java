@@ -24,10 +24,6 @@ public class Message {
   @Column(name = "message_id")
   private Long messageId;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "chat_id", nullable = false)
-  private ChatRoom chatRoom;
-
   // 발신자: NULL 허용
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "chat_part_id")
@@ -41,7 +37,7 @@ public class Message {
   @OneToMany(mappedBy = "parent", orphanRemoval = false)
   @Builder.Default
   private List<Message> children = new ArrayList<>();
-  
+
   @Column(name = "content", columnDefinition = "TEXT")
   private String content;
 
@@ -50,20 +46,17 @@ public class Message {
   private LocalDateTime createdAt;
 
   @Column(name = "deleted_at")
+  @Setter
   private LocalDateTime deletedAt;
 
   @Builder.Default
   @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<MessageAttachment> attachments = new ArrayList<>();
 
-  // 편의 메서드(필요 시)
-  public void replyTo(Message parent) {
-    this.parent = parent;
-    parent.getChildren().add(this);
+  public boolean isSameRoom(Long chatId) {
+    ChatPart cp = this.getChatPart();
+    return cp != null
+        && cp.getChatRoom() != null
+        && cp.getChatRoom().getChatId().equals(chatId);
   }
-
-    public boolean isSameRoom(Long id) {
-        return this.getChatRoom().getChatId().equals(id);
-      //코드
-    }
 }
