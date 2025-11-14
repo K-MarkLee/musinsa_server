@@ -6,6 +6,7 @@ import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
+import com.mudosa.musinsa.product.application.dto.ProductManagerResponse;
 import com.mudosa.musinsa.product.application.dto.ProductOptionCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
 import com.mudosa.musinsa.product.application.mapper.ProductCommandMapper;
@@ -38,7 +39,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 상품 생성/수정/옵션 관리 등 상태 변화를 담당하는 서비스.
+ * 관리자용 상품 관리 및 조회 등을 담당하는 서비스.
  */
 @Service
 @RequiredArgsConstructor
@@ -107,7 +108,7 @@ public class ProductCommandService {
 											   ProductUpdateRequest request,
 											   Long currentUserId) {
 		validateBrandMember(brandId, currentUserId);
-		Product product = productRepository.findDetailById(productId)
+		Product product = productRepository.findDetailByIdForManager(productId, brandId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "상품을 찾을 수 없습니다. productId=" + productId));
 		validateBrandOwnership(product, brandId);
 		return applyUpdates(product, request);
@@ -122,7 +123,7 @@ public class ProductCommandService {
 												       ProductOptionCreateRequest request,
 												       Long currentUserId) {
 		validateBrandMember(brandId, currentUserId);
-		Product product = productRepository.findDetailById(productId)
+		Product product = productRepository.findDetailByIdForManager(productId, brandId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "상품을 찾을 수 없습니다. productId=" + productId));
 		validateBrandOwnership(product, brandId);		
 		if (request == null) {
@@ -150,6 +151,34 @@ public class ProductCommandService {
 		return ProductCommandMapper.toOptionDetail(productOption);
 	}
 	
+	/**
+	 * 브랜드 매니저용: 해당 브랜드의 모든 상품 목록을 조회한다 (isAvailable=false 포함)
+	 */
+	@Transactional(readOnly = true)
+	public List<ProductManagerResponse> getBrandProductsForManager(Long brandId, Long currentUserId) {
+		validateBrandMember(brandId, currentUserId);
+		
+		List<Product> products = productRepository.findAllByBrandForManager(brandId);
+		
+		return products.stream()
+			.map(this::toManagerResponse)
+			.collect(Collectors.toList());
+	}
+
+	/**
+	 * 브랜드 매니저용: 특정 상품 상세 정보를 조회한다 (isAvailable=false 포함)
+	 */
+	@Transactional(readOnly = true)
+	public ProductManagerResponse getProductDetailForManager(Long brandId, Long productId, Long currentUserId) {
+		validateBrandMember(brandId, currentUserId);
+		
+		Product product = productRepository.findDetailByIdForManager(productId, brandId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, 
+				"상품을 찾을 수 없습니다. productId=" + productId + ", brandId=" + brandId));
+		
+		return toManagerResponse(product);
+	}
+
 	/**
 	 * 특정 사용자의 좋아요 상태를 토글한 뒤 결과 카운트를 반환한다. 현재는 미사용
 	 */
@@ -285,6 +314,42 @@ public class ProductCommandService {
 			Image img = Image.create(image.getImageUrl(), image.getIsThumbnail());
 			product.addImage(img);
 		});
+	}
+
+	// Product를 ProductManagerResponse로 변환하는 헬퍼 메서드
+	private ProductManagerResponse toManagerResponse(Product product) {
+		List<ProductManagerResponse.ImageInfo> imageInfos = product.getImages().stream()
+			.map(image -> ProductManagerResponse.ImageInfo.builder()
+				.imageId(image.getImageId())
+				.imageUrl(image.getImageUrl())
+				.isThumbnail(image.getIsThumbnail())
+				.build())
+			.collect(Collectors.toList());
+
+		List<ProductManagerResponse.OptionInfo> optionInfos = product.getProductOptions().stream()
+			.map(option -> ProductManagerResponse.OptionInfo.builder()
+				.optionId(option.getProductOptionId())
+				.price(option.getProductPrice())
+				.stockQuantity(option.getInventory().getStockQuantity().getValue())
+				.optionValues(option.getProductOptionValues().stream()
+					.map(pov -> pov.getOptionValue().getOptionValue()) // optionValue 필드 사용
+					.collect(Collectors.toList()))
+				.build())
+			.collect(Collectors.toList());
+
+		return ProductManagerResponse.builder()
+			.productId(product.getProductId())
+			.productName(product.getProductName())
+			.productInfo(product.getProductInfo())
+			.isAvailable(product.getIsAvailable())
+			.brandName(product.getBrandName())
+			.categoryPath(product.getCategoryPath())
+			.productGenderType(product.getProductGenderType())
+			.createdAt(product.getCreatedAt())
+			.updatedAt(product.getUpdatedAt())
+			.images(imageInfos)
+			.options(optionInfos)
+			.build();
 	}
 
 }

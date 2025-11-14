@@ -9,6 +9,7 @@ import com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductCreateResponse;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
+import com.mudosa.musinsa.product.application.dto.ProductManagerResponse;
 import com.mudosa.musinsa.product.application.dto.ProductOptionCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.ProductUpdateRequest;
@@ -16,21 +17,16 @@ import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
 import com.mudosa.musinsa.product.domain.model.Category;
 import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.security.CustomUserDetails;
+
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.List;
@@ -69,6 +65,16 @@ public class ProductCommandController {
                 .body(ProductCreateResponse.builder().productId(productId).build());
     } 
 
+    // 브랜드별 상품 목록 조회 (비활성 상품 포함)
+    @GetMapping
+    public ResponseEntity<List<ProductManagerResponse>> getBrandProducts(
+            @PathVariable Long brandId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long userId = userDetails.getUserId();
+        List<ProductManagerResponse> products = productService.getBrandProductsForManager(brandId, userId);
+        return ResponseEntity.ok(products);
+    }
+
     // 상품 정보 수정
     @PutMapping("/{productId}")
     public ResponseEntity<ProductDetailResponse> updateProduct(
@@ -79,6 +85,17 @@ public class ProductCommandController {
         Long userId = userDetails.getUserId();
         ProductDetailResponse response = productService.updateProduct(brandId, productId, request, userId);
         return ResponseEntity.ok(response);
+    }
+
+    // 브랜드별 상품 상세 조회 (비활성 상품 포함)
+    @GetMapping("/{productId}")
+    public ResponseEntity<ProductManagerResponse> getProductDetail(
+            @PathVariable Long brandId,
+            @PathVariable Long productId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long userId = userDetails.getUserId();
+        ProductManagerResponse product = productService.getProductDetailForManager(brandId, productId, userId);
+        return ResponseEntity.ok(product);
     }
 
     // 상품 옵션 추가
