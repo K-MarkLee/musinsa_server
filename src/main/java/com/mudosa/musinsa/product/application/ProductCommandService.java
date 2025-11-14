@@ -331,7 +331,6 @@ public class ProductCommandService {
 				.optionId(option.getProductOptionId())
 				.price(option.getProductPrice())
 				.stockQuantity(option.getInventory().getStockQuantity().getValue())
-				.isAvailable(true) // ProductOption은 isAvailable 필드가 없으므로 기본값 true
 				.optionValues(option.getProductOptionValues().stream()
 					.map(pov -> pov.getOptionValue().getOptionValue()) // optionValue 필드 사용
 					.collect(Collectors.toList()))
