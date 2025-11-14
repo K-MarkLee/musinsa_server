@@ -44,7 +44,7 @@ public class ProductInventoryService {
                                                                    Long userId) {
         validateBrandMember(brandId, userId);
         
-        Product product = productRepository.findDetailById(productId)
+        Product product = productRepository.findDetailByIdForManager(productId, brandId)
             .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "상품을 찾을 수 없습니다. productId=" + productId));
 
         validateBrandOwnership(product, brandId);
@@ -126,7 +126,7 @@ public class ProductInventoryService {
                                                                  Long userId) {
         validateBrandMember(brandId, userId);
         
-        Product product = productRepository.findDetailById(productId)
+        Product product = productRepository.findDetailByIdForManager(productId, brandId)
             .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "상품을 찾을 수 없습니다. productId=" + productId));
 
         validateBrandOwnership(product, brandId);

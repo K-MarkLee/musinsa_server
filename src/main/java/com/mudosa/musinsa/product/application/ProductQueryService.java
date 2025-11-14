@@ -76,7 +76,7 @@ public class ProductQueryService {
 	public ProductDetailResponse getProductDetail(Long productId) {
 		// 1. 상품 엔티티 조회 (상품 + 옵션)
 		Product product = productRepository.findDetailById(productId)
-			.orElseThrow(() -> new EntityNotFoundException("해당 상품을 찾을 수 없습니다: " + productId));
+			.orElseThrow(() -> new EntityNotFoundException("해당 상품을 찾을 수 없거나 비활성화된 상품입니다: " + productId +"번 상품"));
 
 		// 2. 응답 DTO 변환
 		return ProductQueryMapper.toProductDetail(product);
