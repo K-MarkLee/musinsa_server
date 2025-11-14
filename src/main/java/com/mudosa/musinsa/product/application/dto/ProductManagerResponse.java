@@ -50,7 +50,6 @@ public class ProductManagerResponse {
         private Long optionId;
         private Money price;
         private Integer stockQuantity;
-        private Boolean isAvailable;
         private List<String> optionValues;
     }
 
