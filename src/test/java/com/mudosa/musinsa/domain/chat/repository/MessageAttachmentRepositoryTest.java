@@ -2,6 +2,7 @@ package com.mudosa.musinsa.domain.chat.repository;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.entity.Message;
@@ -22,7 +23,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("MessageAttachmentRepository 테스트")
-class MessageAttachmentRepositoryTest extends JpaConfig {
+class MessageAttachmentRepositoryTest extends ServiceConfig {
 
   @AfterEach
   void tearDown() {

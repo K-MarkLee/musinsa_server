@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.domain.chat.file;
 
-import com.mudosa.musinsa.domain.chat.ServiceConfig;
+import com.mudosa.musinsa.ServiceConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
