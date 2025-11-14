@@ -6,9 +6,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+
+import com.mudosa.musinsa.common.vo.Money;
 
 // 상품 옵션 재고 현황을 반환하는 응답 DTO이다.
 @Getter
@@ -19,7 +20,7 @@ public class ProductOptionStockResponse {
 
     private Long productOptionId;
     private String productName;
-    private BigDecimal productPrice;
+    private Money productPrice;
     private Integer stockQuantity;
     private Boolean hasStock;
     private List<OptionValueSummary> optionValues;

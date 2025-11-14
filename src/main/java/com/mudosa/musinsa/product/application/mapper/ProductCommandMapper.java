@@ -1,29 +1,19 @@
 package com.mudosa.musinsa.product.application.mapper;
 
-import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 상품 생성/수정 커맨드 흐름에서 사용하는 매핑 유틸리티.
+ * 상품 도메인 객체를 응답 DTO로 역정규화하는 매핑 유틸리티.
+ * 여러 테이블의 데이터를 하나의 응답으로 조합하고 복잡한 비즈니스 로직을 포함한다.
  */
 public final class ProductCommandMapper {
-
-    public static List<Product.ImageRegistration> toImageRegistrations(List<ProductCreateRequest.ImageCreateRequest> specs) {
-        if (specs == null || specs.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return specs.stream()
-            .map(spec -> new Product.ImageRegistration(spec.getImageUrl(), Boolean.TRUE.equals(spec.getIsThumbnail())))
-            .collect(Collectors.toList());
-    }
 
     public static ProductDetailResponse toProductDetail(Product product) {
         List<ProductDetailResponse.ImageResponse> imageResponses = product.getImages().stream()
@@ -68,7 +58,7 @@ public final class ProductCommandMapper {
 
         return ProductDetailResponse.OptionDetail.builder()
             .optionId(option.getProductOptionId())
-            .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
+            .productPrice(option.getProductPrice())
             .stockQuantity(stockQuantity)
             .hasStock(hasStock)
             .optionValues(optionValueDetails)
@@ -79,7 +69,6 @@ public final class ProductCommandMapper {
         OptionValue optionValue = mapping.getOptionValue();
         return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
             .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-            .optionNameId(null)
             .optionName(optionValue != null ? optionValue.getOptionName() : null)
             .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
             .build();

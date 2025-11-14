@@ -8,8 +8,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
+
+import com.mudosa.musinsa.common.vo.Money;
 
 // 상품 옵션 단건 등록 요청을 담는 DTO이다.
 @Getter
@@ -19,7 +20,7 @@ import java.util.List;
 public class ProductOptionCreateRequest {
 
     @NotNull(message = "옵션 가격은 필수입니다.")
-    private BigDecimal productPrice;
+    private Money productPrice;
 
     @NotNull(message = "재고 수량은 필수입니다.")
     private Integer stockQuantity;
