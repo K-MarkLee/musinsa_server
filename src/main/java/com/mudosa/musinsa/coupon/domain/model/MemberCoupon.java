@@ -41,6 +41,16 @@ public class MemberCoupon extends BaseEntity {
     @Column(name = "expired_at")
     private LocalDateTime expiredAt;
 
+
+    public static MemberCoupon issue(Long userId, Coupon coupon) {
+        MemberCoupon memberCoupon = new MemberCoupon();
+        memberCoupon.userId = userId;
+        memberCoupon.coupon = coupon;
+        memberCoupon.couponStatus = CouponStatus.AVAILABLE;
+        memberCoupon.expiredAt = LocalDateTime.now();
+        return memberCoupon;
+    }
+
     public boolean isUsuable() {
         // 1. 상태 검증
         if (this.couponStatus != CouponStatus.AVAILABLE) {
@@ -59,7 +69,7 @@ public class MemberCoupon extends BaseEntity {
         // 1. 상태 검증
         if (this.couponStatus != CouponStatus.AVAILABLE) {
             throw new BusinessException(
-                    ErrorCode.COUPON_APLIED_FALIED,
+                    ErrorCode.COUPON_APPLIED_FALIED,
                     "이미 사용되었거나 만료된 쿠폰입니다"
             );
         }

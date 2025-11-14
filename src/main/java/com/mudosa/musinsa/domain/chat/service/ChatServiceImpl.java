@@ -16,7 +16,7 @@ import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.notification.domain.event.NotificationRequiredEvent;
+import com.mudosa.musinsa.notification.domain.event.NotificationEventPublisher;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -56,8 +56,19 @@ public class ChatServiceImpl implements ChatService {
   private final UserRepository userRepository;
   private final BrandMemberRepository brandMemberRepository;
   private final ChatRoomMapper chatRoomMapper;
-  
+  private final NotificationEventPublisher notificationEventPublisher;
+
   private final @Qualifier("localFileStore") FileStore fileStore;
+
+  // TODO: 분리 필요
+  private static Message createMessage(String content, LocalDateTime now, ChatPart chatPart, Message parent) {
+    return Message.builder()
+        .chatPart(chatPart)
+        .content(StringUtils.hasText(content) ? content.trim() : null)
+        .parent(parent)
+        .createdAt(now)
+        .build();
+  }
 
   @Override
   public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
@@ -68,42 +79,38 @@ public class ChatServiceImpl implements ChatService {
     //채팅방을 dto list 형태로 변환
     return chatRooms.stream()
         .map(chatRoom -> {
-          ChatRoomInfoResponse base = chatRoomMapper.toChatRoomInfoResponse(chatRoom);
-          base.setParticipate(true); // 이 시점에서는 유저가 참여 중인 방만 조회했으므로 true 고정
+          // 이 시점에서는 유저가 참여 중인 방만 조회했으므로 true 고정
+          ChatRoomInfoResponse base = chatRoomMapper.toChatRoomInfoResponse(chatRoom, true);
+
           return base;
         })
         .toList();
   }
-
 
   /**
    * 메시지 저장
    */
   @Override
   @Transactional
-  public MessageResponse saveMessage(Long chatId,
-                                     Long userId,
-                                     Long parentId,
-                                     String content,
-                                     List<MultipartFile> files) {
+  public MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files, LocalDateTime now) {
 
     //시작 시간으로 고정(여러번 호출시 시간이 달라지는 문제 발생 가능)
-    LocalDateTime now = LocalDateTime.now();
     log.info("[chatId={}][userId={}] 메시지 저장 시작. parentId={}, contentLength={}, fileCount={}",
         chatId, userId, parentId,
         (content != null ? content.length() : 0),
         (files != null ? files.size() : 0));
 
-    // 0) 기본 검증
+    // 0) 기본 검증(전송된 파일 & 메시지가 모두 없으면 오류)
     validateMessageOrFiles(content, files);
     log.debug("[chatId={}][userId={}] 메시지/파일 검증 완료", chatId, userId);
 
     // 1) 채팅방/참여자 확인
     ChatRoom chatRoom = getChatRoomOrThrow(chatId);
+    log.debug("[chatId={}] 채팅방 검증 완료.", chatId);
 
     //참여자 정보 확인
     ChatPart chatPart = getChatPartOrThrow(chatId, userId);
-    log.debug("[chatId={}][userId={}] 채팅방 및 참여자 검증 완료. chatRoomId={}", chatId, userId, chatRoom.getChatId());
+    log.debug("[chatId={}][userId={}] 참가 여부 검증 완료.", chatId, userId);
 
     // 2) 부모 메시지 확인 (같은 방인지까지 확인)
     Message parent = getParentMessageIfExists(parentId, chatId);
@@ -112,29 +119,25 @@ public class ChatServiceImpl implements ChatService {
     }
 
     // 3) 메시지 엔티티 생성/저장
-    Message message = Message.builder()
-        .chatRoom(chatRoom)
-        .chatPart(chatPart)
-        .content(StringUtils.hasText(content) ? content.trim() : null)
-        .parent(parent)
-        .createdAt(now)
-        .build();
+    Message message = createMessage(content, now, chatPart, parent);
 
     Message savedMessage = messageRepository.save(message);
 
-    // 채팅방 마지막 메시지 시간 갱신
-    chatRoom.setLastMessageAt(now);
+
     log.info("[chatId={}][userId={}] 메시지 저장 완료. messageId={}", chatId, userId, savedMessage.getMessageId());
 
     // 4) 첨부파일 저장
     List<MessageAttachment> savedAttachments = saveAttachments(chatId, savedMessage.getMessageId(), files, savedMessage);
     log.info("[chatId={}][userId={}] 첨부파일 {}개 저장 완료", chatId, userId, savedAttachments.size());
 
+    // 채팅방 마지막 메시지 시간 갱신
+    chatRoom.setLastMessageAt(now);
+    
     // 5) 응답 생성
     MessageResponse dto = MessageResponse.from(savedMessage, savedAttachments);
 
     // 6) 이벤트 발행 (AFTER_COMMIT 리스너에서 실제 전송)
-    publishMessageEvents(userId, chatId, dto, savedMessage.getContent());
+    publishMessageEvents(dto);
 
     return dto;
   }
@@ -144,18 +147,20 @@ public class ChatServiceImpl implements ChatService {
    */
 
   @Override
-  public Page<MessageResponse> getChatMessages(Long chatId, Long userId, int page, int size) {
+  public Page<MessageResponse> getChatMessages(Long chatId, int page, int size) {
+    ChatRoom chatRoom = getChatRoomOrThrow(chatId);
+
     Pageable pageable = PageRequest.of(page, size);
     Page<Message> messages = messageRepository.findPageWithRelationsByChatId(chatId, pageable);
 
     // 비어 있으면 즉시 반환
     if (messages.isEmpty()) {
-      log.debug("[chatId={}][userId={}] 메시지 없음. page={}, size={}", chatId, userId, page, size);
+      log.debug("[chatId={}] 메시지 없음. page={}, size={}", chatId, page, size);
       return Page.empty(pageable);
     }
 
-    // 동일 채팅방 → 동일 브랜드. 첫 건으로 brandId 획득
-    Long brandId = messages.getContent().get(0).getChatRoom().getBrand().getBrandId();
+    // 채팅방에서 브랜드 id 추출
+    Long brandId = chatRoom.getBrand().getBrandId();
 
     // (1) 브랜드 관리자 유저 ID 집합 미리 로딩 → per-row exists 제거
     List<Long> managerIds = brandMemberRepository.findActiveUserIdsByBrandId(brandId);
@@ -205,7 +210,6 @@ public class ChatServiceImpl implements ChatService {
             .content(parent.getContent())
             .createdAt(parent.getCreatedAt())
             .attachments(parentAttachments)
-            .isDeleted(parent.getDeletedAt() != null)
             .build();
       }
 
@@ -215,7 +219,7 @@ public class ChatServiceImpl implements ChatService {
 
       return MessageResponse.builder()
           .messageId(msg.getMessageId())
-          .chatId(msg.getChatRoom().getChatId())
+          .chatId(msg.getChatPart().getChatRoom().getChatId())
           .chatPartId(cp != null ? cp.getChatPartId() : null)
           .userId(senderUserId)
           .userName(senderName)
@@ -302,6 +306,8 @@ public class ChatServiceImpl implements ChatService {
   public void leaveChat(Long chatId, Long userId) {
     log.info("[chatId={}][userId={}] 채팅방 나가기 요청", chatId, userId);
 
+    getChatRoomOrThrow(chatId);
+
     // 활성 상태의 참여 기록 조회
     ChatPart chatPart = getChatPartOrThrow(chatId, userId);
 
@@ -355,6 +361,8 @@ public class ChatServiceImpl implements ChatService {
     }
   }
 
+  // TODO: DTO 변환 분리 필요
+
   /**
    * ChatPartResponse DTO 변환 메서드
    */
@@ -362,6 +370,7 @@ public class ChatServiceImpl implements ChatService {
     return ChatPartResponse.builder()
         .chatPartId(chatPart.getChatPartId())
         .userId(chatPart.getUser().getId())
+        .chatId(chatPart.getChatRoom().getChatId())
         .userName(chatPart.getUser().getUserName())
         .createdAt(chatPart.getCreatedAt())
         .build();
@@ -395,7 +404,6 @@ public class ChatServiceImpl implements ChatService {
     //TODO: 캡슐화를 공부해보자!
     // 부모 메시지가 다른 방의 메시지면 막기
     if (!parent.isSameRoom(chatId)) {
-//    if (!parent.getChatRoom().getChatId().equals(chatId)) {
       log.warn("[chatId={}][parentId={}] 부모 메시지가 다른 채팅방에 속해 있습니다.", chatId, parentId);
       throw new BusinessException(ErrorCode.MESSAGE_PARENT_NOT_FOUND);
     }
@@ -439,13 +447,10 @@ public class ChatServiceImpl implements ChatService {
   }
 
   //event 발행
-  private void publishMessageEvents(Long userId,
-                                    Long chatId,
-                                    MessageResponse dto,
-                                    String content) {
+  private void publishMessageEvents(MessageResponse dto) {
     //TODO: 만약에 스프링 큐가 아닌 다른 큐를 쓴다면 관련 코드가 다 변경되어아햘지 않을까? OOP를 적용해보자!
     messageEventPublisher.publishMessageCreated(dto);
-    eventPublisher.publishEvent(new NotificationRequiredEvent(userId, chatId, content));
-    log.info("[chatId={}][userId={}] 이벤트 발행 완료. messageId={}", chatId, userId, dto.getMessageId());
+    notificationEventPublisher.publishChatNotificationCreatedEvent(dto);
+    log.info("[chatId={}][userId={}] 이벤트 발행 완료. messageId={}", dto.getMessageId());
   }
 }

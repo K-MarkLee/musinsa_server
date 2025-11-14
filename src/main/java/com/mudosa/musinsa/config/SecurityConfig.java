@@ -58,7 +58,7 @@ public class SecurityConfig {
                     .requestMatchers(
                         "/api/auth/**",           // 로그인, 회원가입, 토큰 갱신
                         "/api/products/**",       // 상품 조회
-                        "/api/brand/**",         // 브랜드 조회
+                        "/api/brand/**",         // 브랜드 조회 (verify 제외)
                         "/api/events/**",         // 이벤트 조회
                         "/api/categories/**",     // 카테고리 조회
                         "/api/payments/confirm",  // 결제 승인
@@ -72,6 +72,9 @@ public class SecurityConfig {
                         "/api/notification/**"    // 알림 페이지(임시)
                     )
                     .permitAll()
+                    // 인증이 필요한 경로
+                    .requestMatchers("/api/brand/verify")  // 브랜드 소속 검증
+                    .authenticated()
                     // 그 외 모든 요청은 인증 필요
                     .anyRequest()
                     .authenticated())

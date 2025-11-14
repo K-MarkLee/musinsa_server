@@ -56,6 +56,7 @@ public class Coupon extends BaseEntity {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    // 쿠폰과 상품 매핑
     @OneToMany(mappedBy = "coupon", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CouponProduct> couponProducts = new ArrayList<>();
 
@@ -83,7 +84,7 @@ public class Coupon extends BaseEntity {
         // 1. 활성화 상태 검증
         if (!this.isActive) {
             throw new BusinessException(
-                    ErrorCode.COUPON_APLIED_FALIED,
+                    ErrorCode.COUPON_APPLIED_FALIED,
                     "비활성화된 쿠폰입니다"
             );
         }
@@ -108,7 +109,7 @@ public class Coupon extends BaseEntity {
         if (this.minOrderAmount != null &&
                 orderAmount.compareTo(this.minOrderAmount) < 0) {
             throw new BusinessException(
-                    ErrorCode.COUPON_APLIED_FALIED,
+                    ErrorCode.COUPON_APPLIED_FALIED,
                     String.format("최소 주문 금액(%s원) 미만입니다", this.minOrderAmount)
             );
         }
@@ -152,4 +153,57 @@ public class Coupon extends BaseEntity {
         validateAvailability(orderAmount);
         return calculateDiscountAmount(orderAmount);
     }
+
+    /*
+    * 이벤트 관련 쿠폰을 위한 메서드
+    */
+
+    // 1. 활성화된 쿠폰 인지 check - 비활성화된 쿠폰이라면 여러가지 오류 메시지 return
+    public void validateIssuable(LocalDateTime now) {
+        if ( !Boolean.TRUE.equals(this.isActive) ) {
+            throw new BusinessException(ErrorCode.COUPON_APPLIED_FALIED, "비활성화된 쿠폰입니다.");
+        }
+
+        if(now.isBefore(this.startDate) || now.isAfter(this.endDate)) {
+            throw new BusinessException(ErrorCode.COUPON_EXPIRED, "쿠폰 발급 가능 기간이 아닙니다");
+        }
+
+        if(this.totalQuantity != null && this.issuedQuantity >= this.totalQuantity) {
+            throw new BusinessException(ErrorCode.COUPON_OUT_OF_STOCK, "쿠폰 재고가 모두 소진되었습니다");
+        }
+
+    }
+
+    // 2. 쿠폰 발급 관련 메서드 - 실제 신규 발급으로 확정되었을 때 증가시키기 위함
+
+    public void increaseIssuedQuantity() {
+        if(this.totalQuantity != null && this.issuedQuantity >= this.totalQuantity) {
+            throw new BusinessException(ErrorCode.COUPON_OUT_OF_STOCK, "쿠폰 재고가 모두 소진되었습니다 ");
+        }
+
+        this.issuedQuantity = (this.issuedQuantity == null ? 0 : this.issuedQuantity) +1; // 쿠폰 소진이 아니라면 쿠폰 발급 성공 + 1
+
+    }
+
+
+    // 3. 쿠폰이 특정 상품에 적용 가능한가 ? => CouponProduct 서비스로 이전 , 쿠폰 자신의 상태/불변식이 아님 !
+
+
+
+//    public boolean isApplicableToProduct(Long productId) {
+//        if ( productId == null ) {
+//            return false;
+//        }
+//
+//        if (this.couponProducts.isEmpty()) {
+//            return false;
+//        }
+//        return this.couponProducts.stream() // 스트림으로 돌려서 상품Id가 같은게 하나라도 있다면 true
+//                .anyMatch(cp -> productId.equals(cp.getProductId()));
+//    }
+
+
+
+
+
 }

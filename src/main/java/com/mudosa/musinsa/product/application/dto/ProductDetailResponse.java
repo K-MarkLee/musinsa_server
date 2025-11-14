@@ -25,7 +25,6 @@ public class ProductDetailResponse {
     private String productGenderType;
     private Boolean isAvailable;
     private String categoryPath;
-    private Long likeCount;
     private List<ImageResponse> images;
     private List<OptionDetail> options;
 

@@ -52,31 +52,30 @@ public class MessageResponse {
           : List.of();
 
       List<AttachmentResponse> parentAttachmentDtos = parentAtt.stream()
-          .map(AttachmentResponse::from)
+          .map(AttachmentResponse::of)
           .toList();
 
       parentDto = ParentMessageResponse.builder()
           .messageId(parent.getMessageId())
-          .userId(parent.getChatPart() != null ? parent.getChatPart().getUser().getId() : null)
-          .userName(parent.getChatPart() != null ? parent.getChatPart().getUser().getUserName() : "Unknown") // TODO: User 연동 시 교체
+          .userId(parent.getChatPart().getUser().getId())
+          .userName(parent.getChatPart().getUser().getUserName())
           .content(parent.getContent())
           .createdAt(parent.getCreatedAt())
           .attachments(parentAttachmentDtos)
-          .isDeleted(parent.getDeletedAt() != null)
           .build();
     }
 
     // 2) 현재 메시지 첨부 → DTO 변환
     List<AttachmentResponse> attachmentDtos = (attachments != null ? attachments : List.<MessageAttachment>of())
         .stream()
-        .map(AttachmentResponse::from)
+        .map(AttachmentResponse::of)
         .toList();
 
-    // 3) 발신자/식별자 널가드 (프록시 안전: 식별자만 꺼냄)
-    Long chatId = message.getChatRoom() != null ? message.getChatRoom().getChatId() : null;
-    Long chatPartId = message.getChatPart() != null ? message.getChatPart().getChatPartId() : null;
-    Long userId = message.getChatPart() != null ? message.getChatPart().getUser().getId() : null;
-    String userName = (message.getChatPart() != null) ? message.getChatPart().getUser().getUserName() : "Unknown"; // TODO: 실제 유저명 매핑
+    // 3) 발신자/식별자
+    Long chatId = message.getChatPart().getChatRoom().getChatId();
+    Long chatPartId = message.getChatPart().getChatPartId();
+    Long userId = message.getChatPart().getUser().getId();
+    String userName = message.getChatPart().getUser().getUserName();
 
     return MessageResponse.builder()
         .messageId(message.getMessageId())
@@ -90,9 +89,5 @@ public class MessageResponse {
         .isDeleted(message.getDeletedAt() != null)
         .parent(parentDto)
         .build();
-  }
-
-  public void setManager(boolean manager) {
-    isManager = manager;
   }
 }

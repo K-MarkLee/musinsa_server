@@ -2,6 +2,7 @@ package com.mudosa.musinsa.domain.chat.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Entity
 @Table(name = "message_attachment")
@@ -18,6 +19,7 @@ public class MessageAttachment {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "message_id", nullable = false)
+  @Setter(AccessLevel.PUBLIC)
   private Message message;
 
   @Column(name = "attachment_url", nullable = false, length = 1024)
@@ -28,4 +30,13 @@ public class MessageAttachment {
 
   @Column(name = "size_bytes")
   private Long sizeBytes;
+
+  public static MessageAttachment create(Message message, MultipartFile file, String storedUrl) {
+    return MessageAttachment.builder()
+        .attachmentUrl(storedUrl)
+        .message(message)
+        .mimeType(file.getContentType())
+        .sizeBytes(file.getSize())
+        .build();
+  }
 }

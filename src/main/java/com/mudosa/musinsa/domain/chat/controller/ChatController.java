@@ -59,7 +59,7 @@ public interface ChatController {
 
   /**
    * 채팅방 이전 메시지 조회 (페이징)
-   * GET /api/chat/1/messages?userId=1&page=0&size=20
+   * GET /api/chat/1/messages?page=0&size=20
    */
   @Operation(
       summary = "메시지 조회",
@@ -118,11 +118,11 @@ public interface ChatController {
 
   /**
    * 나의 참가 채팅방 조회
-   * GET /api/chat/1/my
+   * GET /api/chat/my
    */
   @Operation(
-      summary = "채팅방 나가기",
-      description = "특정 채팅방에서 퇴장합니다."
+      summary = "내 채팅방 목록 조회",
+      description = "내가 참가하고 있는 채팅방 목록을 조회합니다."
   )
   @GetMapping("/my")
   ApiResponse<List<ChatRoomInfoResponse>> getMyChat(

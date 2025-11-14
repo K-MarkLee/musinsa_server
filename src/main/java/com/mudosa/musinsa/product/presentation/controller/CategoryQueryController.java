@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-// 디버깅 목적: 카테고리 ID 기반으로 buildPath 결과를 확인하는 임시 엔드포인트
+//카테고리 ID 기반으로 buildPath 결과를 확인하는 임시 엔드포인트
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/categories")

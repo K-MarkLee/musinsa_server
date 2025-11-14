@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mudosa.musinsa.brand.domain.dto.BrandDetailResponseDTO;
 import com.mudosa.musinsa.brand.domain.dto.BrandRequestDTO;
 import com.mudosa.musinsa.brand.domain.dto.BrandResponseDTO;
+import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.brand.domain.service.BrandService;
 import com.mudosa.musinsa.common.dto.ApiResponse;
+import com.mudosa.musinsa.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -25,12 +28,21 @@ import java.util.List;
 public class BrandControllerImpl implements BrandController {
 
   private final BrandService brandService;
+  private final BrandMemberRepository brandMemberRepository;
 
   @Override
   @GetMapping("")
   public ApiResponse<List<BrandResponseDTO>> getBrands() {
     List<BrandResponseDTO> brands = brandService.getBrands();
     return ApiResponse.success(brands, "브랜드 목록을 성공적으로 불러왔습니다.");
+  }
+
+  @Override
+  @GetMapping("/verify")
+  public ApiResponse<List<Long>> verifyUserBrands(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    Long userId = userDetails.getUserId();
+    List<Long> brandIds = brandMemberRepository.findBrandIdsByUserId(userId);
+    return ApiResponse.success(brandIds, "사용자가 속한 브랜드 목록입니다.");
   }
 
   @Override
@@ -90,4 +102,6 @@ public class BrandControllerImpl implements BrandController {
       throw new RuntimeException(e);
     }
   }
+
+
 }

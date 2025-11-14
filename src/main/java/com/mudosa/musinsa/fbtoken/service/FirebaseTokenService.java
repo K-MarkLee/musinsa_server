@@ -31,8 +31,8 @@ public class FirebaseTokenService {
     }
 
     //Read
-    public List<FBTokenDTO> readFirebaseTokens(Long userId) {
-        List<FirebaseToken> firebaseTokens = firebaseTokenRepository.findByUserId(userId);
+    public List<FBTokenDTO> readFirebaseTokens(List<Long> userIds) {
+        List<FirebaseToken> firebaseTokens = firebaseTokenRepository.findByUserIdIn(userIds);
         List<FBTokenDTO> result = new ArrayList<>();
         for (FirebaseToken firebaseToken : firebaseTokens) {
             FBTokenDTO dto = FBTokenDTO.builder()

@@ -1,16 +1,21 @@
 package com.mudosa.musinsa.event.presentation.controller;
 
-//import com.mudosa.musinsa.event.presentation.dto.req.EventCouponIssueRequest;
-//import com.mudosa.musinsa.event.presentation.dto.res.EventCouponIssueResponse;
-
-import com.mudosa.musinsa.event.presentation.dto.res.EventListResDto;
 import com.mudosa.musinsa.event.model.Event;
+
+import com.mudosa.musinsa.event.presentation.dto.req.EventCouponIssueReqDto;
+import com.mudosa.musinsa.event.presentation.dto.res.EventCouponIssueResDto;
+import com.mudosa.musinsa.event.presentation.dto.res.EventListResDto;
+import com.mudosa.musinsa.event.service.EventCouponService;
 import com.mudosa.musinsa.event.service.EventService;
-import com.mudosa.musinsa.event.service.EventCouponAccessService;
+
+import com.mudosa.musinsa.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 
 import java.util.List;
 
@@ -23,10 +28,13 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 
+
 public class EventController {
 
     private final EventService eventService;
-    private final EventCouponAccessService eventEntryService;
+    private final EventCouponService eventCouponService;
+
+
 
     /*
     이벤트 목록 조회 api
@@ -49,6 +57,7 @@ public class EventController {
 //            return ResponseEntity.badRequest().build();  // 400 잘못된 요청
 //        }
         //String text = new String("test setes");
+        log.info("이벤트 목록 조회 요청 - type: {}", type);
         List<EventListResDto> eventList = eventService.getEventListByType(type); // EventService에 만들어야됨
         return ResponseEntity.ok(eventList);
     }
@@ -59,6 +68,31 @@ public class EventController {
     *
     */
 
-    //@PostMapping
+    @PostMapping("/{eventId}/coupons/issue")
+    public ResponseEntity<EventCouponIssueResDto> issueCoupon(
+            @PathVariable Long eventId,
+            @Valid @RequestBody EventCouponIssueReqDto request,
+            @AuthenticationPrincipal CustomUserDetails user
+
+    ) {
+
+        log.info("쿠폰 발급 요청 - eventId: {}, userId: {}", eventId, user != null ? user.getUserId() : "null");
+        log.info("Request body - productOptionId: {}", request.getProductOptionId());
+
+
+        EventCouponService.EventCouponIssueResult result = eventCouponService.issueCoupon(
+
+                        eventId,
+                        request.getProductOptionId(),
+                        user.getUserId()
+
+                //이벤트 id, 이벤트상품옵션 id, 사용자 id
+        );
+
+        EventCouponIssueResDto response = EventCouponIssueResDto.from(result);
+        return ResponseEntity.ok(response);
+    }
+
+
 
 }

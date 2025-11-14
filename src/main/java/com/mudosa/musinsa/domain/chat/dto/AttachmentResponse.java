@@ -20,7 +20,7 @@ public class AttachmentResponse {
   @Schema(description = "파일 크기", example = "3763")
   private long sizeBytes;
 
-  public static AttachmentResponse from(MessageAttachment entity) {
+  public static AttachmentResponse of(MessageAttachment entity) {
     return AttachmentResponse.builder()
         .attachmentId(entity.getAttachmentId())
         .attachmentUrl(entity.getAttachmentUrl())

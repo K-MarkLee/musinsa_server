@@ -25,6 +25,4 @@ public class ParentMessageResponse {
   private List<AttachmentResponse> attachments; // 첨부파일 정보
   @Schema(description = "보낸 시간", example = "2025-11-04T13:56:25.623Z")
   private LocalDateTime createdAt;
-  @Schema(description = "삭제 여부", example = "false")
-  private boolean isDeleted;
 }

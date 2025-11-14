@@ -61,4 +61,9 @@ public class PaymentController {
 
 		return ResponseEntity.ok(ApiResponse.success(response));
 	}
+
+	/* 결제 취소 */
+
+	/* 결제 실패 */
+
 }
