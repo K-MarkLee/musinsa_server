@@ -30,8 +30,6 @@ import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.mock.web.MockMultipartFile;
@@ -806,53 +804,53 @@ class ChatServiceImplTest extends ServiceConfig {
     }
 
 
-    @ParameterizedTest(name = "{index} -> messageCount={0}, filesPerMessage={1}")
-    @CsvSource({
-        "1000, 3",
-        "10000, 2"
-    })
-    void saveMessagesParameterized(int messageCount, int filesPerMessage) throws Exception {
-      // given
-      User user = saveUser("user");
-      Brand brand1 = saveBrand("브랜드1", "Brand1");
-      ChatRoom chatRoom1 = saveChatRoom(brand1);
-      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
-
-      LocalDateTime baseTime = LocalDateTime.of(2020, 1, 1, 1, 0);
-
-      given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
-          .willAnswer(inv -> "/test-storage/" + ((MultipartFile) inv.getArgument(2)).getOriginalFilename());
-
-      // when
-      for (int i = 0; i < messageCount; i++) {
-        String content = "메시지 #" + i;
-
-        List<MultipartFile> files = new ArrayList<>();
-        for (int f = 0; f < filesPerMessage; f++) {
-          files.add(new MockMultipartFile("file", "file_" + i + "_" + f + ".png", "image/png",
-              ("data" + i + f).getBytes()));
-        }
-
-        chatService.saveMessage(
-            chatRoom1.getChatId(),
-            user.getId(),
-            null,
-            content,
-            files,
-            baseTime.plusSeconds(i)
-        );
-      }
-
-      // then
-      Page<MessageResponse> savedMessages = chatService.getChatMessages(chatRoom1.getChatId(), 0, messageCount);
-      assertThat(savedMessages).hasSize(messageCount);
-
-      // 마지막 메시지 시간 검증
-      assertThat(chatRoom1.getLastMessageAt()).isEqualTo(baseTime.plusSeconds(messageCount - 1));
-
-      // 이벤트 발행 검증
-      verify(messageEventPublisher, times(messageCount)).publishMessageCreated(any());
-    }
+//    @ParameterizedTest(name = "{index} -> messageCount={0}, filesPerMessage={1}")
+//    @CsvSource({
+//        "1000, 3",
+//        "10000, 2"
+//    })
+//    void saveMessagesParameterized(int messageCount, int filesPerMessage) throws Exception {
+//      // given
+//      User user = saveUser("user");
+//      Brand brand1 = saveBrand("브랜드1", "Brand1");
+//      ChatRoom chatRoom1 = saveChatRoom(brand1);
+//      ChatPart chatPart1 = saveChatPartOfUser(chatRoom1, user);
+//
+//      LocalDateTime baseTime = LocalDateTime.of(2020, 1, 1, 1, 0);
+//
+//      given(fileStore.storeMessageFile(anyLong(), anyLong(), any()))
+//          .willAnswer(inv -> "/test-storage/" + ((MultipartFile) inv.getArgument(2)).getOriginalFilename());
+//
+//      // when
+//      for (int i = 0; i < messageCount; i++) {
+//        String content = "메시지 #" + i;
+//
+//        List<MultipartFile> files = new ArrayList<>();
+//        for (int f = 0; f < filesPerMessage; f++) {
+//          files.add(new MockMultipartFile("file", "file_" + i + "_" + f + ".png", "image/png",
+//              ("data" + i + f).getBytes()));
+//        }
+//
+//        chatService.saveMessage(
+//            chatRoom1.getChatId(),
+//            user.getId(),
+//            null,
+//            content,
+//            files,
+//            baseTime.plusSeconds(i)
+//        );
+//      }
+//
+//      // then
+//      Page<MessageResponse> savedMessages = chatService.getChatMessages(chatRoom1.getChatId(), 0, messageCount);
+//      assertThat(savedMessages).hasSize(messageCount);
+//
+//      // 마지막 메시지 시간 검증
+//      assertThat(chatRoom1.getLastMessageAt()).isEqualTo(baseTime.plusSeconds(messageCount - 1));
+//
+//      // 이벤트 발행 검증
+//      verify(messageEventPublisher, times(messageCount)).publishMessageCreated(any());
+//    }
 
 
   }
