@@ -2,6 +2,7 @@ package com.mudosa.musinsa.domain.chat.repository;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.entity.Message;
@@ -27,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Slf4j
 @DisplayName("MessageRepository 테스트")
 @Transactional
-class MessageRepositoryTest extends JpaConfig {
+class MessageRepositoryTest extends ServiceConfig {
 
   /* === Test Helper === */
   // 유저 생성 & 저장`

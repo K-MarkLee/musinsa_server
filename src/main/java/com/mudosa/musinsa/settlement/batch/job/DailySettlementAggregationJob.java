@@ -39,7 +39,7 @@ import java.time.LocalDate;
  */
 @Slf4j
 @Configuration
-@Profile("!dev")  // 개발 환경에서는 배치 Job 로드 안 함
+@Profile("disabled")  // TODO: 배치 설정 완료 후 "!dev"로 복구 필요
 @RequiredArgsConstructor
 public class DailySettlementAggregationJob {
 

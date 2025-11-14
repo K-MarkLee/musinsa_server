@@ -20,7 +20,7 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class Orders extends BaseEntity {
     
     @Id
@@ -28,6 +28,7 @@ public class Orders extends BaseEntity {
     @Column(name = "order_id")
     private Long id;
 
+    //TODO: 굳이 사용자를 바라봐야하는가?
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -45,7 +46,8 @@ public class Orders extends BaseEntity {
     
     @Column(name = "order_no", nullable = false, length = 50, unique = true)
     private String orderNo;
-    
+
+    //TODO: 값 객체를 도입해야 한다.
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
     
@@ -58,7 +60,7 @@ public class Orders extends BaseEntity {
     @Column(name = "settled_at")
     private LocalDateTime settledAt;
 
-    /* 주문 생성 */
+    /* 정적 팩토리 메서드를 사용해서 객체 생성 */
     public static Orders create(
             User user,
             Long couponId

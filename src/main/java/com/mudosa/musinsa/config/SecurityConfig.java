@@ -67,6 +67,7 @@ public class SecurityConfig {
                         "/api/test/**",           // 테스트 API (개발 환경 전용)
                         "/swagger-ui/**",         // Swagger UI
                         "/v3/api-docs/**",        // API 문서
+                        "/actuator/**",           // Actuator 모니터링
                         "/error",                 // 에러 페이지
                         "/api/notification/**"    // 알림 페이지(임시)
                     )

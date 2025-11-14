@@ -12,8 +12,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @MapperScan(
     basePackages = {
         "com.mudosa.musinsa.settlement.domain.repository",
-        "com.mudosa.musinsa.domain.order.mapper",
-        "com.mudosa.musinsa.domain.payment.mapper"
     },
     annotationClass = Mapper.class
 )

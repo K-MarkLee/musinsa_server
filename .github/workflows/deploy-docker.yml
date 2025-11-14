@@ -1,0 +1,64 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. 이미지 태그 생성 (짧은 커밋 해시)
+      - name: Set image tag
+        id: tag
+        run: echo "value=sha-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # 3. AWS 자격증명 설정 (SSM 사용)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 4. Docker Hub 로그인
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 5. Docker 이미지 빌드 & 푸시
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/musinsa-server:${{ steps.tag.outputs.value }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/musinsa-server:latest
+
+      # 6. SSM으로 EC2에 배포 명령 전송
+      - name: Deploy to EC2
+        run: |
+          aws ssm send-command \
+            --instance-ids ${{ secrets.EC2_INSTANCE_ID }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "cd /home/ubuntu/musinsa-server",
+              "export IMAGE_TAG=${{ steps.tag.outputs.value }}",
+              "export $(cat .env.prod | xargs)",
+              "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/musinsa-server:${{ steps.tag.outputs.value }}",
+              "docker compose -f docker-compose.prod.yml down",
+              "docker compose -f docker-compose.prod.yml up -d",
+              "sleep 20",
+              "curl -f http://localhost/actuator/health || exit 1"
+            ]' \
+            --output text \
+            --query "Command.CommandId"

@@ -255,29 +255,27 @@ public class OrderService {
         }
     }
 
+
     @Transactional
     public OrderCreateResponse createPendingOrder(OrderCreateRequest request, Long userId) {
         log.info("주문 생성 시작 - userId: {}, itemCount: {}",
                 userId, request.getItems().size());
 
-        /* 1. 사용자 조회 */
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        /* 2. 상품 옵션 조회 */
         List<Long> productOptionIds = request.getItems().stream()
                 .map(OrderCreateItem::getProductOptionId)
                 .toList();
 
         List<ProductOption> productOptions = productOptionRepository.findAllByIdWithInventory(productOptionIds);
 
-        /* 4. 주문 생성 */
+        //TODO: Order.create 팩토리 메서드에서 product를 받아서 무조건 Order 생성 시점에 OrderProduct도 생성하도록 강제
         Orders order = Orders.create(
                 user,  // User 엔티티 전달
                 request.getCouponId()
         );
 
-        /* 5. 주문 아이템 생성 */
         List<OrderProduct> orderProducts = createOrderProducts(
                 request.getItems(),
                 productOptions,
@@ -286,10 +284,10 @@ public class OrderService {
 
         order.addOrderProducts(orderProducts);
 
-        /* 6. 총 금액 계산 */
+        //TODO: 도메인 외부에서 접근할 필요가 없는 로직 밖에서 알 필요가 없고 알아서는 안되는 정보. 주문이 생성될 때 내부에서 호출하는게 맞음.
         order.calculateTotalPrice();
 
-        /* 7. 재고 확인*/
+        //TODO: 재고 조회는 주문 도메인의 책임이 아니다
         StockValidationResult stockValidation = order.validateStock();
 
         if (stockValidation.hasInsufficientStock()) {
@@ -297,35 +295,12 @@ public class OrderService {
             return OrderCreateResponse.insufficientStock(stockValidation.getInsufficientItems());
         }
 
-        /* 8. 주문 저장 */
         Orders savedOrder = orderRepository.save(order);
         log.info("주문 생성 완료 - orderId: {}, orderNo: {}, totalPrice: {}",
                 savedOrder.getId(), savedOrder.getOrderNo(), savedOrder.getTotalPrice());
 
         return OrderCreateResponse.success(savedOrder.getId(), savedOrder.getOrderNo());
     }
-//
-//    //TODO: 총 주문 금액 계산 로직인데 해당 코드가 여기있으면 될까? 다른롯에서 만약 쓴다면?
-//    private BigDecimal calculateTotalPrice(
-//            List<OrderCreateItem> items,
-//            List<ProductOption> productOptions) {
-//
-//        BigDecimal totalPrice = BigDecimal.ZERO;
-//
-//        for (OrderCreateItem item : items) {
-//            //ProductOption에서 관리
-//            ProductOption productOption = productOptions.stream()
-//                    .filter(po -> po.getProductOptionId().equals(item.getProductOptionId()))
-//                    .findFirst()
-//                    .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_FOUND));
-//
-//            BigDecimal itemPrice = productOption.getProductPrice().getAmount()
-//                    .multiply(BigDecimal.valueOf(item.getQuantity()));
-//            totalPrice = totalPrice.add(itemPrice);
-//        }
-//
-//        return totalPrice;
-//    }
 
     private List<OrderProduct> createOrderProducts(
             List<OrderCreateItem> items,

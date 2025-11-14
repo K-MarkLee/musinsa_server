@@ -6,7 +6,7 @@ import com.mudosa.musinsa.brand.domain.model.BrandMember;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
-import com.mudosa.musinsa.domain.chat.ServiceConfig;
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;

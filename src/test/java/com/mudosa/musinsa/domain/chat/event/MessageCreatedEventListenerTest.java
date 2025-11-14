@@ -2,7 +2,7 @@ package com.mudosa.musinsa.domain.chat.event;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
-import com.mudosa.musinsa.domain.chat.ServiceConfig;
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;

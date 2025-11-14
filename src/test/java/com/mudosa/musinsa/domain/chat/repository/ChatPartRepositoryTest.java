@@ -2,6 +2,7 @@ package com.mudosa.musinsa.domain.chat.repository;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
@@ -21,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 // TODO: @katsudon8991 - findChatPartsExcludingUser 메서드 테스트 작성 필요
 @DisplayName("ChatPartRepository 테스트")
-class ChatPartRepositoryTest extends JpaConfig {
+class ChatPartRepositoryTest extends ServiceConfig {
 
   @AfterEach
   void tearDown() {
