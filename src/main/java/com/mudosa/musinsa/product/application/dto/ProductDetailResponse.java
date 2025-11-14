@@ -71,7 +71,6 @@ public class ProductDetailResponse {
         @AllArgsConstructor(access = AccessLevel.PROTECTED)
         public static class OptionValueDetail {
             private Long optionValueId;
-            private Long optionNameId;
             private String optionName;
             private String optionValue;
         }

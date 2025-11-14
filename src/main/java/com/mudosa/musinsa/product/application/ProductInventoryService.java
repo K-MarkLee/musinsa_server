@@ -9,22 +9,25 @@ import com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
 import com.mudosa.musinsa.product.domain.model.Inventory;
-
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
+import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-// 브랜드 관리자가 상품 옵션 재고를 조회하고 조정하는 애플리케이션 서비스이다.
+// 브랜드 관리자가 상품 옵션 재고를 조회하고 조정하며, 재고 컨트롤을 담당하는 통합 애플리케이션 서비스이다.
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -32,7 +35,7 @@ public class ProductInventoryService {
 
     private final ProductRepository productRepository;
     private final ProductOptionRepository productOptionRepository;
-    private final InventoryService inventoryService;
+    private final InventoryRepository inventoryRepository;
     private final BrandMemberRepository brandMemberRepository;
 
     // 브랜드와 상품을 기준으로 옵션 재고 목록을 조회한다.
@@ -57,7 +60,12 @@ public class ProductInventoryService {
                                                Long productId,
                                                StockAdjustmentRequest request,
                                                Long userId) {
-        return adjustStock(brandId, productId, request, userId, true);
+        validateBrandMember(brandId, userId);
+        ProductOption productOption = loadProductOptionForBrand(brandId, userId, productId, request.getProductOptionId());
+
+        Inventory updatedInventory = adjustStock(productOption.getProductOptionId(), request.getQuantity(), true);
+
+        return mapToStockResponse(productOption, updatedInventory);
     }
 
     // 옵션 재고를 감소시킨다.
@@ -66,24 +74,48 @@ public class ProductInventoryService {
                                                     Long productId,
                                                     StockAdjustmentRequest request,
                                                     Long userId) {
-        return adjustStock(brandId, productId, request, userId, false);
-    }
-
-    // 재고 조정 공통 메서드
-    @Transactional
-    private ProductOptionStockResponse adjustStock(Long brandId,
-                                                    Long productId,
-                                                    StockAdjustmentRequest request,
-                                                    Long userId,
-                                                    boolean isIncrease) {
         validateBrandMember(brandId, userId);
         ProductOption productOption = loadProductOptionForBrand(brandId, userId, productId, request.getProductOptionId());
 
-        Inventory updatedInventory = isIncrease 
-            ? inventoryService.addStock(productOption.getProductOptionId(), request.getQuantity())
-            : inventoryService.subtractStock(productOption.getProductOptionId(), request.getQuantity());
+        Inventory updatedInventory = adjustStock(productOption.getProductOptionId(), request.getQuantity(), false);
 
         return mapToStockResponse(productOption, updatedInventory);
+    }
+
+    // 지정된 수량만큼 옵션 재고를 조정한다 (입고/재입고/출고/조정).
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Inventory adjustStock(Long productOptionId, Integer quantity, boolean isIncrease) {
+        String operation = isIncrease ? "추가" : "차감";
+        log.info("재고 {} 시작 - productOptionId: {}, quantity: {}", operation, productOptionId, quantity);
+
+        if (quantity == null || quantity <= 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
+
+        Inventory inventory = loadInventoryWithLock(productOptionId);
+        
+        if (isIncrease) {
+            inventory.increase(quantity);
+        } else {
+            try {
+                inventory.decrease(quantity);
+            } catch (IllegalStateException ex) {
+                throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK, ex.getMessage());
+            }
+        }
+
+        inventoryRepository.save(inventory);
+
+        log.info("재고 {} 완료 - productOptionId: {}, {} 수량: {}, 현재 재고: {}", 
+            operation, productOptionId, operation, quantity, inventory.getStockQuantity());
+        return inventory;
+    }
+
+
+
+    private Inventory loadInventoryWithLock(Long productOptionId) {
+        return inventoryRepository.findByProductOptionIdWithLock(productOptionId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
     }
 
     // 상품 판매 가능 상태를 변경한다.
@@ -137,6 +169,7 @@ public class ProductInventoryService {
         return productOption;
     }
 
+    // 사용자가 브랜드 멤버인지 검증한다.
     private void validateBrandMember(Long brandId,
                                     Long userId) {
         if (!brandMemberRepository.existsByBrand_BrandIdAndUserId(brandId, userId)) {
@@ -144,6 +177,7 @@ public class ProductInventoryService {
         }
     }
 
+    // 상품이 해당 브랜드에 속하는지 검증한다.
     private void validateBrandOwnership(Product product,
                                         Long brandId) {
         if (product.getBrand() == null || !Objects.equals(product.getBrand().getBrandId(), brandId)) {
@@ -151,6 +185,7 @@ public class ProductInventoryService {
         }
     }
 
+    // 상품 옵션과 재고를 매핑한다.
     private ProductOptionStockResponse mapToStockResponse(ProductOption productOption) {
         return mapToStockResponse(productOption, productOption.getInventory());
     }

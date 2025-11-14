@@ -68,7 +68,7 @@ public class Category extends BaseEntity {
                 return currentName;  // 부모: "상의"
             }
 
-            return currentParent.buildPathInternal(visited) + "/" + currentName;  // 자식: "상의/티셔츠"
+            return currentParent.buildPathInternal(visited) + ">" + currentName;  // 자식: "상의 > 티셔츠"
         } finally {
             visited.remove(this);
         }

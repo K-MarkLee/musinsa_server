@@ -90,7 +90,6 @@ public final class ProductQueryMapper {
 				OptionValue optionValue = mapping.getOptionValue();
 				return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
 					.optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-					.optionNameId(null)
 					.optionName(optionValue != null ? optionValue.getOptionName() : null)
 					.optionValue(optionValue != null ? optionValue.getOptionValue() : null)
 					.build();
