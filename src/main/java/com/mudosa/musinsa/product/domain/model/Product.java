@@ -36,7 +36,7 @@ public class Product extends BaseEntity {
     @Column(name = "product_name", nullable = false, length = 100)
     private String productName;
 
-    @Column(name = "product_info", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "product_info", nullable = false, length = 600)
     private String productInfo;
 
     @Column(name = "is_available", nullable = false)
@@ -51,7 +51,7 @@ public class Product extends BaseEntity {
     private String brandName;
 
     // 역정규화: "상의/티셔츠"
-    @Column(name = "category_path", nullable = false, length = 255)
+    @Column(name = "category_path", nullable = false, length = 100)
     private String categoryPath;
  
     // 필수 값 검증 후 상품과 연관 컬렉션을 초기화하는 빌더 생성자이다.

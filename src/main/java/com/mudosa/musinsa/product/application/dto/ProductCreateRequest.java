@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.product.application.dto;
 
-import com.mudosa.musinsa.common.vo.Money;
+import java.math.BigDecimal;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -65,7 +65,7 @@ public class ProductCreateRequest {
     public static class OptionCreateRequest {
 
         @NotNull(message = "옵션 가격은 필수입니다.")
-        private Money productPrice;
+    private BigDecimal productPrice;
 
         @NotNull(message = "재고 수량은 필수입니다.")
         private Integer stockQuantity;

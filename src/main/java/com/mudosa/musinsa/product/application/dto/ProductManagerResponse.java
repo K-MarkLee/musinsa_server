@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.product.application.dto;
 
-import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,7 +47,7 @@ public class ProductManagerResponse {
     @AllArgsConstructor
     public static class OptionInfo {
         private Long optionId;
-        private Money price;
+    private java.math.BigDecimal price;
         private Integer stockQuantity;
         private List<String> optionValues;
     }

@@ -85,11 +85,12 @@ public class ProductCommandService {
 
 		// 상품 옵션을 직접 생성해서 상품에 추가
 		request.getOptions().forEach(option -> {
+			Money price = option.getProductPrice() != null ? new Money(option.getProductPrice()) : null;
 			ProductOption productOption = createProductOption(
-				product, 
-				option.getProductPrice(), 
-				option.getStockQuantity(), 
-				option.getOptionValueIds(), 
+				product,
+				price,
+				option.getStockQuantity(),
+				option.getOptionValueIds(),
 				optionValueMap
 			);
 			product.addProductOption(productOption);
@@ -138,11 +139,12 @@ public class ProductCommandService {
 
 		Map<Long, OptionValue> optionValueMap = loadOptionValuesByIds(request.getOptionValueIds());
 
+		Money optionPrice = request.getProductPrice() != null ? new Money(request.getProductPrice()) : null;
 		ProductOption productOption = createProductOption(
-			product, 
-			request.getProductPrice(), 
-			request.getStockQuantity(), 
-			request.getOptionValueIds(), 
+			product,
+			optionPrice,
+			request.getStockQuantity(),
+			request.getOptionValueIds(),
 			optionValueMap
 		);
 		
@@ -329,7 +331,7 @@ public class ProductCommandService {
 		List<ProductManagerResponse.OptionInfo> optionInfos = product.getProductOptions().stream()
 			.map(option -> ProductManagerResponse.OptionInfo.builder()
 				.optionId(option.getProductOptionId())
-				.price(option.getProductPrice())
+				.price(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
 				.stockQuantity(option.getInventory().getStockQuantity().getValue())
 				.optionValues(option.getProductOptionValues().stream()
 					.map(pov -> pov.getOptionValue().getOptionValue()) // optionValue 필드 사용
