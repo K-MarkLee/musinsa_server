@@ -8,8 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.Collections;
 import java.util.List;
-
-import com.mudosa.musinsa.common.vo.Money;
+import java.math.BigDecimal;
 
 // 상품 상세 정보를 담아 프레젠테이션 계층에 전달하는 응답 DTO이다.
 @Getter
@@ -55,7 +54,7 @@ public class ProductDetailResponse {
     @AllArgsConstructor(access = AccessLevel.PROTECTED)
     public static class OptionDetail {
         private Long optionId;
-        private Money productPrice;
+    private BigDecimal productPrice;
         private Integer stockQuantity;
     private Boolean hasStock;
         private List<OptionValueDetail> optionValues;

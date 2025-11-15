@@ -58,7 +58,7 @@ public final class ProductCommandMapper {
 
         return ProductDetailResponse.OptionDetail.builder()
             .optionId(option.getProductOptionId())
-            .productPrice(option.getProductPrice())
+            .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
             .stockQuantity(stockQuantity)
             .hasStock(hasStock)
             .optionValues(optionValueDetails)

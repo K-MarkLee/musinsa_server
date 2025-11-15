@@ -1,7 +1,6 @@
 package com.mudosa.musinsa.product.application;
 
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
-import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
@@ -201,7 +200,9 @@ public class ProductInventoryService {
             hasStock = stockQuantity > 0;
         }
 
-        Money productPrice = productOption.getProductPrice();
+        java.math.BigDecimal productPrice = productOption.getProductPrice() != null
+            ? productOption.getProductPrice().getAmount()
+            : null;
 
         List<ProductOptionStockResponse.OptionValueSummary> optionValueSummaries = productOption.getProductOptionValues().stream()
             .map(this::mapToOptionValueSummary)
