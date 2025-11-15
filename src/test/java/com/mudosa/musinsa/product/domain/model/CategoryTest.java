@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 public class CategoryTest {
     
     @Test
-    @DisplayName("부모 카테고리와 자식 카테고리로 경로를 생성할 수 있다")
+    @DisplayName("부모 카테고리와 자식 카테고리를 생성했을 때 child.buildPath()는 '상의>티셔츠'를 반환해야 한다")
     void buildPath_createsCorrectPath() {
         // given
         Category root = Category.builder()
@@ -21,7 +21,7 @@ public class CategoryTest {
         // when
         String path = child.buildPath();
         
-        // then
-        assert path.equals("상의/티셔츠");
+    // then
+    org.assertj.core.api.Assertions.assertThat(path).isEqualTo("상의>티셔츠");
     }
 }
