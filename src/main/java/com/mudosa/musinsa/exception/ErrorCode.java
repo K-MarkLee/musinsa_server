@@ -47,10 +47,12 @@ public enum ErrorCode {
   ORDER_INVALID_AMOUNT("40007", "주문 상품 가격이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
   PRODUCT_OPTION_NOT_FOUND("40008", "상품 옵션을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
   ORDER_INSUFFICIENT_STOCK("40009", "재고가 부족한 상품이 있습니다", HttpStatus.BAD_REQUEST),
+  ORDER_CREATE_FAIL("40010","주문 생성에 실패했습니다", HttpStatus.BAD_REQUEST),
+  INVALID_PRODUCT_ORDER("40011","현재 판매 불가능한 상품이 포함되어 있습니다",HttpStatus.BAD_REQUEST ),
 
   //inventory
   INVENTORY_NOT_FOUND("50001", "재고 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
-  INSUFFICIENT_STOCK("50002", "재고가 부족합니다", HttpStatus.BAD_REQUEST),
+  INSUFFICIENT_STOCK("50002", "재고가 부족한 상품이 있습니다", HttpStatus.BAD_REQUEST),
 
     //event
     EVENT_NOT_FOUND("50003", "이벤트를 찾을 수 없습니다", HttpStatus.NOT_FOUND),

@@ -16,23 +16,25 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderDetailResponse {
+    //주문 정보
     private String orderNo;
     private String orderStatus;
+    private BigDecimal totalProductAmount;
+    private BigDecimal discountAmount;
+    private LocalDateTime orderedAt;
+
+    //사용자 정보
     private String userName;
     private String userAddress;
     private String userContactNumber;
-    private LocalDateTime orderedAt;
-    private LocalDateTime completedAt;
-    
+
+    //상품 정보
     private List<OrderDetailItem> orderProducts;
-    
-    // 결제 정보
-    private BigDecimal totalProductAmount;
-    private BigDecimal discountAmount;
+
+    //결제 정보
     private BigDecimal paymentFinalAmount;
     private String paymentMethod;
     private String pgProvider;
     private LocalDateTime approvedAt;
     private PaymentStatus paymentStatus;
-
 }
