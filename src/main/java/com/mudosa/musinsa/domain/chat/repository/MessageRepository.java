@@ -1,8 +1,8 @@
 package com.mudosa.musinsa.domain.chat.repository;
 
 import com.mudosa.musinsa.domain.chat.entity.Message;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,25 +18,14 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
   @Query(
       value = """
           select m
-          from Message m
+            from Message m
             join fetch m.chatPart cp
-            join fetch cp.chatRoom cr
-            left join fetch m.parent pm
-            left join fetch pm.chatPart pmcp
-            left join fetch pmcp.user pmu
             left join fetch cp.user u
-          where cr.chatId = :chatId
-          order by m.createdAt desc, m.messageId desc
-          """,
-      countQuery = """
-          select count(m)
-          from Message m
-            join m.chatPart cp
-            join cp.chatRoom cr
-          where cr.chatId = :chatId
+            where m.chatId = :chatId
+            order by m.createdAt desc, m.messageId desc
           """
   )
-  Page<Message> findPageWithRelationsByChatId(
+  Slice<Message> findSliceWithRelationsByChatId(
       @Param("chatId") Long chatId,
       Pageable pageable
   );

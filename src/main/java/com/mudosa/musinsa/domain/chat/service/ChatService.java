@@ -4,7 +4,7 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -36,7 +36,7 @@ public interface ChatService {
    * @return 메시지 응답 페이지
    * @throws RuntimeException 비참여자 접근 등 권한 오류
    */
-  Page<MessageResponse> getChatMessages(Long chatId, int page, int size);
+  Slice<MessageResponse> getChatMessages(Long chatId, int page, int size);
 
   /**
    * 특정 채팅방의 정보 조회
