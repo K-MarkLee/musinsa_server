@@ -1,8 +1,8 @@
 package com.mudosa.musinsa.domain.chat.repository;
 
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
-import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.entity.Message;
@@ -81,6 +81,7 @@ class MessageAttachmentRepositoryTest extends ServiceConfig {
     // 1. Message 생성 및 저장
     Message message = Message.builder()
         .chatPart(chatPart)
+        .chatId(chatPart.getChatRoom().getChatId())
         .content(content)
         .build();
 
