@@ -21,7 +21,4 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
     Optional<Coupon> findByIdForUpdate(@Param("couponId") Long couponId);
 
 
-
-
-
 }

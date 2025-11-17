@@ -174,15 +174,20 @@ public class Coupon extends BaseEntity {
 
     }
 
-    // 2. 쿠폰 발급 관련 메서드 - 실제 신규 발급으로 확정되었을 때 증가시키기 위함
+    // 2. 쿠폰 발급 관련 메서드 - 실제 신규 발급으로 확정되었을 때 발급 수량 증가 (재고 차감 효과)
+    // 주의: 재고 검증은 validateIssuable()에서 먼저 수행되어야 함
 
     public void increaseIssuedQuantity() {
-        if(this.totalQuantity != null && this.issuedQuantity >= this.totalQuantity) {
-            throw new BusinessException(ErrorCode.COUPON_OUT_OF_STOCK, "쿠폰 재고가 모두 소진되었습니다 ");
+        this.issuedQuantity = (this.issuedQuantity == null ? 0 : this.issuedQuantity) + 1;
+    }
+
+    // 남은 재고 조회 (totalQuantity - issuedQuantity)
+    public Integer getRemainingQuantity() {
+        if (this.totalQuantity == null) {
+            return null; // 무제한 발급
         }
-
-        this.issuedQuantity = (this.issuedQuantity == null ? 0 : this.issuedQuantity) +1; // 쿠폰 소진이 아니라면 쿠폰 발급 성공 + 1
-
+        int issued = (this.issuedQuantity == null ? 0 : this.issuedQuantity);
+        return Math.max(0, this.totalQuantity - issued);
     }
 
 
