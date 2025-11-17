@@ -6,6 +6,7 @@ import com.mudosa.musinsa.exception.ErrorCode;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,6 +34,13 @@ public class Image extends BaseEntity {
     // 이미지를 생성하며 필수 정보를 검증한다.
     public static Image create(String imageUrl, boolean isThumbnail) {
         return new Image(imageUrl, isThumbnail);
+    }
+
+    @Builder
+    private Image(Product product, String imageUrl, Boolean isThumbnail) {
+        this.product = product;
+        this.imageUrl = imageUrl;
+        this.isThumbnail = isThumbnail;
     }
 
     Image(String imageUrl, boolean isThumbnail) {

@@ -2,6 +2,7 @@ package com.mudosa.musinsa.product.domain.model;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -69,6 +70,7 @@ public class ProductOptionValue {
         return new ProductOptionValue(productOption, optionValue);
     }
 
+    @Builder
     ProductOptionValue(ProductOption productOption, OptionValue optionValue) {
         if (productOption == null) {
             throw new IllegalArgumentException("상품 옵션은 필수입니다.");

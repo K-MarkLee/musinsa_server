@@ -86,7 +86,7 @@ public class PaymentSettlementService {
 
         Long brandId = orderProduct.getProductOption().getProduct().getBrand().getBrandId();
 
-        Money transactionAmount = Money.of(orderProduct.getProductPrice().getAmount())
+        Money transactionAmount = orderProduct.getProductPrice()
                 .multiply(orderProduct.getProductQuantity());
 
         Money pgFeeAmount = pgFeeCalculator.calculate(payment.getMethod(), transactionAmount);

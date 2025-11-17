@@ -67,7 +67,7 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 
         // 사용자 정보 조회
-        Long userId = order.getId();
+        Long userId = order.getUserId();
         UserInfoDto userInfo = userRepository.findDtoById(userId);
 
         // 상품 목록 조회
@@ -142,7 +142,7 @@ public class OrderService {
                 .map(op -> op.getProductOption().getProductOptionId())
                 .toList();
 
-        cartService.deleteCartItemsByProductOptions(order.getId(), productOptionIds);
+        cartService.deleteCartItemsByProductOptions(order.getUserId(), productOptionIds);
 
         log.info("장바구니 삭제 완료 - orderId: {}, count: {}",
                 order.getId(), productOptionIds.size());
@@ -155,7 +155,7 @@ public class OrderService {
 
         try {
             memberCouponService.useMemberCoupon(
-                    order.getId(),
+                    order.getUserId(),
                     order.getCouponId(),
                     order.getId()
             );
@@ -210,7 +210,7 @@ public class OrderService {
                         "주문을 찾을 수 없습니다: " + orderNo));
 
         // 2. 사용자 권한 검증
-        if (!order.getId().equals(userId)) {
+        if (!order.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED_USER,
                     "본인의 주문만 결제할 수 있습니다");
         }
@@ -285,7 +285,7 @@ public class OrderService {
 
         try {
             memberCouponService.rollbackMemberCoupon(
-                    order.getId(),
+                    order.getUserId(),
                     order.getCouponId(),
                     order.getId()
             );

@@ -37,7 +37,7 @@ public class OrderProduct extends BaseEntity {
     @AttributeOverride(name = "amount", column = @Column(name = "product_price"))
     private Money productPrice;
 
-    private Integer productQuantity = 1;
+    private Integer productQuantity;
 
     @Builder
     private OrderProduct(Order order, ProductOption productOption, Money productPrice, Integer productQuantity) {
