@@ -25,6 +25,7 @@ public interface ProductOptionRepository extends JpaRepository<ProductOption, Lo
         "JOIN FETCH po.inventory " +
         "WHERE po.productOptionId = :id")
     Optional<ProductOption> findByIdWithProductAndInventory(@Param("id") Long id);
+    
     // 특정 상품에 속한 옵션 목록을 조회한다.
     List<ProductOption> findAllByProduct(Product product);
     Optional<ProductOption> findByInventory(Inventory inventory);

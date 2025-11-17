@@ -40,9 +40,17 @@ public class ProductQueryService {
 		ProductSearchCondition.PriceSort priceSort = condition != null ? condition.getPriceSort() : null;
 		List<String> categoryPaths = condition != null ? condition.getCategoryPaths() : Collections.emptyList();
 
-		// 2. 데이터베이스 레벨에서 필터링, 정렬, 페이징 수행
-		Page<Product> page = productRepository.findAllByFiltersWithPagination(
-			categoryPaths, gender, keyword, brandId, priceSort, pageable);
+		// 2. 키워드 유무에 따라 적절한 검색 메서드 호출
+		Page<Product> page;
+		if (keyword != null && !keyword.isBlank()) {
+			// 키워드 검색 + 필터링
+			page = productRepository.searchByKeywordWithFilters(
+				keyword, categoryPaths, gender, brandId, priceSort, pageable);
+		} else {
+			// 순수 필터링
+			page = productRepository.findAllByFiltersWithPagination(
+				categoryPaths, gender, brandId, priceSort, pageable);
+		}
 
 		// 3. 응답 DTO 변환
 		List<ProductSearchResponse.ProductSummary> summaries = page.getContent().stream()
@@ -68,10 +76,9 @@ public class ProductQueryService {
 	public ProductDetailResponse getProductDetail(Long productId) {
 		// 1. 상품 엔티티 조회 (상품 + 옵션)
 		Product product = productRepository.findDetailById(productId)
-			.orElseThrow(() -> new EntityNotFoundException("해당 상품을 찾을 수 없습니다: " + productId));
+			.orElseThrow(() -> new EntityNotFoundException("해당 상품을 찾을 수 없거나 비활성화된 상품입니다: " + productId +"번 상품"));
 
-	// 2. 응답 DTO 변환
-	return ProductQueryMapper.toProductDetail(product);
+		// 2. 응답 DTO 변환
+		return ProductQueryMapper.toProductDetail(product);
 	}
-
-	}
+}

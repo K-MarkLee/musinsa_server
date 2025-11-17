@@ -28,3 +28,9 @@ fcm:
   service-acount-file: key/fdbdproject.json
   topic-name: fdbdMessage
   project-id: fdbdproject
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info # 필요한 것만 나열하거나 "*"로 전체 노출

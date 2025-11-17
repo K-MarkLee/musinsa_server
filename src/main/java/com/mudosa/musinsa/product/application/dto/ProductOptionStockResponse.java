@@ -6,9 +6,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+
+import java.math.BigDecimal;
 
 // 상품 옵션 재고 현황을 반환하는 응답 DTO이다.
 @Getter

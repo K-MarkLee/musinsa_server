@@ -1,7 +1,7 @@
 package com.mudosa.musinsa.product.application.dto;
 
-import com.mudosa.musinsa.product.domain.model.CartItem;
 import java.math.BigDecimal;
+import com.mudosa.musinsa.product.domain.model.CartItem;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
