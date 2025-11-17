@@ -30,14 +30,14 @@ public class Message {
   @JoinColumn(name = "chat_part_id")
   private ChatPart chatPart;
 
+  // 방 기준 조회용 FK -> 비정규화
+  @Column(name = "chat_id", nullable = false)
+  private Long chatId;
+
   // 답장(스레드) 자기참조
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "parent_id")
   private Message parent;
-
-  @OneToMany(mappedBy = "parent", orphanRemoval = false)
-  @Builder.Default
-  private List<Message> children = new ArrayList<>();
 
   @Column(name = "content", columnDefinition = "TEXT")
   private String content;
@@ -57,6 +57,7 @@ public class Message {
   public static Message createMessage(String content, LocalDateTime now, ChatPart chatPart, Message parent) {
     return Message.builder()
         .chatPart(chatPart)
+        .chatId(chatPart.getChatRoom().getChatId())
         .content(StringUtils.hasText(content) ? content.trim() : null)
         .parent(parent)
         .createdAt(now)

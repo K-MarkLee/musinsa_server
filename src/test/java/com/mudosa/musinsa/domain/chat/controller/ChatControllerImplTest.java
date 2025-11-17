@@ -9,8 +9,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.LocalDateTime;
@@ -421,7 +421,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
         messages.add(createMessageResponse(chatId, i, "안녕" + i));
       }
 
-      Page<MessageResponse> response = new PageImpl<>(new ArrayList<>(messages));
+      Slice<MessageResponse> response = new SliceImpl<>(new ArrayList<>(messages));
 
       given(chatService.getChatMessages(chatId, page, size))
           .willReturn(response);
@@ -449,7 +449,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       Long chatId = 1L;
       int page = 0;
       int size = 20;
-      Page<MessageResponse> response = new PageImpl<>(new ArrayList<>());
+      Slice<MessageResponse> response = new SliceImpl<>(new ArrayList<>());
 
       given(chatService.getChatMessages(chatId, page, size))
           .willReturn(response);
@@ -476,7 +476,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       int size = 20;
 
       given(chatService.getChatMessages(chatId, page, size))
-          .willReturn(new PageImpl<>(List.of()));
+          .willReturn(new SliceImpl<>(List.of()));
 
       // when & then
       mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
