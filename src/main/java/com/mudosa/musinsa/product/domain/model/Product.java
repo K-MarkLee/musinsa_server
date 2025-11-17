@@ -24,7 +24,7 @@ public class Product extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "producst_id")
+    @Column(name = "product_id")
     private Long productId;
 
     @ManyToOne(fetch = FetchType.LAZY)
