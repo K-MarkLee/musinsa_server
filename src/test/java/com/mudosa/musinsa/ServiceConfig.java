@@ -1,6 +1,10 @@
-package com.mudosa.musinsa.domain.chat;
+package com.mudosa.musinsa;
 
-import com.mudosa.musinsa.ServerApplication;
+import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
+import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
+import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
+import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
+import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
 import com.mudosa.musinsa.notification.domain.service.FcmService;
 import com.mudosa.musinsa.security.JwtTokenProvider;
 import com.mudosa.musinsa.settlement.batch.job.DailySettlementAggregationJob;
@@ -10,9 +14,11 @@ import com.mudosa.musinsa.settlement.batch.scheduler.SettlementBatchScheduler;
 import com.mudosa.musinsa.settlement.domain.repository.SettlementDailyMapper;
 import com.mudosa.musinsa.settlement.domain.repository.SettlementMonthlyMapper;
 import com.mudosa.musinsa.settlement.domain.repository.SettlementPerTransactionMapper;
+import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
 import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -61,4 +67,17 @@ public abstract class ServiceConfig {
   private JobRepository jobRepository;
   @MockitoBean
   private FcmService fcmService;
+
+  @Autowired
+  protected ChatRoomRepository chatRoomRepository;
+  @Autowired
+  protected ChatPartRepository chatPartRepository;
+  @Autowired
+  protected UserRepository userRepository;
+  @Autowired
+  protected BrandRepository brandRepository;
+  @Autowired
+  protected MessageRepository messageRepository;
+  @Autowired
+  protected MessageAttachmentRepository attachmentRepository;
 }

@@ -2,6 +2,7 @@ package com.mudosa.musinsa.domain.chat.repository;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
@@ -21,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 // TODO: @katsudon8991 - findChatPartsExcludingUser 메서드 테스트 작성 필요
 @DisplayName("ChatPartRepository 테스트")
-class ChatPartRepositoryTest extends JpaConfig {
+class ChatPartRepositoryTest extends ServiceConfig {
 
   @AfterEach
   void tearDown() {
@@ -42,13 +43,12 @@ class ChatPartRepositoryTest extends JpaConfig {
 
   // 브랜드 생성 & 저장
   private Brand saveBrand(String nameKo, String nameEn) {
-    Brand brand = brandRepository.save(Brand.builder()
+    return brandRepository.save(Brand.builder()
         .nameKo(nameKo)
         .nameEn(nameEn)
         .commissionRate(BigDecimal.valueOf(10.00))
         .status(BrandStatus.ACTIVE)
         .build());
-    return brand;
   }
 
   // 채팅방 생성 & 저장
@@ -76,14 +76,13 @@ class ChatPartRepositoryTest extends JpaConfig {
   @Nested
   @DisplayName("채팅방 참여자 수 조회")
   class countByChatRoom_ChatIdAndDeletedAtIsNull {
-
-    @DisplayName("채팅방에 참여중인 참여자 수를 반환한다.")
+    @DisplayName("채팅방에 참여중인 참여자 수를 반환한다")
     @Test
-    void countByChatRoom_ChatIdAndDeletedAtIsNull() {
+    void countByChatRoom_ChatIdAndDeletedAtIsNull_Success() {
       // given
       //1. 유저 생성
-      User user1 = saveUser("철수");
-      User user2 = saveUser("영희");
+      User user1 = saveUser("user1");
+      User user2 = saveUser("user2");
 
       // 2. 브랜드 먼저 저장
       Brand brand1 = saveBrand("브랜드1", "Brand1");
@@ -92,8 +91,8 @@ class ChatPartRepositoryTest extends JpaConfig {
       ChatRoom chatRoom1 = saveChatRoom(brand1, ChatRoomType.GROUP);
 
       // 4. 참가자 저장
-      ChatPart p1 = saveChatPart(chatRoom1, user1);
-      ChatPart p2 = saveChatPart(chatRoom1, user2);
+      saveChatPart(chatRoom1, user1);
+      saveChatPart(chatRoom1, user2);
 
       // when
       long countPart = chatPartRepository.countByChatRoom_ChatIdAndDeletedAtIsNull(chatRoom1.getChatId());
@@ -103,13 +102,13 @@ class ChatPartRepositoryTest extends JpaConfig {
           .isEqualTo(2L);
     }
 
-    @DisplayName("퇴장한 참여자를 제외한 채팅방에 참여중인 참여자 수를 반환한다.")
+    @DisplayName("퇴장한 참여자를 제외한 채팅방에 참여중인 참여자 수를 반환한다")
     @Test
     void countByChatRoom_ChatIdAndDeletedAtIsNull_DeleteAt_NotCount() {
       // given
       //1. 유저 생성
-      User user1 = saveUser("철수");
-      User user2 = saveUser("영희");
+      User user1 = saveUser("user1");
+      User user2 = saveUser("user2");
 
       // 2. 브랜드 먼저 저장
       Brand brand1 = saveBrand("브랜드1", "Brand1");
@@ -119,7 +118,7 @@ class ChatPartRepositoryTest extends JpaConfig {
 
       // 4. 참가자 저장
       ChatPart p1 = saveChatPart(chatRoom1, user1);
-      ChatPart p2 = saveChatPart(chatRoom1, user2);
+      saveChatPart(chatRoom1, user2);
 
       // 5. deleteAt 추가(퇴장)
       p1.setDeletedAt(LocalDateTime.of(2025, 11, 19, 0, 0));
@@ -148,20 +147,21 @@ class ChatPartRepositoryTest extends JpaConfig {
 
       // then
       assertThat(countPart)
-          .isEqualTo(0L);
+          .isZero();
     }
 
     @DisplayName("여러 채팅방이 있어도 채팅방별로 참여자 수를 센다")
     @Test
     void countByChatRoom_ChatIdAndDeletedAtIsNull_SplitByRoom() {
       // given
-      User user1 = saveUser("철수");
-      User user2 = saveUser("영희");
+      User user1 = saveUser("user1");
+      User user2 = saveUser("user2");
 
-      Brand brand = saveBrand("브랜드1", "Brand1");
+      Brand brand1 = saveBrand("브랜드1", "Brand1");
+      Brand brand2 = saveBrand("브랜드1", "Brand1");
 
-      ChatRoom room1 = saveChatRoom(brand, ChatRoomType.GROUP);
-      ChatRoom room2 = saveChatRoom(brand, ChatRoomType.GROUP);
+      ChatRoom room1 = saveChatRoom(brand1, ChatRoomType.GROUP);
+      ChatRoom room2 = saveChatRoom(brand2, ChatRoomType.GROUP);
 
       saveChatPart(room1, user1);
       saveChatPart(room1, user2);
@@ -181,15 +181,15 @@ class ChatPartRepositoryTest extends JpaConfig {
     @Test
     void countByChatRoom_ChatIdAndDeletedAtIsNull_OneDeleted_OthersRemain() {
       // given
-      User user1 = saveUser("철수");
-      User user2 = saveUser("영희");
+      User user1 = saveUser("user1");
+      User user2 = saveUser("user2");
 
       Brand brand = saveBrand("브랜드1", "Brand1");
 
       ChatRoom room = saveChatRoom(brand, ChatRoomType.GROUP);
 
       ChatPart part1 = saveChatPart(room, user1);
-      ChatPart part2 = saveChatPart(room, user2);
+      saveChatPart(room, user2);
 
       part1.setDeletedAt(LocalDateTime.of(2025, 11, 19, 0, 0));
       chatPartRepository.save(part1);
@@ -212,7 +212,7 @@ class ChatPartRepositoryTest extends JpaConfig {
     void findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull_Exists_ReturnsChatPart() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user1");
 
       // 2. 브랜드 먼저 저장
       Brand brand1 = saveBrand("브랜드1", "Brand1");
@@ -224,10 +224,10 @@ class ChatPartRepositoryTest extends JpaConfig {
       ChatPart p1 = saveChatPart(chatRoom1, user);
 
       // when
-      Optional<ChatPart> found = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(chatRoom1.getChatId(), user.getId());
+      Optional<ChatPart> chatPart = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(chatRoom1.getChatId(), user.getId());
 
       // then
-      assertThat(found)
+      assertThat(chatPart)
           .isPresent()
           .get()
           .extracting(ChatPart::getChatPartId)
@@ -239,7 +239,7 @@ class ChatPartRepositoryTest extends JpaConfig {
     void findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull_NotExists_ReturnsEmpty() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user1");
 
       // 2. 브랜드 저장
       Brand brand1 = saveBrand("브랜드1", "Brand1");
@@ -250,21 +250,21 @@ class ChatPartRepositoryTest extends JpaConfig {
       ChatRoom chatRoom2 = saveChatRoom(brand2, ChatRoomType.GROUP);
 
       // 4. 참가자 저장
-      ChatPart p1 = saveChatPart(chatRoom1, user);
+      saveChatPart(chatRoom1, user);
 
       // when
-      Optional<ChatPart> isExist = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(chatRoom2.getChatId(), user.getId());
+      Optional<ChatPart> chatPart = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(chatRoom2.getChatId(), user.getId());
 
       // then
-      assertThat(isExist).isEmpty();
+      assertThat(chatPart).isEmpty();
     }
 
-    @DisplayName("소프트 삭제된(퇴장한) 참여라면 Optional.empty()를 반환한다")
+    @DisplayName("퇴장한 참여라면 Optional.empty()를 반환한다")
     @Test
     void findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull_DeleteAt_ReturnsEmpty() {
       // given
       //1. 유저 생성
-      User user = saveUser("철수");
+      User user = saveUser("user1");
 
       // 2. 브랜드 저장
       Brand brand1 = saveBrand("브랜드1", "Brand1");
@@ -280,30 +280,30 @@ class ChatPartRepositoryTest extends JpaConfig {
       chatPartRepository.save(p1);
 
       // when
-      Optional<ChatPart> isExist = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(chatRoom1.getChatId(), user.getId());
+      Optional<ChatPart> chatPart = chatPartRepository.findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(chatRoom1.getChatId(), user.getId());
 
       // then
-      assertThat(isExist).isEmpty();
+      assertThat(chatPart).isEmpty();
     }
 
     @DisplayName("같은 채팅방에 여러 사용자가 있어도 조회 대상 사용자의 참여만 반환한다")
     @Test
     void findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull_MultipleUsers_ReturnsOnlyTarget() {
       // given
-      User user1 = saveUser("철수");
-      User user2 = saveUser("영희");
+      User user1 = saveUser("user1");
+      User user2 = saveUser("user2");
       Brand brand = saveBrand("브랜드1", "Brand1");
       ChatRoom room = saveChatRoom(brand, ChatRoomType.GROUP);
 
-      ChatPart part1 = saveChatPart(room, user1);
-      ChatPart part2 = saveChatPart(room, user2);
+      saveChatPart(room, user1);
+      saveChatPart(room, user2);
 
       // when
-      Optional<ChatPart> found =
+      Optional<ChatPart> chatPart =
           chatPartRepository.findByChatRoom_ChatIdAndUserIdAndDeletedAtIsNull(room.getChatId(), user1.getId());
 
       // then
-      assertThat(found).isPresent()
+      assertThat(chatPart).isPresent()
           .get()
           .extracting(ChatPart::getUser)
           .extracting(User::getId)
@@ -321,7 +321,7 @@ class ChatPartRepositoryTest extends JpaConfig {
     void existsByChatRoom_ChatIdAndUser_IdAndDeletedAtIsNull_Part_ReturnsTrue() {
       // given
       // 1. 유저 저장
-      User user = saveUser("철수");
+      User user = saveUser("user1");
 
       // 2. 브랜드 저장
       Brand brand1 = saveBrand("브랜드1", "Brand1");
@@ -330,7 +330,7 @@ class ChatPartRepositoryTest extends JpaConfig {
       ChatRoom chatRoom1 = saveChatRoom(brand1, ChatRoomType.GROUP);
 
       // 4. 참가자 저장
-      ChatPart p1 = saveChatPart(chatRoom1, user);
+      saveChatPart(chatRoom1, user);
 
       // when
       boolean isPart = chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndDeletedAtIsNull(chatRoom1.getChatId(), user.getId());
@@ -344,7 +344,7 @@ class ChatPartRepositoryTest extends JpaConfig {
     void existsByChatRoom_ChatIdAndUser_IdAndDeletedAtIsNull_NotPart_ReturnsFalse() {
       // given
       // 1. 유저 저장
-      User user = saveUser("철수");
+      User user = saveUser("user1");
 
       // 2. 브랜드 먼저 저장
       Brand brand1 = saveBrand("브랜드1", "Brand1");
@@ -355,7 +355,7 @@ class ChatPartRepositoryTest extends JpaConfig {
       ChatRoom chatRoom2 = saveChatRoom(brand2, ChatRoomType.GROUP);
 
       // 4. 참가자 저장
-      ChatPart p1 = saveChatPart(chatRoom1, user);
+      saveChatPart(chatRoom1, user);
 
       // when
       boolean isPart = chatPartRepository.existsByChatRoom_ChatIdAndUser_IdAndDeletedAtIsNull(chatRoom2.getChatId(), user.getId());
@@ -364,12 +364,12 @@ class ChatPartRepositoryTest extends JpaConfig {
       assertThat(isPart).isFalse();
     }
 
-    @DisplayName("소프트 삭제된(퇴장한) 참여라면 false를 반환한다")
+    @DisplayName("퇴장한 참여라면 false를 반환한다")
     @Test
     void existsByChatRoom_ChatIdAndUser_IdAndDeletedAtIsNull_DeleteAt_ReturnsFalse() {
       // given
       // 1. 유저 저장
-      User user = saveUser("철수");
+      User user = saveUser("user1");
 
       // 2. 브랜드 먼저 저장
       Brand brand = saveBrand("브랜드", "Brand");

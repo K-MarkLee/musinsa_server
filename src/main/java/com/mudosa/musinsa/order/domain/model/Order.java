@@ -1,95 +1,123 @@
 package com.mudosa.musinsa.order.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.dto.InsufficientStockItem;
+import com.mudosa.musinsa.order.application.dto.OrderCreateItem;
+import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.aspectj.weaver.ast.Or;
+import org.springframework.data.annotation.CreatedDate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-/* Order가 Order 도메인의 Aggregate Root이다.
-* 앞으로 OrderProduct랑 대화는 Order에서 한다. */
+
 @Entity
 @Table(name = "orders")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Orders extends BaseEntity {
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
+public class Order extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private Long userId;
     
-    @Column(name = "coupon_id")
     private Long couponId;
 
     //TODO: order가 order_product를 바라보는 상황이 있을까?
-    @OneToMany(mappedBy = "orders", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderProduct> orderProducts = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "order_status", nullable = false, length = 50)
+    @Column(name="order_status")
     private OrderStatus status;
     
-    @Column(name = "order_no", nullable = false, length = 50, unique = true)
     private String orderNo;
-    
-    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalPrice;
-    
-    @Column(name = "total_discount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalDiscount = BigDecimal.ZERO;
 
-    @Column(name = "is_settleable", nullable = false)
+    @Embedded
+    @AttributeOverride(name = "amount", column = @Column(name = "total_price"))
+    private Money totalPrice;
+
+    @Embedded
+    @AttributeOverride(name = "amount", column = @Column(name = "total_discount"))
+    private Money totalDiscount = Money.of(BigDecimal.ZERO);
+
+    @CreatedDate
+    private LocalDateTime registeredAt;
+
     private Boolean isSettleable = false;
     
-    @Column(name = "settled_at")
     private LocalDateTime settledAt;
 
-    /* 주문 생성 */
-    public static Orders create(
-            User user,
-            Long couponId
-            ) {
+    @Builder
+    private Order(Long userId, Long couponId, OrderStatus status, String orderNo, Money totalPrice, Money totalDiscount, LocalDateTime registeredAt, Boolean isSettleable, LocalDateTime settledAt, List<OrderProduct> orderProducts) {
+        this.userId = userId;
+        this.couponId = couponId;
+        this.status = status;
+        this.orderNo = orderNo;
+        this.totalPrice = totalPrice;
+        this.totalDiscount = totalDiscount;
+        this.registeredAt = registeredAt;
+        this.isSettleable = isSettleable;
+        this.settledAt = settledAt;
+        this.orderProducts = orderProducts;
+    }
 
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+    public static Order create(
+            Long userId,
+            Long couponId,
+            Map<ProductOption, Integer> orderProductsWithQuantity
+    ) {
+        if(orderProductsWithQuantity == null){
+            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND, "상품 목록이 없는 주문은 생성할 수 없습니다");
         }
 
-        Orders order = new Orders();
-        order.user = user;
-        order.status = OrderStatus.PENDING;
-        order.couponId = couponId;
+        //Order 생성
+        Order order = Order.builder()
+                .userId(userId)
+                .orderNo(createOrderNumber())
+                .status(OrderStatus.PENDING)
+                .couponId(couponId)
+                .orderProducts(new ArrayList<>())
+                .build();
 
-        /* order 무작위 번호 생성 */
-        order.orderNo = createOrderNumber();
+        //총 가격 초기 세팅
+        Money calculatedTotalPrice = Money.of(0L);
+
+        for(Map.Entry<ProductOption, Integer> entry: orderProductsWithQuantity.entrySet()){
+            ProductOption productOption = entry.getKey();
+            Integer quantity = entry.getValue();
+            if(quantity < 1) throw new BusinessException(ErrorCode.ORDER_CREATE_FAIL, "상품은 1개 이상 주문 가능합니다");
+
+            //OrderProduct 생성
+            OrderProduct orderProduct = OrderProduct.create(order, productOption, quantity);
+            order.orderProducts.add(orderProduct);
+
+            //총 가격 계산
+            Money productPrice = productOption.getProductPrice();
+            Money itemTotalPrice = productPrice.multiply(quantity);
+            calculatedTotalPrice = calculatedTotalPrice.add(itemTotalPrice);
+        }
+
+        order.totalPrice = calculatedTotalPrice;
         return order;
     }
 
-    /* 상품 가격 계산 */
-    public void calculateTotalPrice() {
-        if (this.orderProducts.isEmpty()) {
-            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND);
-        }
 
-        this.totalPrice = this.orderProducts.stream()
-                .map(OrderProduct::calculatePrice)  // 각 상품의 금액 계산
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    /* 주문 번호 생성 */
     private static String createOrderNumber(){
         // 주문번호 형식: ORD + timestamp(13자리) + random(3자리)
         long timestamp = System.currentTimeMillis();
@@ -159,36 +187,8 @@ public class Orders extends BaseEntity {
 
     /* 할인 적용 */
     public void applyDiscount(BigDecimal discount) {
-        if (discount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException(ErrorCode.INVALID_DISCOUNT_AMOUNT,"할인 금액은 음수일 수 없습니다");
-        }
-
-        if (discount.compareTo(this.totalPrice) > 0) {
-            throw new BusinessException(ErrorCode.INVALID_DISCOUNT_AMOUNT,
-                    "할인 금액이 총 금액보다 클 수 없습니다");
-        }
-
-        this.totalDiscount = discount;
     }
 
-    /* 주문 아이템 추가 */
-    public void addOrderProduct(OrderProduct orderProduct) {
-        if (orderProduct == null) {
-            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND, "주문 아이템이 null입니다");
-        }
-        this.orderProducts.add(orderProduct);
-        orderProduct.setOrders(this);  // 양방향 연관관계 설정
-    }
-
-    /* 주문 아이템 일괄 추가 */
-    public void addOrderProducts(List<OrderProduct> orderProducts) {
-        if (orderProducts == null || orderProducts.isEmpty()) {
-            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND, "주문 아이템이 비어있습니다");
-        }
-        for (OrderProduct orderProduct : orderProducts) {
-            addOrderProduct(orderProduct);
-        }
-    }
 
     /* 재고 확인 */
     public StockValidationResult validateStock() {

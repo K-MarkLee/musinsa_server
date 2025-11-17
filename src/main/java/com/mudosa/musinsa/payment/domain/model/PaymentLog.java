@@ -21,14 +21,11 @@ public class PaymentLog extends BaseEntity {
     @JoinColumn(name = "payment_id", nullable = false)
     private Payment payment;
     
-    @Column(name = "user_id", nullable = false)
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "event_status", nullable = false, length = 50)
     private PaymentEventType eventStatus;
     
-    @Column(name = "event_message", columnDefinition = "TEXT")
     private String eventMessage;
 
     /* 결제 로그 생성 */

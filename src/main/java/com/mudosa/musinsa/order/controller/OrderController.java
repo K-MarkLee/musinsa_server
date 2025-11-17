@@ -32,32 +32,14 @@ public class OrderController {
             description = "주문을 생성합니다"
     )
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody OrderCreateRequest request)
     {
         Long userId = userDetails.getUserId();
 
-        log.info("[Order] 주문 생성 요청, userId: {}", userId);
-
         OrderCreateResponse response = orderService.createPendingOrder(request, userId);
 
-        if (response.hasInsufficientStock()) {
-            log.warn("[Order] 재고 부족으로 주문 생성 실패, userId: {}, 부족한 상품 수: {}", 
-                    userId, response.getInsufficientStockItems().size());
-            
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(
-                            ErrorCode.ORDER_INSUFFICIENT_STOCK.getCode(),
-                            ErrorCode.ORDER_INSUFFICIENT_STOCK.getMessage(),
-                            response
-                    ));
-        }
-
-        log.info("[Order] 주문 생성 완료, orderId: {}, orderNo: {}", 
-                response.getOrderId(), response.getOrderNo());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -66,14 +48,11 @@ public class OrderController {
             description = "생성한 주문을 조회합니다."
     )
     @GetMapping("/pending")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<PendingOrderResponse>> fetchOrder(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(value="orderNo") String orderNo
     ){
         Long userId = userDetails.getUserId();
-        
-        log.info("[Order] 주문 조회 요청, userId: {}, orderNo: {}", userId, orderNo);
 
         PendingOrderResponse response = orderService.fetchPendingOrder(orderNo);
 
@@ -96,4 +75,6 @@ public class OrderController {
     }
 
     /* 주문 목록 조회 */
+
+    /* 주문 취소 */
 }

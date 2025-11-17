@@ -6,7 +6,6 @@ import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -44,10 +43,11 @@ public class ProductOption extends BaseEntity {
     private List<ProductOptionValue> productOptionValues = new ArrayList<>();
 
     // 옵션 생성 시 필수 값 검증 후 연관 엔티티를 초기화한다.
-    @Builder
-    public ProductOption(Product product, Money productPrice, Inventory inventory,
-                         List<ProductOptionValue> productOptionValues) {
-        // 필수 파라미터를 확인해 무결성을 보장한다.
+    public static ProductOption create(Product product, Money productPrice, Inventory inventory) {
+        return new ProductOption(product, productPrice, inventory);
+    }
+
+    ProductOption(Product product, Money productPrice, Inventory inventory) {
         if (product == null) {
             throw new IllegalArgumentException("상품은 옵션에 필수입니다.");
         }
@@ -61,10 +61,6 @@ public class ProductOption extends BaseEntity {
         this.product = product;
         this.productPrice = productPrice;
         this.inventory = inventory;
-        if (productOptionValues != null) {
-            productOptionValues.forEach(this::addOptionValue);
-        }
-
     }
 
     // 상품 애그리거트에서만 호출해 양방향 연관을 설정한다.
@@ -128,4 +124,11 @@ public class ProductOption extends BaseEntity {
             .toList();
     }
 
+    public Integer getStockQuantity() {
+        return this.getInventory().getStockQuantity().getValue();
+    }
+
+    public boolean hasEnoughStock(Integer quantity) {
+        return this.getStockQuantity() >= quantity;
+    }
 }

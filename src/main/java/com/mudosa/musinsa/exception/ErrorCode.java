@@ -47,10 +47,12 @@ public enum ErrorCode {
   ORDER_INVALID_AMOUNT("40007", "주문 상품 가격이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
   PRODUCT_OPTION_NOT_FOUND("40008", "상품 옵션을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
   ORDER_INSUFFICIENT_STOCK("40009", "재고가 부족한 상품이 있습니다", HttpStatus.BAD_REQUEST),
+  ORDER_CREATE_FAIL("40010","주문 생성에 실패했습니다", HttpStatus.BAD_REQUEST),
+  INVALID_PRODUCT_ORDER("40011","현재 판매 불가능한 상품이 포함되어 있습니다",HttpStatus.BAD_REQUEST ),
 
   //inventory
   INVENTORY_NOT_FOUND("50001", "재고 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
-  INSUFFICIENT_STOCK("50002", "재고가 부족합니다", HttpStatus.BAD_REQUEST),
+  INSUFFICIENT_STOCK("50002", "재고가 부족한 상품이 있습니다", HttpStatus.BAD_REQUEST),
 
     //event
     EVENT_NOT_FOUND("50003", "이벤트를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
@@ -72,9 +74,17 @@ public enum ErrorCode {
 
   //brand
   BRAND_NOT_FOUND("70001", "브랜드를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+  BRAND_NOT_MATCHED("70002", "브랜드 정보가 일치하지 않습니다", HttpStatus.BAD_REQUEST),
+  NOT_BRAND_PRODUCT("70003", "해당 브랜드의 상품이 아닙니다", HttpStatus.BAD_REQUEST),
 
   //product
   PRODUCT_OPTION_NOT_AVAILABLE("80001", "상품 옵션이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
+  DUPLICATE_PRODUCT_OPTION("80002", "상품 옵션은 중복될 수 없습니다.", HttpStatus.BAD_REQUEST),
+  DUPLICATE_PRODUCT_IMAGE("80003", "중복된 상품 이미지가 존재합니다", HttpStatus.BAD_REQUEST),
+  PRODUCT_INFO_REQUIRED("80004", "상품 정보들은 비워둘 수 없습니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_REQUIRED("80005", "상품 옵션은 필수입니다.", HttpStatus.BAD_REQUEST),
+  CATEGORY_NOT_FOUND("80006", "카테고리를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+  PRODUCT_NOT_FOUND("80007", "상품을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
 
   //chat
   MESSAGE_OR_FILE_REQUIRED("110001", "메시지 또는 파일 중 하나는 반드시 포함되어야 합니다.", HttpStatus.BAD_REQUEST),
@@ -89,8 +99,13 @@ public enum ErrorCode {
   //inventory
   INVENTORY_NOT_AVAILABLE("90001", "재고가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
 
+  //image
+  IMAGE_REQUIRED("100001", "이미지 또는 썸네일은 필수입니다.", HttpStatus.BAD_REQUEST),
+  THUMBNAIL_ONLY_ONE("100002", "썸네일 이미지는 반드시 하나여야 합니다.", HttpStatus.BAD_REQUEST),
+
   //settlement
   SETTLEMENT_NOT_FOUND("A0001", "정산 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND);
+
 
   private final String code;
   private final String message;

@@ -21,7 +21,7 @@ import java.util.Locale;
 public class ProductSearchRequest {
 
     private String keyword;
-    private List<String> categoryPaths = new ArrayList<>();
+    private List<String> categoryPaths;
     private String gender;
     private Long brandId;
     private String priceSort;

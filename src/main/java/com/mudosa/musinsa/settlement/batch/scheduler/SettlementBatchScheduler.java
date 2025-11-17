@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Profile("!dev")  // 개발 환경에서는 비활성화
+@Profile("disabled")  // TODO: 배치 설정 완료 후 "!dev"로 복구 필요
 public class SettlementBatchScheduler {
 
     private final JobLauncher jobLauncher;

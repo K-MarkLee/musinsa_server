@@ -9,8 +9,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.LocalDateTime;
@@ -74,7 +74,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
   @Nested
   @DisplayName("PATCH /api/chat/{chatId}/leave")
   class LeaveChatRoomsApi {
-    @DisplayName("채팅방 나가기 요청 시 남아 있는 채팅방 목록을 반환한다")
+    @DisplayName("채팅방 나가기 후 남아 있는 채팅방 목록을 반환한다")
     @Test
     void leaveChat() throws Exception {
       // given
@@ -135,6 +135,27 @@ class ChatControllerImplTest extends ControllerTestSupport {
       inOrder.verifyNoMoreInteractions();
     }
 
+    @DisplayName("채팅방을 나갈 때 채팅 ID는 숫자여야 한다")
+    @Test
+    void leaveChat_invalidChatId() throws Exception {
+      // given
+      CustomUserDetails userDetails = new CustomUserDetails(1L, "USER");
+      String invalidChatId = "invalid";
+
+      // when & then
+      mockMvc.perform(patch("/api/chat/{chatId}/leave", invalidChatId)
+              .with(user(userDetails))
+              .with(csrf()))
+          .andDo(print())
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.success").value(false))
+          .andExpect(jsonPath("$.errorCode").value("400"))
+          .andExpect(jsonPath("$.message").value(String.format("요청 파라미터 ‘chatId’의 값 ‘%s’은(는) 올바르지 않습니다. Long 형식의 값이어야 합니다.", invalidChatId)));
+
+      verifyNoInteractions(chatService);
+    }
+
+
     @DisplayName("인증되지 않은 사용자가 채팅방 나가기 요청을 하면 401을 반환한다")
     @Test
     void leaveChat_unauthenticated() throws Exception {
@@ -152,7 +173,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
 
     @DisplayName("CSRF 없이 채팅방 나가기를 요청하면 403을 반환한다")
     @Test
-    void leaveChat_withoutCsrf_forbidden() throws Exception {
+    void leaveChat_withoutCsrf() throws Exception {
       // given
       CustomUserDetails user = new CustomUserDetails(1L, "USER");
       Long chatId = 1L;
@@ -226,6 +247,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
       mockMvc.perform(get("/api/chat/my"))
           .andDo(print())
           .andExpect(status().isUnauthorized());
+
+      verifyNoInteractions(chatService);
     }
   }
 
@@ -261,6 +284,27 @@ class ChatControllerImplTest extends ControllerTestSupport {
       verify(chatService).addParticipant(chatId, userDetails.getUserId());
     }
 
+    @DisplayName("채팅방 참여 요청 시 채팅 ID는 숫자여야 한다")
+    @Test
+    void addParticipant_invalidChatId() throws Exception {
+      // given
+      CustomUserDetails userDetails = new CustomUserDetails(1L, "USER");
+      String invalidChatId = "invalid";
+
+      // when & then
+      mockMvc.perform(post("/api/chat/{chatId}/participants", invalidChatId)
+              .with(user(userDetails))
+              .with(csrf()))
+          .andDo(print())
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.success").value(false))
+          .andExpect(jsonPath("$.errorCode").value("400"))
+          .andExpect(jsonPath("$.message").value(String.format("요청 파라미터 ‘chatId’의 값 ‘%s’은(는) 올바르지 않습니다. Long 형식의 값이어야 합니다.", invalidChatId)));
+
+      verifyNoInteractions(chatService);
+    }
+
+
     @DisplayName("인증되지 않은 사용자가 참여 요청하면 401을 반환한다")
     @Test
     void addParticipant_unauthenticated() throws Exception {
@@ -295,7 +339,6 @@ class ChatControllerImplTest extends ControllerTestSupport {
     }
   }
 
-  /* === 각 Api 테스트 === */
   /* === GET /api/chat/1/info Api 테스트 [채팅방 정보 조회] === */
   @Nested
   @DisplayName("GET /api/chat/{chatId}/info")
@@ -325,7 +368,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       verify(chatService).getChatRoomInfoByChatId(chatId, userDetails.getUserId());
     }
 
-    @DisplayName("채팅방 정보를 조회할 때 채팅 ID는 숫자여야 한다.")
+    @DisplayName("채팅방 정보를 조회할 때 채팅 ID는 숫자여야 한다")
     @Test
     void getChatInfo_invalidChatId() throws Exception {
       // given
@@ -374,11 +417,11 @@ class ChatControllerImplTest extends ControllerTestSupport {
       int size = 20;
 
       List<MessageResponse> messages = new ArrayList<>();
-      for (Long i = 1L; i <= size; i++) {
+      for (long i = 1L; i <= size; i++) {
         messages.add(createMessageResponse(chatId, i, "안녕" + i));
       }
 
-      Page<MessageResponse> response = new PageImpl<>(new ArrayList<>(messages));
+      Slice<MessageResponse> response = new SliceImpl<>(new ArrayList<>(messages));
 
       given(chatService.getChatMessages(chatId, page, size))
           .willReturn(response);
@@ -406,7 +449,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       Long chatId = 1L;
       int page = 0;
       int size = 20;
-      Page<MessageResponse> response = new PageImpl<>(new ArrayList<>());
+      Slice<MessageResponse> response = new SliceImpl<>(new ArrayList<>());
 
       given(chatService.getChatMessages(chatId, page, size))
           .willReturn(response);
@@ -417,7 +460,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
               .param("size", String.valueOf(size))
               .with(user(userDetails)))
           .andDo(print())
-          .andExpect(status().isOk())
+          .andExpect(status().isOk()).
+          andExpect(jsonPath("$.message").value(containsString("이전 메시지를 성공적으로 조회했습니다")))
           .andExpect(jsonPath("$.data.content", hasSize(0)));
 
       verify(chatService).getChatMessages(chatId, page, size);
@@ -432,7 +476,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       int size = 20;
 
       given(chatService.getChatMessages(chatId, page, size))
-          .willReturn(new PageImpl<>(List.of()));
+          .willReturn(new SliceImpl<>(List.of()));
 
       // when & then
       mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
@@ -442,6 +486,26 @@ class ChatControllerImplTest extends ControllerTestSupport {
 
       verify(chatService).getChatMessages(chatId, page, size);
     }
+
+    @DisplayName("채팅방 이전 메시지 조회 시 채팅 ID는 숫자여야 한다")
+    @Test
+    void getChatMessages_invalidChatId() throws Exception {
+      // given
+      CustomUserDetails userDetails = new CustomUserDetails(1L, "USER");
+      String invalidChatId = "invalid";
+
+      // when & then
+      mockMvc.perform(get("/api/chat/{chatId}/messages", invalidChatId)
+              .with(user(userDetails)))
+          .andDo(print())
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.success").value(false))
+          .andExpect(jsonPath("$.errorCode").value("400"))
+          .andExpect(jsonPath("$.message").value(String.format("요청 파라미터 ‘chatId’의 값 ‘%s’은(는) 올바르지 않습니다. Long 형식의 값이어야 합니다.", invalidChatId)));
+
+      verifyNoInteractions(chatService);
+    }
+
 
     @DisplayName("인증되지 않은 사용자가 메시지 조회를 요청하면 401을 반환한다")
     @Test
@@ -457,6 +521,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
               .param("size", String.valueOf(size)))
           .andDo(print())
           .andExpect(status().isUnauthorized());
+
+      verifyNoInteractions(chatService);
     }
   }
 
@@ -560,7 +626,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
       );
     }
 
-    @DisplayName("답장 메시지만 전송하면 성공 응답을 반환한다")
+    @DisplayName("답장 형태로 일반 메시지만 전송하면 성공 응답을 반환한다")
     @Test
     void sendMessage_message() throws Exception {
       // given
@@ -740,6 +806,27 @@ class ChatControllerImplTest extends ControllerTestSupport {
       );
     }
 
+    @DisplayName("메시지 전송 시 채팅 ID는 숫자여야 한다")
+    @Test
+    void sendMessage_invalidChatId() throws Exception {
+      // given
+      CustomUserDetails userDetails = new CustomUserDetails(1L, "USER");
+      String invalidChatId = "invalid";
+
+      // when & then
+      mockMvc.perform(multipart("/api/chat/{chatId}/send", invalidChatId)
+              .with(user(userDetails))
+              .with(csrf()))
+          .andDo(print())
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.success").value(false))
+          .andExpect(jsonPath("$.errorCode").value("400"))
+          .andExpect(jsonPath("$.message").value(String.format("요청 파라미터 ‘chatId’의 값 ‘%s’은(는) 올바르지 않습니다. Long 형식의 값이어야 합니다.", invalidChatId)));
+
+      verifyNoInteractions(chatService);
+    }
+
+
     @DisplayName("인증되지 않은 사용자가 메시지 전송을 요청하면 401을 반환한다")
     @Test
     void sendMessage_unauthenticated() throws Exception {
@@ -769,7 +856,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
 
     @DisplayName("CSRF 없이 메시지 전송을 요청하면 403을 반환한다")
     @Test
-    void sendMessage_withoutCsrf_forbidden() throws Exception {
+    void sendMessage_withoutCsrf() throws Exception {
       // given
       CustomUserDetails userDetails = new CustomUserDetails(1L, "USER");
       Long chatId = 1L;

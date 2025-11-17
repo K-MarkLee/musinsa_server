@@ -13,6 +13,7 @@ import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.model.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -84,25 +85,31 @@ class SpringMessageEventPublisherTest {
 
   }
 
-  @Test
-  void publishMessageCreated_shouldCallPublishEvent() {
-    // given
-    // 유저 생성
-    User user = saveUser("철수");
-    //브랜드 생성
-    Brand brand1 = saveBrand("브랜드1", "Brand1");
-    // 채팅방 생성
-    ChatRoom chatRoom1 = saveChatRoom(brand1);
-    ChatPart chatPart = saveChatPartOfUser(chatRoom1, user);
-    LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
-    Message message = saveMessage(chatPart, "안녕", base);
-    List<MessageAttachment> attachments = new ArrayList<>();
-    MessageResponse dto = MessageResponse.from(message, attachments);
+  @Nested
+  @DisplayName("메시지 이벤트 발행 테스트")
+  class publishMessageCreated {
+    @DisplayName("MessageResponse 전달 시 MessageCreatedEvent가 한 번 발행된다")
+    @Test
+    void publishMessageCreated_shouldCallPublishEvent() {
+      // given
+      // 유저 생성
+      User user = saveUser("user");
+      //브랜드 생성
+      Brand brand1 = saveBrand("브랜드1", "Brand1");
+      // 채팅방 생성
+      ChatRoom chatRoom1 = saveChatRoom(brand1);
+      ChatPart chatPart = saveChatPartOfUser(chatRoom1, user);
+      LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
+      Message message = saveMessage(chatPart, "안녕", base);
+      List<MessageAttachment> attachments = new ArrayList<>();
+      MessageResponse dto = MessageResponse.from(message, attachments);
 
-    // when
-    messageEventPublisher.publishMessageCreated(dto);
+      // when
+      messageEventPublisher.publishMessageCreated(dto);
 
-    // then
-    verify(eventPublisher, times(1)).publishEvent(any(MessageCreatedEvent.class));
+      // then
+      verify(eventPublisher, times(1)).publishEvent(any(MessageCreatedEvent.class));
+    }
   }
+
 }

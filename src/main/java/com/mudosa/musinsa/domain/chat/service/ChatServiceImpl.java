@@ -23,12 +23,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -60,15 +60,6 @@ public class ChatServiceImpl implements ChatService {
 
   private final @Qualifier("localFileStore") FileStore fileStore;
 
-  // TODO: 분리 필요
-  private static Message createMessage(String content, LocalDateTime now, ChatPart chatPart, Message parent) {
-    return Message.builder()
-        .chatPart(chatPart)
-        .content(StringUtils.hasText(content) ? content.trim() : null)
-        .parent(parent)
-        .createdAt(now)
-        .build();
-  }
 
   @Override
   public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
@@ -119,17 +110,19 @@ public class ChatServiceImpl implements ChatService {
     }
 
     // 3) 메시지 엔티티 생성/저장
-    Message message = createMessage(content, now, chatPart, parent);
+    Message message = Message.createMessage(content, now, chatPart, parent);
 
     Message savedMessage = messageRepository.save(message);
 
-    // 채팅방 마지막 메시지 시간 갱신
-    chatRoom.setLastMessageAt(now);
+
     log.info("[chatId={}][userId={}] 메시지 저장 완료. messageId={}", chatId, userId, savedMessage.getMessageId());
 
     // 4) 첨부파일 저장
     List<MessageAttachment> savedAttachments = saveAttachments(chatId, savedMessage.getMessageId(), files, savedMessage);
     log.info("[chatId={}][userId={}] 첨부파일 {}개 저장 완료", chatId, userId, savedAttachments.size());
+
+    // 채팅방 마지막 메시지 시간 갱신
+    chatRoom.setLastMessageAt(now);
 
     // 5) 응답 생성
     MessageResponse dto = MessageResponse.from(savedMessage, savedAttachments);
@@ -145,16 +138,17 @@ public class ChatServiceImpl implements ChatService {
    */
 
   @Override
-  public Page<MessageResponse> getChatMessages(Long chatId, int page, int size) {
+  public Slice<MessageResponse> getChatMessages(Long chatId, int page, int size) {
     ChatRoom chatRoom = getChatRoomOrThrow(chatId);
 
     Pageable pageable = PageRequest.of(page, size);
-    Page<Message> messages = messageRepository.findPageWithRelationsByChatId(chatId, pageable);
+    
+    Slice<Message> messages = messageRepository.findSliceWithRelationsByChatId(chatId, pageable);
 
     // 비어 있으면 즉시 반환
     if (messages.isEmpty()) {
       log.debug("[chatId={}] 메시지 없음. page={}, size={}", chatId, page, size);
-      return Page.empty(pageable);
+      return new SliceImpl<MessageResponse>(List.of(), pageable, false);
     }
 
     // 채팅방에서 브랜드 id 추출
@@ -446,9 +440,8 @@ public class ChatServiceImpl implements ChatService {
 
   //event 발행
   private void publishMessageEvents(MessageResponse dto) {
-    //TODO: 만약에 스프링 큐가 아닌 다른 큐를 쓴다면 관련 코드가 다 변경되어아햘지 않을까? OOP를 적용해보자!
     messageEventPublisher.publishMessageCreated(dto);
     notificationEventPublisher.publishChatNotificationCreatedEvent(dto);
-    log.info("[chatId={}][userId={}] 이벤트 발행 완료. messageId={}", dto.getMessageId());
+    log.info("이벤트 발행 완료. messageId={}", dto.getMessageId());
   }
 }

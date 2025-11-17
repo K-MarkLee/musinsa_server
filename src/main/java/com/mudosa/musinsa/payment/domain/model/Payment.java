@@ -27,32 +27,23 @@ public class Payment extends BaseEntity{
     @Column(name = "payment_id")
     private Long id;
     
-    @Column(name = "order_id", nullable = false, unique = true)
     private Long orderId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_status", nullable = false, length = 50)
     private PaymentStatus status;
 
-    @Column(name = "currency", nullable = false, length = 3)
     private String currency = "KRW";
 
-    @Column(name = "method", length = 50)
     private String method;  // "카드", "계좌이체", "간편결제" 등
     
-    @Column(name = "amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
     
-    @Column(name = "pg_provider", nullable = false, length = 50)
     private String pgProvider;
     
-    @Column(name = "pg_transaction_id", length = 100, unique = true)
     private String pgTransactionId;
     
-    @Column(name = "approved_at")
     private LocalDateTime approvedAt;
     
-    @Column(name = "cancelled_at")
     private LocalDateTime cancelledAt;
     
     @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true)

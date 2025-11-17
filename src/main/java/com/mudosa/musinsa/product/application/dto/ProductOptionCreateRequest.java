@@ -8,8 +8,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
+
+import java.math.BigDecimal;
 
 // 상품 옵션 단건 등록 요청을 담는 DTO이다.
 @Getter

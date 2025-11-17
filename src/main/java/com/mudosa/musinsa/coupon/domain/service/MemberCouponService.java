@@ -89,17 +89,5 @@ public class MemberCouponService {
         log.info("쿠폰 롤백 완료 - userId: {}, couponId: {}", userId, couponId);
     }
 
-    public List<OrderMemberCoupon> findMemberCoupons(Long userId) {
-        return memberCouponRepository.findAllByUserId(userId).stream()
-                .filter(MemberCoupon::isUsuable)
-                .map(mc -> {
-                    Coupon coupon = mc.getCoupon();
-                    return new OrderMemberCoupon(
-                            coupon.getId(),
-                            coupon.getCouponName(),
-                            coupon.getDiscountType().name(),
-                            coupon.getDiscountValue()
-                    );
-                }).toList();
-    }
+
 }

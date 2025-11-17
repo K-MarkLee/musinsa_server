@@ -1,12 +1,14 @@
 package com.mudosa.musinsa.order.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.event.model.Event;
 import com.mudosa.musinsa.event.model.EventOption;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -25,66 +27,41 @@ public class OrderProduct extends BaseEntity {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
-    private Orders orders;
+    private Order order;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
-
-    //재고 차감을 위해 필요함
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_option_id", nullable = false)
     private ProductOption productOption;
-    
-    @Column(name = "product_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal productPrice;
-    
-    @Column(name = "product_quantity", nullable = false)
+
+    @Embedded
+    @AttributeOverride(name = "amount", column = @Column(name = "product_price"))
+    private Money productPrice;
+
     private Integer productQuantity = 1;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_id")
-    private Event event;
+    @Builder
+    private OrderProduct(Order order, ProductOption productOption, Money productPrice, Integer productQuantity) {
+        this.order = order;
+        this.productOption = productOption;
+        this.productPrice = productPrice;
+        this.productQuantity = productQuantity;
+    }
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_option_id")
-    private EventOption eventOption;
+    public static OrderProduct create(Order order, ProductOption productOption, int productQuantity){
+        return OrderProduct.builder()
+                .order(order)
+                .productPrice(productOption.getProductPrice())
+                .productOption(productOption)
+                .productQuantity(productQuantity)
+                .build();
+    }
 
-    @Column(name = "paid_flag", nullable = false)
-    private Boolean paidFlag = false;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "limit_scope")
-    private LimitScope limitScope;
-
-    // getProductOptionId 메서드 추가
     public Long getProductOptionId() {
         return productOption.getProductOptionId();  // productOption 객체의 ID 반환
     }
 
-    // 양방향 연관관계 설정용 메서드
-    void setOrders(Orders orders) {
-        this.orders = orders;
-    }
-
-    public static OrderProduct create(
-            Long userId,
-            ProductOption productOption,
-            BigDecimal productPrice,
-            Integer productQuantity,
-            Event event,
-            EventOption eventOption,
-            LimitScope limitScope) {
-
-        OrderProduct orderProduct = new OrderProduct();
-        orderProduct.userId = userId;
-        orderProduct.productOption = productOption;
-        orderProduct.productPrice = productPrice;
-        orderProduct.productQuantity = productQuantity;
-        orderProduct.event = event;  // Event 객체
-        orderProduct.eventOption = eventOption;  // EventOption 객체
-        orderProduct.limitScope = limitScope;  // LimitScope enum
-        orderProduct.paidFlag = false;
-        return orderProduct;
+    public void setOrder(Order order) {
+        this.order = order;
     }
 
     /* 재고 차감 */
@@ -112,7 +89,7 @@ public class OrderProduct extends BaseEntity {
         return this.productOption.getInventory().getStockQuantity().getValue();
     }
 
-    public BigDecimal calculatePrice() {
+    public Money calculatePrice() {
         return this.productPrice.multiply(BigDecimal.valueOf(this.productQuantity));
     }
 }
