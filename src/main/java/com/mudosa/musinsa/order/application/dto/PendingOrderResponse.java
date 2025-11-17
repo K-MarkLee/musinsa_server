@@ -1,16 +1,15 @@
 package com.mudosa.musinsa.order.application.dto;
 
-import lombok.Builder;
-import lombok.Getter;
+import java.math.BigDecimal;
 import java.util.List;
 
-@Getter
-@Builder
-public class PendingOrderResponse{
-    private String orderNo;
-    private List<PendingOrderItem> orderProducts;
-    private List<OrderMemberCoupon> coupons;
-    private String userName;
-    private String userAddress;
-    private String userContactNumber;
-}
+public record PendingOrderResponse(
+    String orderNo,
+    BigDecimal totalPrice,
+    BigDecimal totalDiscount,
+    List<PendingOrderItem> orderProducts,
+    List<OrderMemberCoupon> coupons,
+    String userName,
+    String userAddress,
+    String userContactNumber
+){}

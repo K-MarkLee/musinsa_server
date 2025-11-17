@@ -1,30 +1,26 @@
 package com.mudosa.musinsa.order.application.dto;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderCreateResponse {
     private Long orderId;
     private String orderNo;
-    private List<InsufficientStockItem> insufficientStockItems;
 
-    public static OrderCreateResponse success(Long orderId, String orderNo) {
-        return new OrderCreateResponse(orderId, orderNo, null);
+    @Builder
+    private OrderCreateResponse(Long orderId, String orderNo) {
+        this.orderId = orderId;
+        this.orderNo = orderNo;
     }
 
-    public static OrderCreateResponse insufficientStock(List<InsufficientStockItem> insufficientStockItems) {
-        return new OrderCreateResponse(null, null, insufficientStockItems);
+    public static OrderCreateResponse of(Long orderId, String orderNo) {
+        return OrderCreateResponse
+                .builder()
+                .orderId(orderId)
+                .orderNo(orderNo)
+                .build();
     }
-
-    public boolean hasInsufficientStock() {
-        return insufficientStockItems != null && !insufficientStockItems.isEmpty();
-    }
-
 }

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MemberCouponRepository extends JpaRepository<MemberCoupon, Long> {
+public interface MemberCouponRepository extends JpaRepository<MemberCoupon, Long>,  MemberCouponRepositoryCustom{
     
     List<MemberCoupon> findByUserId(Long userId);
 
@@ -18,4 +18,5 @@ public interface MemberCouponRepository extends JpaRepository<MemberCoupon, Long
     long countByUserIdAndCouponId(Long userId,Long couponId);
 
     List<MemberCoupon> findAllByUserId(Long userId);
+
 }

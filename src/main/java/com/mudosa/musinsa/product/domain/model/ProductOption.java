@@ -124,4 +124,11 @@ public class ProductOption extends BaseEntity {
             .toList();
     }
 
+    public Integer getStockQuantity() {
+        return this.getInventory().getStockQuantity().getValue();
+    }
+
+    public boolean hasEnoughStock(Integer quantity) {
+        return this.getStockQuantity() >= quantity;
+    }
 }
