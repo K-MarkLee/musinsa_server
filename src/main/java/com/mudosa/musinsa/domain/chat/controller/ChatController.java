@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -65,7 +65,7 @@ public interface ChatController {
       summary = "메시지 조회",
       description = "특정 채팅방의 메시지를 조회합니다. (페이지 처리)"
   )
-  ApiResponse<Page<MessageResponse>> getChatMessages(
+  ApiResponse<Slice<MessageResponse>> getChatMessages(
       @Parameter(description = "채팅방 ID", example = "1", required = true)
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails,
