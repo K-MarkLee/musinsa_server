@@ -11,16 +11,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import com.mudosa.musinsa.TestJpaConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
-import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.context.annotation.Import;
-import com.mudosa.musinsa.config.JpaConfig;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -30,18 +26,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @ImportAutoConfiguration(exclude = MybatisAutoConfiguration.class)
 @ActiveProfiles("test")
-@ContextConfiguration(classes = CartItemRepositoryTest.TestConfig.class)
+@ContextConfiguration(classes = TestJpaConfig.class)
 @DisplayName("CartItemRepository JPA 테스트")
 class CartItemRepositoryTest {
-    @SpringBootConfiguration
-    @EnableAutoConfiguration
-    @EntityScan(basePackages = "com.mudosa.musinsa")
-    @Import(JpaConfig.class)
-    public static class TestConfig {
-        // test-only minimal configuration to avoid loading ServerApplication (and its @MapperScan)
-        // EntityScan ensures JPA finds all @Entity classes in the project during the slice test
-        // Import JpaConfig to enable JPA auditing (createdAt/updatedAt) so non-nullable audit columns are populated
-    }
 
     @Autowired
     private TestEntityManager em;

@@ -48,7 +48,7 @@ class ProductCommandServiceTest {
     @InjectMocks
     private ProductCommandService service;
 
-    // helper to set private id fields on entities
+    // 
     private void setId(Object target, String fieldName, Long id) {
         try {
             Field f = target.getClass().getDeclaredField(fieldName);
@@ -66,7 +66,7 @@ class ProductCommandServiceTest {
     }
 
     @Nested
-    @DisplayName("createProduct 메서드")
+    @DisplayName("상품 생성 테스트")
     class CreateProduct {
 
         @Test

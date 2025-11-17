@@ -14,12 +14,17 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "product")
+//크롤링을 위한 임시
+@Table(name = "product",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"product_info", "category_path"},
+                        name = "uk_product_info_category")
+        })
 public class Product extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "product_id")
+    @Column(name = "producst_id")
     private Long productId;
 
     @ManyToOne(fetch = FetchType.LAZY)
