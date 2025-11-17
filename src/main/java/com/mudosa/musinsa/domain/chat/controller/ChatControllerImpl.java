@@ -9,7 +9,7 @@ import com.mudosa.musinsa.domain.chat.service.ChatService;
 import com.mudosa.musinsa.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -71,7 +71,7 @@ public class ChatControllerImpl implements ChatController {
    */
   @GetMapping("/{chatId}/messages")
   @Override
-  public ApiResponse<Page<MessageResponse>> getChatMessages(
+  public ApiResponse<Slice<MessageResponse>> getChatMessages(
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails,
       @RequestParam(defaultValue = "0") int page,
@@ -81,7 +81,7 @@ public class ChatControllerImpl implements ChatController {
     log.info("[API][GET] /api/chat/{}/messages userId={} page={} size={}",
         chatId, userId, page, size);
 
-    Page<MessageResponse> messages = chatService.getChatMessages(chatId, page, size);
+    Slice<MessageResponse> messages = chatService.getChatMessages(chatId, page, size);
 
     return ApiResponse.success(
         messages,
