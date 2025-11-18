@@ -93,24 +93,15 @@ public class CartService {
         return CartItemResponse.from(saved);
     }
 
-    /* 장바구니 삭제 일괄*/
     @Transactional
     public void deleteCartItemsByProductOptions(Long userId, List<Long> productOptionIds) {
         if (productOptionIds == null || productOptionIds.isEmpty()) {
-            log.info("삭제할 장바구니 아이템 없음 - userId: {}", userId);
             return;
         }
-
-        log.info("장바구니 삭제 시작 - userId: {}, productOptionIds: {}",
-                userId, productOptionIds);
-
-        int deletedCount = cartItemRepository.deleteByUserIdAndProductOptionIdIn(
+        cartItemRepository.deleteByUserIdAndProductOptionIdIn(
                 userId,
                 productOptionIds
         );
-
-        log.info("장바구니 삭제 완료 - userId: {}, deletedCount: {}",
-                userId, deletedCount);
     }
 
 /* 장바구니 삭제 개별*/

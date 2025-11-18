@@ -5,6 +5,7 @@ import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +20,6 @@ import java.util.List;
 @Table(name = "payment")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Slf4j
 public class Payment extends BaseEntity{
     
     @Id
@@ -34,7 +34,7 @@ public class Payment extends BaseEntity{
 
     private String currency = "KRW";
 
-    private String method;  // "카드", "계좌이체", "간편결제" 등
+    private String method;
     
     private BigDecimal amount;
     
@@ -49,11 +49,29 @@ public class Payment extends BaseEntity{
     @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PaymentLog> paymentLogs = new ArrayList<>();
 
+    @Builder
+    public Payment(Long orderId, PaymentStatus status, String currency, String method, BigDecimal amount, String pgProvider, String pgTransactionId, LocalDateTime approvedAt, LocalDateTime cancelledAt, List<PaymentLog> paymentLogs) {
+        this.orderId = orderId;
+        this.status = status;
+        this.currency = currency;
+        this.method = method;
+        this.amount = amount;
+        this.pgProvider = pgProvider;
+        this.pgTransactionId = pgTransactionId;
+        this.approvedAt = approvedAt;
+        this.cancelledAt = cancelledAt;
+        this.paymentLogs = paymentLogs;
+    }
+
     public static Payment create(
             Long orderId,
             BigDecimal amount,
             String pgProvider,
             Long userId) {
+
+        //결제 생성
+
+        //결제 로그 추가
 
         // 검증
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -75,7 +93,6 @@ public class Payment extends BaseEntity{
 
 
     public void validatePending() {
-        log.info(this.status.name());
         if (!this.status.isPending()) {
             throw new BusinessException(
                     ErrorCode.INVALID_PAYMENT_STATUS,
@@ -84,27 +101,13 @@ public class Payment extends BaseEntity{
         }
     }
 
-    public void validateAmount(BigDecimal requestAmount) {
-        if (this.amount.compareTo(requestAmount) != 0) {
-            throw new BusinessException(
-                    ErrorCode.PAYMENT_AMOUNT_MISMATCH,
-                    String.format("결제 금액 불일치. 요청: %s, 실제: %s", requestAmount, this.amount)
-            );
-        }
-    }
 
     private void addLog(PaymentEventType eventType, String message, Long userId) {
         PaymentLog log = PaymentLog.create(this, eventType, message, userId);
         this.paymentLogs.add(log);
     }
 
-    /* 결제 승인 요청 */
-    public void requestApproval(Long userId) {
-        validatePending();
-        addLog(PaymentEventType.APPROVAL_REQUESTED, "결제 승인 요청", userId);
-    }
 
-    /* 결제 승인 */
     public void approve(String pgTransactionId, Long userId, LocalDateTime approvedAt, String method) {
         if (pgTransactionId == null || pgTransactionId.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_PG_TRANSACTION_ID);

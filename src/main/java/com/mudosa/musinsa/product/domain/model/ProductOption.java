@@ -87,7 +87,7 @@ public class ProductOption extends BaseEntity {
     }
 
     // 주문 과정에서 옵션 재고를 차감한다.
-    public void decreaseStock(int quantity) {
+    public void deductStock(int quantity) {
         if (quantity <= 0) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "차감 수량은 1 이상이어야 합니다.");
         }

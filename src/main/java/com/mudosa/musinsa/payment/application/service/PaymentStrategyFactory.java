@@ -16,7 +16,7 @@ public class PaymentStrategyFactory {
     public PaymentStrategyFactory(List<PaymentStrategy> strategies) {
         this.strategyMap = strategies.stream()
                 .collect(Collectors.toMap(
-                        PaymentStrategy::getProviderName,  // "TOSS", "KAKAO" 등
+                        PaymentStrategy::getProviderName,
                         strategy -> strategy
                 ));
     }

@@ -2,10 +2,10 @@ package com.mudosa.musinsa.payment.application.service;
 
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.payment.application.dto.PaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentConfirmRequest;
 import com.mudosa.musinsa.payment.application.dto.PaymentResponseDto;
-import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmRequest;
-import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmResponse;
+import com.mudosa.musinsa.payment.application.dto.request.TossPaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.response.TossPaymentConfirmResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,11 +67,6 @@ public class TossPaymentStrategy implements PaymentStrategy {
 
 			HttpEntity<TossPaymentConfirmRequest> entity = new HttpEntity<>(request, headers);
 
-			log.info(
-					"[TossPayments] 결제 승인 요청 - orderId: {}, paymentKey: {}, amount: {}",
-					request.getOrderId(),
-					request.getPaymentKey(),
-					request.getAmount());
 
 			ResponseEntity<TossPaymentConfirmResponse> response =
 					restTemplate.exchange(
@@ -86,11 +81,6 @@ public class TossPaymentStrategy implements PaymentStrategy {
 				log.error("[TossPayments] 결제 승인 응답이 null입니다");
 				throw new BusinessException(ErrorCode.PAYMENT_APPROVAL_FAILED);
 			}
-
-			log.info(
-					"[TossPayments] 결제 승인 성공 - orderId: {}, status: {}, method: {}",
-					responseBody.getOrderId(),
-					responseBody.getStatus());
 
 			return responseBody;
 

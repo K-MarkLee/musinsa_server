@@ -34,11 +34,9 @@ public class Inventory extends BaseEntity {
         this.stockQuantity = stockQuantity;
     }
 
-    // 요청 수량만큼 재고를 감소시키고 품절 여부를 갱신한다.
     public void decrease(int quantity) {
         if (this.stockQuantity.getValue() < quantity) {
-            throw new IllegalStateException(
-                String.format("재고가 부족합니다. 요청: %d, 현재: %d", quantity, this.stockQuantity.getValue()));
+            throw new IllegalStateException("재고가 부족한 상품이 있습니다");
         }
         this.stockQuantity.decrease(quantity);
     }

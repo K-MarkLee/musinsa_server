@@ -64,19 +64,10 @@ public class OrderProduct extends BaseEntity {
         this.order = order;
     }
 
-    /* 재고 차감 */
-    public void decreaseStock() {
-        this.productOption.decreaseStock(this.productQuantity);
-    }
 
     /* 재고 복구 */
     public void restoreStock() {
         this.productOption.restoreStock(this.productQuantity);
-    }
-
-    /* 상품 옵션 검증 */
-    public void validateProductOption() {
-        this.productOption.validateAvailable();
     }
 
     /* 재고 확인 */

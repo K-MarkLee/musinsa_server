@@ -8,6 +8,7 @@ import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
@@ -21,6 +22,7 @@ import static com.mudosa.musinsa.product.domain.model.QProductOption.productOpti
 import static com.mudosa.musinsa.product.domain.model.QProductOptionValue.productOptionValue;
 
 
+@Repository
 @RequiredArgsConstructor
 public class OrderRepositoryImpl implements OrderRepositoryCustom{
 

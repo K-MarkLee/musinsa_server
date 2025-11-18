@@ -125,7 +125,6 @@ public class Order extends BaseEntity {
         return String.format("ORD%d%03d", timestamp, random);
     }
 
-    /* 주문 상태 확인 */
     public void validatePending() {
         if (!this.status.isPending()) {
             throw new BusinessException(
@@ -135,25 +134,12 @@ public class Order extends BaseEntity {
         }
     }
 
-    /* 주문 상품 검증 */
-    public void validateOrderProducts() {
-        if (this.orderProducts.isEmpty()) {
-            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND);
-        }
-
-        // 각 주문 상품의 상품 옵션 검증
-        for (OrderProduct orderProduct : this.orderProducts) {
-            orderProduct.validateProductOption();
-        }
-    }
-
-    /* 주문 완료 처리 */
     public void complete() {
+        validatePending();
         this.status = this.status.transitionTo(OrderStatus.COMPLETED);
         this.isSettleable = true;
     }
 
-    /* 주문 롤백 처리 */
     public void rollback() {
         if (this.status.isCompleted()) {
             this.status = OrderStatus.PENDING;
@@ -161,57 +147,10 @@ public class Order extends BaseEntity {
         }
     }
 
-    /* 재고 차감 */
-    public void decreaseStock() {
-        for (OrderProduct orderProduct : this.orderProducts) {
-            orderProduct.decreaseStock();
-        }
-    }
-
-    /* 쿠폰 사용 여부 확인 */
-    public boolean hasCoupon() {
-        return this.couponId != null;
-    }
-
-    /* 주문에 쿠폰 적용 */
-    public void addCoupon(Long couponId){
-        this.couponId = couponId;
-    }
-
-    /* 재고 복구 */
     public void restoreStock() {
         for (OrderProduct orderProduct : this.orderProducts) {
             orderProduct.restoreStock();
         }
     }
 
-    /* 할인 적용 */
-    public void applyDiscount(BigDecimal discount) {
-    }
-
-
-    /* 재고 확인 */
-    public StockValidationResult validateStock() {
-        if (this.orderProducts.isEmpty()) {
-            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND, "주문 상품이 없습니다");
-        }
-        
-        List<InsufficientStockItem> insufficientItems = new ArrayList<>();
-        
-        for (OrderProduct orderProduct : this.orderProducts) {
-            if (!orderProduct.hasEnoughStock()) {
-                insufficientItems.add(new InsufficientStockItem(
-                    orderProduct.getProductOption().getProductOptionId(),
-                    orderProduct.getProductQuantity(),
-                    orderProduct.getAvailableStock()
-                ));
-            }
-        }
-        
-        if (!insufficientItems.isEmpty()) {
-            return StockValidationResult.invalid(insufficientItems);
-        }
-        
-        return StockValidationResult.valid();
-    }
 }

@@ -34,14 +34,9 @@ public class StockQuantity {
         return value.toString();
     }
 
-    // 요청 수량만큼 재고를 감소시키며 음수를 허용하지 않는다.
     public void decrease(int quantity){
-        // 음수 재고를 방지하기 위한 방어 로직
         if (quantity <= 0) {
             throw new IllegalArgumentException("차감 수량은 0 이하일 수 없습니다.");
-        }
-        if (this.value - quantity < 0) {
-            throw new IllegalArgumentException("재고 수량은 음수가 될 수 없습니다.");
         }
         this.value -= quantity;
     }
