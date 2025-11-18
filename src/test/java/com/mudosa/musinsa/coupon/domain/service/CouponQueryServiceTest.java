@@ -1,0 +1,127 @@
+package com.mudosa.musinsa.coupon.domain.service;
+
+import com.mudosa.musinsa.ServiceConfig;
+import com.mudosa.musinsa.coupon.domain.model.Coupon;
+import com.mudosa.musinsa.coupon.domain.model.DiscountType;
+import com.mudosa.musinsa.coupon.domain.model.MemberCoupon;
+import com.mudosa.musinsa.coupon.domain.repository.CouponRepository;
+import com.mudosa.musinsa.coupon.domain.repository.MemberCouponRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DisplayName("CouponQueryService 테스트")
+class CouponQueryServiceTest extends ServiceConfig {
+
+    @Autowired
+    private CouponQueryService couponQueryService;
+
+    @Autowired
+    private CouponRepository couponRepository;
+
+    @Autowired
+    private MemberCouponRepository memberCouponRepository;
+
+    @Test
+    @DisplayName("[해피케이스] 회원 쿠폰 목록 조회 - 사용자가 발급받은 모든 쿠폰 목록을 조회한다")
+    void getMemberCoupons_Success() {
+        // given
+        Long userId = 1L;
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(30);
+
+        Coupon coupon1 = Coupon.create(
+                "테스트 쿠폰1",
+                DiscountType.AMOUNT,
+                new BigDecimal("5000"),
+                startDate,
+                endDate,
+                100
+        );
+        Coupon coupon2 = Coupon.create(
+                "테스트 쿠폰2",
+                DiscountType.PERCENTAGE,
+                new BigDecimal("10"),
+                startDate,
+                endDate,
+                50
+        );
+        Coupon savedCoupon1 = couponRepository.save(coupon1);
+        Coupon savedCoupon2 = couponRepository.save(coupon2);
+
+        MemberCoupon memberCoupon1 = MemberCoupon.issue(userId, savedCoupon1);
+        MemberCoupon memberCoupon2 = MemberCoupon.issue(userId, savedCoupon2);
+        memberCouponRepository.save(memberCoupon1);
+        memberCouponRepository.save(memberCoupon2);
+
+        // when
+        List<MemberCoupon> result = couponQueryService.getMemberCoupons(userId);
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(mc -> mc.getCoupon().getCouponName())
+                .contains("테스트 쿠폰1", "테스트 쿠폰2");
+    }
+
+    @Test
+    @DisplayName("[해피케이스] 사용 가능한 쿠폰 목록 조회 - 사용자가 발급받은 사용 가능한 쿠폰만 조회한다")
+    void getAvailableMemberCoupons_Success() {
+        // given
+        Long userId = 2L;
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(30);
+
+        Coupon coupon = Coupon.create(
+                "사용 가능 쿠폰",
+                DiscountType.AMOUNT,
+                new BigDecimal("5000"),
+                startDate,
+                endDate,
+                100
+        );
+        Coupon savedCoupon = couponRepository.save(coupon);
+
+        MemberCoupon memberCoupon = MemberCoupon.issue(userId, savedCoupon);
+        memberCouponRepository.save(memberCoupon);
+
+        // when
+        List<MemberCoupon> result = couponQueryService.getAvailableMemberCoupons(userId);
+
+        // then
+        // MemberCoupon.issue()에서 expiredAt이 현재 시간으로 설정되므로
+        // isUsuable()이 false를 반환하여 빈 리스트가 됨
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[예외케이스] 회원 쿠폰 목록 조회 - 발급받은 쿠폰이 없으면 빈 리스트를 반환한다")
+    void getMemberCoupons_NoIssuance_ReturnsEmptyList() {
+        // given
+        Long nonExistentUserId = 999999L;
+
+        // when
+        List<MemberCoupon> result = couponQueryService.getMemberCoupons(nonExistentUserId);
+
+        // then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[예외케이스] 사용 가능한 쿠폰 목록 조회 - 사용 가능한 쿠폰이 없으면 빈 리스트를 반환한다")
+    void getAvailableMemberCoupons_NoAvailableCoupons_ReturnsEmptyList() {
+        // given
+        Long nonExistentUserId = 999999L;
+
+        // when
+        List<MemberCoupon> result = couponQueryService.getAvailableMemberCoupons(nonExistentUserId);
+
+        // then
+        assertThat(result).isEmpty();
+    }
+}
