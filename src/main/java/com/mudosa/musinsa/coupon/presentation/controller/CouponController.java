@@ -1,7 +1,7 @@
 package com.mudosa.musinsa.coupon.presentation.controller;
 
 import com.mudosa.musinsa.coupon.domain.model.MemberCoupon;
-import com.mudosa.musinsa.coupon.domain.service.CouponQueryService;
+import com.mudosa.musinsa.coupon.domain.service.CouponListService;
 import com.mudosa.musinsa.coupon.presentation.dto.res.MemberCouponResDto;
 import com.mudosa.musinsa.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CouponController {
 
-    private final CouponQueryService couponQueryService;
+    private final CouponListService couponListService;
 
     /**
      * 사용자가 발급받은 모든 쿠폰 목록 조회
@@ -32,7 +32,7 @@ public class CouponController {
     ) {
         log.info("사용자 쿠폰 목록 조회 요청 - userId: {}", user != null ? user.getUserId() : "null");
 
-        List<MemberCoupon> memberCoupons = couponQueryService.getMemberCoupons(user.getUserId());
+        List<MemberCoupon> memberCoupons = couponListService.getMemberCoupons(user.getUserId());
 
         List<MemberCouponResDto> response = memberCoupons.stream()
                 .map(MemberCouponResDto::from)
@@ -52,7 +52,7 @@ public class CouponController {
     ) {
         log.info("사용자 사용 가능 쿠폰 목록 조회 요청 - userId: {}", user != null ? user.getUserId() : "null");
 
-        List<MemberCoupon> memberCoupons = couponQueryService.getAvailableMemberCoupons(user.getUserId());
+        List<MemberCoupon> memberCoupons = couponListService.getAvailableMemberCoupons(user.getUserId());
 
         List<MemberCouponResDto> response = memberCoupons.stream()
                 .map(MemberCouponResDto::from)
