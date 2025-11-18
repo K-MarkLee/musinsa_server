@@ -66,10 +66,8 @@ public class NotificationService {
                 .toList();
     }
 
-    //TODO: 파라미터에 대한 dto 필요성 검토
     public void createChatNotification(ChatNotificationCreatedEvent chatNotificationCreatedEvent){
 
-        //TODO: 하드코딩하면 안된다..
         List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(chatNotificationCreatedEvent.getUserId(), chatNotificationCreatedEvent.getChatId());
         NotificationMetadata chatNotificationMetadata = notificationMetadataRepository.findByNotificationCategory(CHAT_METADATA_CATEGORY).orElseThrow(
                 ()->new NoSuchElementException("Notification Metadata not found")
