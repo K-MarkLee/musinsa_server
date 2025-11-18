@@ -76,7 +76,6 @@ class ChatPartRepositoryTest extends ServiceConfig {
   @Nested
   @DisplayName("채팅방에 어떤 참여자를 제외한 ChatPart 정보를 조회한다")
   class findChatPartExcludingUser {
-      @DisplayName("")
       @Test
       void findChatPartExcludingUserTest(){
           // given
