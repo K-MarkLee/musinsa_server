@@ -8,17 +8,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class NotificationMetadataRepositoryTest extends ServiceConfig {
-
-    private NotificationMetadata saveNotificationMetadata(String notificationCategory) {
-        return notificationMetadataRepository.save(
-                NotificationMetadata.builder()
-                        .notificationCategory(notificationCategory)
-                        .build()
-        );
-    }
 
     @AfterEach
     void tearDown() {
@@ -39,7 +31,7 @@ class NotificationMetadataRepositoryTest extends ServiceConfig {
         // when
             Optional<NotificationMetadata> notificationMetadata = notificationMetadataRepository.findByNotificationCategory("CHAT");
         // then
-            assertSame("CHAT", notificationMetadata.orElseThrow().getNotificationCategory());
+            assertThat(notificationMetadata.orElseThrow().getNotificationCategory()).isEqualTo("CHAT");
         }
 
         @DisplayName("조회된 값이 없을 때")
@@ -50,7 +42,7 @@ class NotificationMetadataRepositoryTest extends ServiceConfig {
         // when
         Optional<NotificationMetadata> notificationMetadata = notificationMetadataRepository.findByNotificationCategory("CHAT");
         // then
-        assertTrue(notificationMetadata.isEmpty());
+        assertThat(notificationMetadata).isEmpty();
         }
     }
 

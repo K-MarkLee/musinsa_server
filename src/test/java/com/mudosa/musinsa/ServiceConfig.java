@@ -5,7 +5,9 @@ import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
+import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
 import com.mudosa.musinsa.notification.domain.repository.NotificationMetadataRepository;
+import com.mudosa.musinsa.notification.domain.repository.NotificationRepository;
 import com.mudosa.musinsa.notification.domain.service.FcmService;
 import com.mudosa.musinsa.security.JwtTokenProvider;
 import com.mudosa.musinsa.settlement.batch.job.DailySettlementAggregationJob;
@@ -83,4 +85,14 @@ public abstract class ServiceConfig {
   protected MessageAttachmentRepository attachmentRepository;
   @Autowired
   protected NotificationMetadataRepository notificationMetadataRepository;
+  @Autowired
+  protected NotificationRepository notificationRepository;
+
+  protected NotificationMetadata saveNotificationMetadata(String notificationCategory) {
+      return notificationMetadataRepository.save(
+              NotificationMetadata.builder()
+                      .notificationCategory(notificationCategory)
+                      .build()
+      );
+  }
 }
