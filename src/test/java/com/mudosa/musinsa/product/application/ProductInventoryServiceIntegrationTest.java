@@ -18,11 +18,11 @@ import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 
-import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 

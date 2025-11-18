@@ -17,11 +17,11 @@ import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 
-import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
