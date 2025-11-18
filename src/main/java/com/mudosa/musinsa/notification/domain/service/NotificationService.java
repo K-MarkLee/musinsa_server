@@ -66,7 +66,7 @@ public class NotificationService {
                 .toList();
     }
 
-    public void createChatNotification(ChatNotificationCreatedEvent chatNotificationCreatedEvent){
+    public List<Notification> createChatNotification(ChatNotificationCreatedEvent chatNotificationCreatedEvent){
 
         List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(chatNotificationCreatedEvent.getUserId(), chatNotificationCreatedEvent.getChatId());
         NotificationMetadata chatNotificationMetadata = notificationMetadataRepository.findByNotificationCategory(CHAT_METADATA_CATEGORY).orElseThrow(
@@ -88,13 +88,15 @@ public class NotificationService {
                         .build())
                 .toList();
 
-        notificationRepository.saveAll(notificationList);
+        List<Notification> notifications = notificationRepository.saveAll(notificationList);
 
         if (fcmService != null && !notificationList.isEmpty()) {
             fcmService.sendMessageByToken(notificationList.getFirst().getNotificationTitle(), message,firebaseTokenService.readFirebaseTokens(userIds));
         } else {
             log.info("알림 생성 중 문제가 발생했습니다.");
+            return null;
         }
+        return notifications;
     }
 
     @Transactional

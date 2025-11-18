@@ -23,13 +23,6 @@ class NotificationRepositoryTest extends ServiceConfig {
         return user;
     }
 
-    private Notification saveNotification(User user, NotificationMetadata notificationMetadata){
-        return notificationRepository.save(Notification.builder()
-                .user(user)
-                .notificationMetadata(notificationMetadata)
-                .build());
-    }
-
     @AfterEach
     void tearDown() {
         notificationRepository.deleteAllInBatch();

@@ -5,6 +5,7 @@ import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
+import com.mudosa.musinsa.notification.domain.model.Notification;
 import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
 import com.mudosa.musinsa.notification.domain.repository.NotificationMetadataRepository;
 import com.mudosa.musinsa.notification.domain.repository.NotificationRepository;
@@ -17,6 +18,7 @@ import com.mudosa.musinsa.settlement.batch.scheduler.SettlementBatchScheduler;
 import com.mudosa.musinsa.settlement.domain.repository.SettlementDailyMapper;
 import com.mudosa.musinsa.settlement.domain.repository.SettlementMonthlyMapper;
 import com.mudosa.musinsa.settlement.domain.repository.SettlementPerTransactionMapper;
+import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
@@ -94,5 +96,12 @@ public abstract class ServiceConfig {
                       .notificationCategory(notificationCategory)
                       .build()
       );
+  }
+
+  protected Notification saveNotification(User user, NotificationMetadata notificationMetadata){
+      return notificationRepository.save(Notification.builder()
+              .user(user)
+              .notificationMetadata(notificationMetadata)
+              .build());
   }
 }
