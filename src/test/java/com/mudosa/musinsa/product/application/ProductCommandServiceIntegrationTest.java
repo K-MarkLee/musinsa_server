@@ -16,6 +16,9 @@ import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
+
+import jakarta.transaction.Transactional;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * ProductCommandService 핵심 흐름을 실제 DB/트랜잭션 위에서 검증하는 통합 테스트.
  * Chat 모듈과 동일하게 ServiceConfig를 상속받아 공통 설정과 MockitoBean들을 재사용한다.
  */
+@Transactional
 @DisplayName("ProductCommandService 통합 테스트")
 class ProductCommandServiceIntegrationTest extends ServiceConfig {
 

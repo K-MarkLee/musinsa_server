@@ -21,7 +21,7 @@ class UserRepositoryTest extends ServiceConfig {
         userRepository.save(user);
 
         //when
-        UserInfoDto result = userRepository.findDtoById(1L);
+        UserInfoDto result = userRepository.findDtoById(user.getId());
 
         //then
         assertThat(result)

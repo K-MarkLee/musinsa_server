@@ -6,6 +6,7 @@ import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -47,6 +48,7 @@ public class ProductOption extends BaseEntity {
         return new ProductOption(product, productPrice, inventory);
     }
 
+    @Builder
     ProductOption(Product product, Money productPrice, Inventory inventory) {
         if (product == null) {
             throw new IllegalArgumentException("상품은 옵션에 필수입니다.");
