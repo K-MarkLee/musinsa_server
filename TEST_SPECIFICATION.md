@@ -73,6 +73,30 @@
 | EventService | 조회 | 타입별 조회 (결과 없음) | 예외 | getEventListByType() | DISCOUNT 타입 Event 없음 | getEventListByType(DISCOUNT) 호출 | 빈 리스트 반환 | size == 0 | ✅ |
 | EventService | 조회 | 날짜 필터링 (결과 없음) | 예외 | getFilteredEventList() | 조건 안맞는 Event들 | getFilteredEventList() 호출 | 빈 리스트 또는 불일치 결과 | 빈 리스트 또는 조건 불일치 | ✅ |
 
+### 1.7 EventEntryService 테스트
+
+| 대분류 | 중분류 | 상세 | 테스트유형 | 테스트대상 | Given | When | Then | 기대값 | 결과값 |
+|--------|--------|------|------------|-----------|-------|------|------|--------|--------|
+| EventEntryService | 슬롯확보 | 정상 슬롯 확보 | 해피 | acquireSlot() | eventId, userId | acquireSlot() 호출 | 슬롯 확보 성공 | token != null | ✅ |
+| EventEntryService | 슬롯확보 | 자동 해제 (try-with-resources) | 해피 | acquireSlot() | eventId, userId | try-with-resources 사용 | 자동으로 슬롯 해제됨 | 재확보 가능 | ✅ |
+| EventEntryService | 슬롯해제 | 수동 해제 | 해피 | release() | 확보된 token | release() 호출 | 슬롯 해제됨 | 재확보 가능 | ✅ |
+| EventEntryService | 슬롯해제 | 중복 해제 | 해피 | release() | 확보된 token | 여러 번 release() 호출 | 예외 없이 정상 처리 | 예외 없음 | ✅ |
+| EventEntryService | 슬롯확보 | 다른 사용자 동시 확보 | 해피 | acquireSlot() | 같은 eventId, 다른 userId | 두 번 acquireSlot() 호출 | 둘 다 확보 성공 | 두 token 모두 != null | ✅ |
+| EventEntryService | 슬롯확보 | 다른 이벤트 동시 확보 | 해피 | acquireSlot() | 다른 eventId, 같은 userId | 두 번 acquireSlot() 호출 | 둘 다 확보 성공 | 두 token 모두 != null | ✅ |
+| EventEntryService | 슬롯확보 | 중복 슬롯 확보 | 예외 | acquireSlot() | 같은 eventId, 같은 userId | 두 번 acquireSlot() 호출 | BusinessException 발생 | EVENT_ENTRY_CONFLICT | ✅ |
+| EventEntryService | 슬롯확보 | eventId null | 예외 | acquireSlot() | eventId=null, userId | acquireSlot() 호출 | NullPointerException 발생 | "eventId cannot be null" | ✅ |
+| EventEntryService | 슬롯확보 | userId null | 예외 | acquireSlot() | eventId, userId=null | acquireSlot() 호출 | NullPointerException 발생 | "userId cannot be null" | ✅ |
+
+### 1.8 EventCouponService 테스트
+
+| 대분류 | 중분류 | 상세 | 테스트유형 | 테스트대상 | Given | When | Then | 기대값 | 결과값 |
+|--------|--------|------|------------|-----------|-------|------|------|--------|--------|
+| EventCouponService | 쿠폰발급 | 정상 쿠폰 발급 | 해피 | issueCoupon() | Event, EventOption, Coupon, Product 준비 | issueCoupon() 호출 | 쿠폰 발급 성공 | duplicate=false, memberCouponId != null | ✅ |
+| EventCouponService | 쿠폰발급 | 중복 쿠폰 발급 | 해피 | issueCoupon() | 이미 발급받은 userId | 두 번 issueCoupon() 호출 | 중복 발급 처리 | duplicate=true | ✅ |
+| EventCouponService | 쿠폰발급 | 존재하지 않는 이벤트 옵션 | 예외 | issueCoupon() | 없는 eventId, productOptionId | issueCoupon() 호출 | BusinessException 발생 | EVENT_NOT_FOUND | ✅ |
+| EventCouponService | 쿠폰발급 | 이벤트가 OPEN 아님 | 예외 | issueCoupon() | DRAFT 상태 Event | issueCoupon() 호출 | BusinessException 발생 | EVENT_NOT_OPEN | ✅ |
+| EventCouponService | 쿠폰발급 | 재고 부족 | 예외 | issueCoupon() | EventOption 재고=1, 2명 발급 시도 | 두 번째 issueCoupon() 호출 | BusinessException 발생 | EVENT_STOCK_EMPTY | ✅ |
+
 ---
 
 ## 2. Coupon 도메인 테스트
@@ -152,25 +176,25 @@
 ## 테스트 통계
 
 ### Event 도메인
-- **총 테스트 케이스**: 47개
-  - Model: 19개
-  - Repository: 8개
-  - Service: 6개
-- **해피 케이스**: 39개
-- **예외 케이스**: 8개
+- **총 테스트 케이스**: 61개
+  - Model: 19개 (Event, EventOption, EventImage, EventStatus)
+  - Repository: 8개 (EventRepository)
+  - Service: 20개 (EventService, EventEntryService, EventCouponService)
+- **해피 케이스**: 50개
+- **예외 케이스**: 11개
 
 ### Coupon 도메인
 - **총 테스트 케이스**: 36개
-  - Model: 18개
-  - Repository: 10개
-  - Service: 8개
+  - Model: 18개 (Coupon, MemberCoupon)
+  - Repository: 10개 (CouponRepository, MemberCouponRepository)
+  - Service: 8개 (CouponIssuanceService, CouponQueryService)
 - **해피 케이스**: 27개
 - **예외 케이스**: 9개
 
 ### 전체 통계
-- **총 테스트 케이스**: 83개
-- **해피 케이스**: 66개 (79.5%)
-- **예외 케이스**: 17개 (20.5%)
+- **총 테스트 케이스**: 97개
+- **해피 케이스**: 77개 (79.4%)
+- **예외 케이스**: 20개 (20.6%)
 - **테스트 프레임워크**: JUnit 5
 - **Assertion 라이브러리**: AssertJ
 
