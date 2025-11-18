@@ -48,11 +48,11 @@ public class CouponIssuanceService {
     @Transactional
     public CouponIssuanceResult issueCoupon(Long userId, Long couponId,Long productId){
 
-        // 쿠폰 잠금 + 존재 확인
+        // 1. 쿠폰 조회 + 비관적 락 (동시성 제어)
         Coupon coupon = couponRepository.findByIdForUpdate(couponId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
 
-        // 발급 가능 상태 검증
+        // 2. 발급 가능 상태 검증 (활성화, 기간, 재고 확인)
         LocalDateTime now = LocalDateTime.now();
         coupon.validateIssuable(now);
 
@@ -76,16 +76,20 @@ public class CouponIssuanceService {
 
     }
 
-    // 사용자별 쿠폰 발급 로직
+    // 신규 쿠폰 발급 로직
     private CouponIssuanceResult createMemberCoupon(Long userId, Coupon coupon) {
-        coupon.increaseIssuedQuantity(); // 발급 수량 + 1
+        // 발급 수량 증가 (재고 차감 효과: totalQuantity - issuedQuantity = 남은 재고)
+        coupon.increaseIssuedQuantity();
 
-
-        // 회원-쿠폰 엔티티 생성/저장.
+        // 회원-쿠폰 엔티티 생성/저장
         MemberCoupon memberCoupon = MemberCoupon.issue(userId, coupon);
         MemberCoupon saved = memberCouponRepository.save(memberCoupon);
 
-        log.info("쿠폰 발급 완료 - userId: {}, couponId: {}", userId, coupon.getId());
+        log.info("쿠폰 발급 완료 - userId: {}, couponId: {}, 남은 재고: {}",
+                userId, coupon.getId(),
+                coupon.getRemainingQuantity() != null ?
+                    coupon.getRemainingQuantity() : "무제한");
+
         return CouponIssuanceResult.issued(
                 saved.getId(),
                 coupon.getId(),

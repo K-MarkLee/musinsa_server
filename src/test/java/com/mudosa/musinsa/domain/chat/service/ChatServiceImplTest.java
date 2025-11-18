@@ -1,12 +1,12 @@
 package com.mudosa.musinsa.domain.chat.service;
 
 import com.google.firebase.messaging.FirebaseMessagingException;
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandMember;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
-import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
@@ -31,7 +31,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
@@ -124,6 +124,7 @@ class ChatServiceImplTest extends ServiceConfig {
     // 1. Message 생성 및 저장
     Message message = Message.builder()
         .chatPart(chatPart)
+        .chatId(chatPart.getChatRoom().getChatId())
         .content(content)
         .createdAt(timestamp)
         .build();
@@ -138,6 +139,7 @@ class ChatServiceImplTest extends ServiceConfig {
     Message message = Message.builder()
         .parent(parent)
         .chatPart(chatPart)
+        .chatId(chatPart.getChatRoom().getChatId())
         .content("child")
         .createdAt(timestamp)
         .build();
@@ -150,6 +152,7 @@ class ChatServiceImplTest extends ServiceConfig {
     // 1. Message 생성 및 저장
     Message message = Message.builder()
         .chatPart(chatPart)
+        .chatId(chatPart.getChatRoom().getChatId())
         .content(content)
         .createdAt(timestamp)
         .build();
@@ -180,20 +183,29 @@ class ChatServiceImplTest extends ServiceConfig {
         .build();
   }
 
-  // page 관련 검증
-  private void assertPage(Page<MessageResponse> messages, int count, int size, int page) {
-    assertThat(messages.getTotalElements()).isEqualTo(count);
-    assertThat(messages.getTotalPages()).isEqualTo((int) Math.ceil((double) count / size));
+
+  // slice 관련 검증
+  private void assertSlice(Slice<MessageResponse> messages, int totalCount, int size, int page) {
+    // 요청한 페이지/사이즈가 그대로 들어왔는지
     assertThat(messages.getNumber()).isEqualTo(page);
     assertThat(messages.getSize()).isEqualTo(size);
+
+    // 이 테스트에서는 totalCount를 우리가 알고 있으므로
+    // hasNext / isLast 여부를 계산해서 검증할 수 있음
+    boolean expectedHasNext = totalCount > (page + 1) * size;
+
+    assertThat(messages.hasNext()).isEqualTo(expectedHasNext);
+    assertThat(messages.isLast()).isEqualTo(!expectedHasNext);
   }
 
-  // 최신순 정렬 검증
-  private void assertLatest(Page<MessageResponse> messages) {
+
+  // 최신순 정렬 검증 (Slice 버전)
+  private void assertLatest(Slice<MessageResponse> messages) {
     assertThat(messages.getContent())
         .extracting(MessageResponse::getCreatedAt)
         .isSortedAccordingTo(Comparator.reverseOrder());
   }
+
 
   /**
    * === saveMessage 메서드 테스트 ===
@@ -886,7 +898,7 @@ class ChatServiceImplTest extends ServiceConfig {
       int size = 20;
 
       // when
-      Page<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
+      Slice<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
 
       // then
       assertThat(messages).isNotNull();
@@ -901,7 +913,7 @@ class ChatServiceImplTest extends ServiceConfig {
       assertLatest(messages);
 
       // 페이지 메타데이터 확인
-      assertPage(messages, count, size, page);
+      assertSlice(messages, count, size, page);
     }
 
     @DisplayName("여러 채팅방의 채팅이 존재할 때 특정 채팅방의 메시지만을 성공적으로 반환한다")
@@ -932,7 +944,7 @@ class ChatServiceImplTest extends ServiceConfig {
       int size = 20;
 
       // when
-      Page<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
+      Slice<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
 
       // then
       assertThat(messages).isNotNull();
@@ -947,7 +959,7 @@ class ChatServiceImplTest extends ServiceConfig {
       assertLatest(messages);
 
       // 페이지 메타데이터 확인
-      assertPage(messages, count, size, page);
+      assertSlice(messages, count, size, page);
 
       assertThat(messages.getContent())
           .extracting(MessageResponse::getChatId)
@@ -985,7 +997,7 @@ class ChatServiceImplTest extends ServiceConfig {
       int totalCount = count * 2;
 
       // when
-      Page<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
+      Slice<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
 
       // then
       assertThat(messages).isNotNull();
@@ -999,7 +1011,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       // 최신순 확인
       assertLatest(messages);
-      assertPage(messages, totalCount, size, page);
+      assertSlice(messages, totalCount, size, page);
     }
 
     @DisplayName("관리자 채팅은 isManager가 true, 사용자 채팅은 false로 반환한다")
@@ -1033,7 +1045,7 @@ class ChatServiceImplTest extends ServiceConfig {
       int size = 20;
 
       // when
-      Page<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
+      Slice<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
 
       // then
       assertThat(messages).isNotNull();
@@ -1052,7 +1064,7 @@ class ChatServiceImplTest extends ServiceConfig {
       assertLatest(messages);
 
       // 페이지 메타데이터 확인
-      assertPage(messages, totalCount, size, page);
+      assertSlice(messages, totalCount, size, page);
     }
 
     @DisplayName("답장 메시지인 경우 부모 메시지와 함께 반환한다")
@@ -1080,7 +1092,7 @@ class ChatServiceImplTest extends ServiceConfig {
       int count = 2;
 
       // when
-      Page<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
+      Slice<MessageResponse> messages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
 
       // then
       assertThat(messages).isNotNull();
@@ -1093,7 +1105,7 @@ class ChatServiceImplTest extends ServiceConfig {
       assertLatest(messages);
 
       // 페이지 메타데이터 확인
-      assertPage(messages, count, size, page);
+      assertSlice(messages, count, size, page);
     }
 
     @DisplayName("파일을 포함한 메시지인 경우 파일 목록과 함께 반환한다")
@@ -1121,7 +1133,7 @@ class ChatServiceImplTest extends ServiceConfig {
       int count = 2;
 
       // when
-      Page<MessageResponse> messages = chatService.getChatMessages(chatRoom.getChatId(), page, size);
+      Slice<MessageResponse> messages = chatService.getChatMessages(chatRoom.getChatId(), page, size);
 
       // then
       assertThat(messages).isNotNull();
@@ -1137,7 +1149,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       assertLatest(messages);
 
-      assertPage(messages, count, size, page);
+      assertSlice(messages, count, size, page);
     }
 
     @DisplayName("특정 채팅방의 메시지가 없으면 빈 페이지를 반환한다")
@@ -1152,15 +1164,17 @@ class ChatServiceImplTest extends ServiceConfig {
       int size = 20;
 
       // when
-      Page<MessageResponse> chatMessages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
+      Slice<MessageResponse> chatMessages = chatService.getChatMessages(chatRoom1.getChatId(), page, size);
 
       // then
       assertThat(chatMessages).isNotNull();
       assertThat(chatMessages.getContent()).isEmpty();
-      assertThat(chatMessages.getTotalElements()).isZero();
-      assertThat(chatMessages.getTotalPages()).isZero();
       assertThat(chatMessages.getNumber()).isEqualTo(page);
       assertThat(chatMessages.getSize()).isEqualTo(size);
+
+      // 빈 페이지이므로 다음 페이지 없음
+      assertThat(chatMessages.hasNext()).isFalse();
+      assertThat(chatMessages.isLast()).isTrue();
     }
 
     @DisplayName("특정 채팅방이 존재하지 않으면 오류를 반환한다")

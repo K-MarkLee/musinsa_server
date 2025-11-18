@@ -40,7 +40,8 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
 
         List<Predicate> predicates = buildPredicates(cb, product, categoryPaths, gender, brandId);
 
-        cq.select(product).distinct(true);
+        // DISTINCT를 사용하면 H2에서 ORDER BY 서브쿼리가 SELECT 목록에 포함되어야 하므로 제거했다.
+        cq.select(product);
         if (!predicates.isEmpty()) {
             cq.where(cb.and(predicates.toArray(new Predicate[0])));
         }
@@ -199,7 +200,8 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
         // 항상 판매 가능 상품만 조회
         predicates.add(cb.isTrue(product.get("isAvailable")));
 
-        cq.select(product).distinct(true);
+        // 위와 동일한 이유로 DISTINCT 없이 조회한다.
+        cq.select(product);
         if (!predicates.isEmpty()) {
             cq.where(cb.and(predicates.toArray(new Predicate[0])));
         }
