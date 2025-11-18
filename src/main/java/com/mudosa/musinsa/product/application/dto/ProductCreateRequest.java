@@ -65,7 +65,7 @@ public class ProductCreateRequest {
     public static class OptionCreateRequest {
 
         @NotNull(message = "옵션 가격은 필수입니다.")
-    private BigDecimal productPrice;
+        private BigDecimal productPrice;
 
         @NotNull(message = "재고 수량은 필수입니다.")
         private Integer stockQuantity;
