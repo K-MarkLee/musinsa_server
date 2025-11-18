@@ -18,12 +18,15 @@ import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.model.UserRole;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,8 +34,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * CartService를 실제 DB/트랜잭션에서 검증하여
  * 상품/옵션/재고와의 연동이 정상 동작하는지 확인한다.
  */
+@Transactional
 @DisplayName("CartService 통합 테스트")
 class CartServiceIntegrationTest extends ServiceConfig {
+
+    private static final AtomicInteger PRODUCT_SEQ = new AtomicInteger();
 
     @Autowired
     private CartService cartService;
@@ -57,11 +63,12 @@ class CartServiceIntegrationTest extends ServiceConfig {
     }
 
     private ProductOption createProductOption(int stockQuantity) {
+        int suffix = PRODUCT_SEQ.incrementAndGet();
         Brand brand = brandRepository.save(Brand.create("카트브랜드", "cart-brand", BigDecimal.ONE));
         Product product = productRepository.save(Product.builder()
             .brand(brand)
-            .productName("장바구니 상품")
-            .productInfo("통합 테스트용 상품")
+            .productName("장바구니 상품-" + suffix)
+            .productInfo("통합 테스트용 상품-" + suffix)
             .productGenderType(ProductGenderType.ALL)
             .brandName(brand.getNameKo())
             .categoryPath("상의>후드티")

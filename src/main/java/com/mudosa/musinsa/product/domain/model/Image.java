@@ -6,6 +6,7 @@ import com.mudosa.musinsa.exception.ErrorCode;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -35,6 +36,7 @@ public class Image extends BaseEntity {
         return new Image(imageUrl, isThumbnail);
     }
 
+    @Builder
     Image(String imageUrl, boolean isThumbnail) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             throw new BusinessException(ErrorCode.IMAGE_REQUIRED);
