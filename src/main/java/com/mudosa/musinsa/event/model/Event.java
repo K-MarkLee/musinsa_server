@@ -57,11 +57,6 @@ public class Event extends BaseEntity {
     @Column(name = "limit_per_user", nullable = false)
     private Integer limitPerUser = 1;
 
-    // DDL: limit_scope ENUM('EVENT','OPTION') NOT NULL DEFAULT 'EVENT'
-    @Enumerated(EnumType.STRING)
-    @Column(name = "limit_scope", nullable = false, length = 20)
-    private LimitScope limitScope = LimitScope.EVENT;
-
     // DDL: started_at / ended_at NOT NULL
     // 이벤트 시작시간 , 종료 시간
     @Column(name = "started_at", nullable = false)
@@ -86,7 +81,6 @@ public class Event extends BaseEntity {
             String title,
             String description,
             EventType eventType,
-            LimitScope limitScope,
             int limitPerUser,
             boolean isPublic,
             LocalDateTime startedAt,
@@ -99,7 +93,6 @@ public class Event extends BaseEntity {
         e.eventType = eventType;
         e.status = EventStatus.DRAFT; // DDL default와 일치
         e.isPublic = isPublic;
-        e.limitScope = limitScope;
         e.limitPerUser = limitPerUser;
         e.startedAt = startedAt;
         e.endedAt = endedAt;
@@ -134,6 +127,4 @@ public class Event extends BaseEntity {
 
     // ===== Enums =====
     public enum EventType { DROP, COMMENT, DISCOUNT }
-
-    public enum LimitScope { EVENT, OPTION }
 }

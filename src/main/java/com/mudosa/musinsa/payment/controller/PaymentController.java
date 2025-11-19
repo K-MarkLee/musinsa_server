@@ -44,11 +44,11 @@ public class PaymentController {
 			userId, request.getOrderNo());
 
 		PaymentConfirmResponse response = paymentService.confirmPaymentAndCompleteOrder(request);
-		
+
 		// 재고 부족인 경우 BAD_REQUEST로 응답
 		if (response.hasInsufficientStock()) {
 			log.warn("[Payment] 재고 부족으로 결제 실패, userId: {}", userId);
-			
+
 			return ResponseEntity
 					.status(HttpStatus.BAD_REQUEST)
 					.body(ApiResponse.failure(

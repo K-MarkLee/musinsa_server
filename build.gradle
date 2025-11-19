@@ -1,3 +1,5 @@
+
+
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.6'
@@ -81,6 +83,8 @@ jacocoTestCoverageVerification {
     }))
 }
 
+
+
 test.finalizedBy jacocoTestReport
 
 group = 'com.musinsa'
@@ -160,6 +164,10 @@ dependencies {
     // https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp
     implementation 'com.squareup.okhttp3:okhttp:5.2.1'
     implementation 'io.micrometer:micrometer-registry-prometheus'
+
+    // chat 에서 필요한 의존성?
+    implementation 'io.micrometer:micrometer-tracing'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
 }
 
 tasks.named('test') {

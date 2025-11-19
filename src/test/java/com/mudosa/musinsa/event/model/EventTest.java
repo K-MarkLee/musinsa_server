@@ -33,7 +33,6 @@ class EventTest {
                 "신상품 드롭 이벤트",
                 "2025년 겨울 신상품 드롭",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -49,7 +48,6 @@ class EventTest {
         assertThat(event.getStatus()).isEqualTo(EventStatus.DRAFT);
         assertThat(event.getIsPublic()).isTrue();
         assertThat(event.getLimitPerUser()).isEqualTo(1);
-        assertThat(event.getLimitScope()).isEqualTo(Event.LimitScope.EVENT);
         assertThat(event.getStartedAt()).isEqualTo(startedAt);
         assertThat(event.getEndedAt()).isEqualTo(endedAt);
         assertThat(event.getCoupon()).isEqualTo(coupon);
@@ -65,7 +63,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -90,7 +87,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -116,7 +112,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -141,7 +136,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -166,7 +160,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -193,7 +186,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -220,7 +212,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -247,7 +238,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -274,7 +264,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -307,7 +296,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
@@ -335,7 +323,6 @@ class EventTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
