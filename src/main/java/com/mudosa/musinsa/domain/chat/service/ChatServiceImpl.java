@@ -142,12 +142,12 @@ public class ChatServiceImpl implements ChatService {
     if (cursor == null) {
       return messageRepository.findIdSliceByChatId(chatId, pageable);
     }
-    return messageRepository.findIdSliceByChatIdAndCursor(
-        chatId,
-        cursor.createdAt(),
-        cursor.messageId(),
-        pageable
-    );
+
+    if (cursor.messageId() == null) {
+      return messageRepository.findIdSliceByChatId(chatId, pageable);
+    }
+
+    return messageRepository.findIdSliceByChatIdAndCursor(chatId, cursor.createdAt(), cursor.messageId(), pageable);
   }
 
   @Transactional(readOnly = true)
@@ -300,7 +300,7 @@ public class ChatServiceImpl implements ChatService {
         attachmentMap = attachmentRepository.findAllByMessageIdIn(allIds).stream()
             .collect(Collectors.groupingBy(
                 ma -> ma.getMessage().getMessageId(),
-                Collectors.mapping(this::toAttachmentDto, Collectors.toList())
+                Collectors.mapping(AttachmentResponse::of, Collectors.toList())
             ));
       } finally {
         attSpan.end();
@@ -432,14 +432,6 @@ public class ChatServiceImpl implements ChatService {
     }
   }
 
-  private AttachmentResponse toAttachmentDto(MessageAttachment a) {
-    return AttachmentResponse.builder()
-        .attachmentId(a.getAttachmentId())
-        .attachmentUrl(a.getAttachmentUrl())
-        .mimeType(a.getMimeType())
-        .sizeBytes(a.getSizeBytes())
-        .build();
-  }
 
   /**
    * 채팅방 정보 조회
