@@ -3,8 +3,6 @@ package com.mudosa.musinsa.product.application;
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
-import com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
 import com.mudosa.musinsa.product.domain.model.Inventory;
@@ -115,36 +113,6 @@ public class ProductInventoryService {
     private Inventory loadInventoryWithLock(Long productOptionId) {
         return inventoryRepository.findByProductOptionIdWithLock(productOptionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
-    }
-
-    // 상품 판매 가능 상태를 변경한다.
-    @Transactional
-    public ProductAvailabilityResponse updateProductAvailability(Long brandId,
-                                                                 Long productId,
-                                                                 ProductAvailabilityRequest request,
-                                                                 Long userId) {
-        validateBrandMember(brandId, userId);
-        
-        Product product = productRepository.findDetailByIdForManager(productId, brandId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "상품을 찾을 수 없습니다. productId=" + productId));
-
-        validateBrandOwnership(product, brandId);
-
-        Boolean requestedAvailability = request.getIsAvailable();
-        if (requestedAvailability == null) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "판매 가능 여부는 필수입니다.");
-        }
-
-        if (Objects.equals(product.getIsAvailable(), requestedAvailability)) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "이미 요청한 판매 상태와 동일합니다.");
-        }
-
-        product.changeAvailability(requestedAvailability);
-
-        return ProductAvailabilityResponse.builder()
-            .productId(product.getProductId())
-            .isAvailable(product.getIsAvailable())
-            .build();
     }
 
     // 브랜드의 상품의 옵션을 로드하고 유효성을 검증한다.
