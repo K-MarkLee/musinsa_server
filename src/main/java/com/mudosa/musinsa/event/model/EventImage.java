@@ -46,7 +46,7 @@ public class EventImage extends BaseEntity {
     }
 
     /** Event 할당 (Event 애그리거트에서만 호출) */
-    void assignEvent(Event event) {
+    public void assignEvent(Event event) {
         this.event = event;
     }
 }

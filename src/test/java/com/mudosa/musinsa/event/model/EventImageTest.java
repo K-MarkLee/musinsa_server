@@ -13,14 +13,14 @@ class EventImageTest {
     @Test
     @DisplayName("[해피케이스] EventImage 생성 - 썸네일 이미지로 생성한다")
     void createEventImage_WithThumbnailTrue_Success() {
-        // given
+        // given : 시나리오 진행에 필요한 모든 준비 과정
         String imageUrl = "https://example.com/thumbnail.jpg";
         Boolean isThumbnail = true;
 
-        // when
+        // when : 시나리오 행동 진행
         EventImage eventImage = EventImage.create(imageUrl, isThumbnail);
 
-        // then
+        // then: 시나리오 진행에 대한 결과 명시 , 검증
         assertThat(eventImage).isNotNull();
         assertThat(eventImage.getImageUrl()).isEqualTo(imageUrl);
         assertThat(eventImage.getIsThumbnail()).isTrue();
