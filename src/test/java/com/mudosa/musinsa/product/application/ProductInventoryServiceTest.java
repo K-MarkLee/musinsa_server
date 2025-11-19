@@ -3,7 +3,6 @@ package com.mudosa.musinsa.product.application;
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.exception.BusinessException;
-import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
 import com.mudosa.musinsa.product.domain.model.*;
@@ -236,68 +235,6 @@ class ProductInventoryServiceTest {
             assertThat(list.get(0).getProductOptionId()).isEqualTo(77L);
         }
 
-        @Test
-        @DisplayName("updateProductAvailability: null 요청이면 예외가 발생한다")
-        void updateAvailability_nullRequest_shouldThrow() {
-            // Given: 브랜드와 상품을 구성하고 null 요청을 준비한다
-            Brand brand = Brand.create("b", "b", BigDecimal.ONE);
-            setId(brand, "brandId", 7L);
-
-            Product product = Product.builder().brand(brand).productName("p").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
-            setId(product, "productId", 8L);
-
-            given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(7L), anyLong())).willReturn(true);
-            given(productRepository.findDetailByIdForManager(eq(8L), eq(7L))).willReturn(Optional.of(product));
-
-            ProductAvailabilityRequest req = ProductAvailabilityRequest.builder().isAvailable(null).build();
-
-            // When / Then: null 상태로 요청 시 BusinessException 발생
-            assertThatThrownBy(() -> service.updateProductAvailability(7L, 8L, req, 999L))
-                .isInstanceOf(BusinessException.class);
-        }
-
-        @Test
-        @DisplayName("updateProductAvailability: 동일 상태로 요청하면 예외가 발생한다")
-        void updateAvailability_sameValue_shouldThrow() {
-            // Given: 브랜드와 상품을 구성하고 동일한 상태로 요청을 준비한다
-            Brand brand = Brand.create("b", "b", BigDecimal.ONE);
-            setId(brand, "brandId", 7L);
-
-            Product product = Product.builder().brand(brand).productName("p").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
-            setId(product, "productId", 8L);
-
-            given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(7L), anyLong())).willReturn(true);
-            given(productRepository.findDetailByIdForManager(eq(8L), eq(7L))).willReturn(Optional.of(product));
-
-            ProductAvailabilityRequest req = ProductAvailabilityRequest.builder().isAvailable(true).build();
-
-            // When / Then: 동일 상태로 요청 시 BusinessException 발생
-            assertThatThrownBy(() -> service.updateProductAvailability(7L, 8L, req, 999L))
-                .isInstanceOf(BusinessException.class);
-        }
-
-        @Test
-        @DisplayName("updateProductAvailability 성공 케이스")
-        void updateAvailability_success() {
-            // Given: 브랜드와 상품을 구성하고 다른 상태로 변경 요청을 준비한다
-            Brand brand = Brand.create("b", "b", BigDecimal.ONE);
-            setId(brand, "brandId", 7L);
-
-            Product product = Product.builder().brand(brand).productName("p").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
-            setId(product, "productId", 8L);
-
-            given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(7L), anyLong())).willReturn(true);
-            given(productRepository.findDetailByIdForManager(eq(8L), eq(7L))).willReturn(Optional.of(product));
-
-            ProductAvailabilityRequest req = ProductAvailabilityRequest.builder().isAvailable(false).build();
-
-            // When: updateProductAvailability 호출
-            var resp = service.updateProductAvailability(7L, 8L, req, 999L);
-
-            // Then: 변경된 상태가 응답에 반영된다
-            assertThat(resp.getProductId()).isEqualTo(8L);
-            assertThat(resp.getIsAvailable()).isFalse();
-        }
     }
 
 }

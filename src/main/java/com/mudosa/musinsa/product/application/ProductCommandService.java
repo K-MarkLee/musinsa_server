@@ -114,7 +114,7 @@ public class ProductCommandService {
 		validateBrandOwnership(product, brandId);
 		return applyUpdates(product, request);
 	}
-	
+
 	/**
 	 * 상품 옵션을 추가하고 결과 상세 정보를 반환한다.
 	 */
@@ -206,7 +206,7 @@ public class ProductCommandService {
 	private ProductDetailResponse applyUpdates(Product product,
 											   ProductUpdateRequest request) {
 		if (!request.hasUpdatableField()) {
-			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 이름, 설명, 판매가능여부, 이미지 만 수정이 가능합니다.");
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 이름, 설명, 판매가능여부, 이미지만 수정이 가능합니다.");
 		}
 
 		boolean changed = product.updateBasicInfo(
@@ -215,10 +215,8 @@ public class ProductCommandService {
 		);
 
 		if (request.getIsAvailable() != null) {
-			if (!Objects.equals(product.getIsAvailable(), request.getIsAvailable())) {
-				product.changeAvailability(request.getIsAvailable());
-				changed = true;
-			}
+			product.changeAvailability(request.getIsAvailable());
+			changed = true;
 		}
 
 		if (request.getImages() != null) {
@@ -239,13 +237,13 @@ public class ProductCommandService {
 			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "변경된 항목이 없습니다.");
 		}
 
-	return ProductCommandMapper.toProductDetail(product);
+		return ProductCommandMapper.toProductDetail(product);
 	}
 
 	// 브랜드 멤버 권한을 검증한다.
 	private void validateBrandMember(Long brandId, Long userId) {
 		if (!brandMemberRepository.existsByBrand_BrandIdAndUserId(brandId, userId)) {
-			throw new BusinessException(ErrorCode.BRAND_NOT_MATCHED, "브랜드 멤버 권한이 없습니다. brandId=" + brandId + ", userId=" + userId);
+			throw new BusinessException(ErrorCode.FORBIDDEN, "브랜드 멤버 권한이 없습니다. brandId=" + brandId + ", userId=" + userId);
 		}
 	}
 

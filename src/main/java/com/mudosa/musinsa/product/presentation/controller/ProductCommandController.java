@@ -4,8 +4,6 @@ import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
 import com.mudosa.musinsa.product.application.ProductCommandService;
 import com.mudosa.musinsa.product.application.ProductInventoryService;
-import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
-import com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductCreateResponse;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
@@ -143,18 +141,6 @@ public class ProductCommandController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getUserId();
         ProductOptionStockResponse response = productInventoryService.subtractStock(brandId, productId, request, userId);
-        return ResponseEntity.ok(response);
-    }
-
-    // 상품 전체 판매 가능 상태 변경
-    @PatchMapping("/{productId}/availability")
-    public ResponseEntity<ProductAvailabilityResponse> changeProductAvailability(
-            @PathVariable Long brandId,
-            @PathVariable Long productId,
-            @Valid @RequestBody ProductAvailabilityRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        Long userId = userDetails.getUserId();
-        ProductAvailabilityResponse response = productInventoryService.updateProductAvailability(brandId, productId, request, userId);
         return ResponseEntity.ok(response);
     }
 }
