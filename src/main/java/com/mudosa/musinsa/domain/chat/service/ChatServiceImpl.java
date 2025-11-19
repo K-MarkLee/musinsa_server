@@ -6,7 +6,6 @@ import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.entity.Message;
 import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
-import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
 import com.mudosa.musinsa.domain.chat.event.MessageEventPublisher;
 import com.mudosa.musinsa.domain.chat.file.FileStore;
 import com.mudosa.musinsa.domain.chat.mapper.ChatRoomMapper;
@@ -136,7 +135,7 @@ public class ChatServiceImpl implements ChatService {
     return dto;
   }
 
-  public Slice<Long> getChatMessagesSlice(Long chatId, MessageCursor cursor, int size) {
+  private Slice<Long> getChatMessagesSlice(Long chatId, MessageCursor cursor, int size) {
     // hasNext 판단 위해 size+1
     Pageable pageable = PageRequest.of(0, size + 1);
 
@@ -152,7 +151,7 @@ public class ChatServiceImpl implements ChatService {
   }
 
   @Transactional(readOnly = true)
-  public MessagesBundle loadMessages(Long chatId, MessageCursor cursor, int size) {
+  protected MessagesBundle loadMessages(Long chatId, MessageCursor cursor, int size) {
 
     // 전체 loadMessages용 span
     Span span = tracer.nextSpan()
@@ -329,9 +328,9 @@ public class ChatServiceImpl implements ChatService {
     }
   }
 
-
   @Override
   public Slice<MessageResponse> getChatMessages(Long chatId, MessageCursor cursor, int size) {
+    getChatRoomOrThrow(chatId);
 
     Span span = tracer.nextSpan()
         .name("chat.getChatMessages")
@@ -485,11 +484,7 @@ public class ChatServiceImpl implements ChatService {
     validateNotAlreadyParticipant(chatId, userId);
 
     // 3) 참여자 생성
-    ChatPart chatPart = ChatPart.builder()
-        .chatRoom(chatRoom)
-        .user(user)
-        .role(ChatPartRole.USER)
-        .build();
+    ChatPart chatPart = ChatPart.create(chatRoom, user);
 
     chatPart = chatPartRepository.save(chatPart);
 
@@ -497,7 +492,7 @@ public class ChatServiceImpl implements ChatService {
         chatId, userId, chatPart.getChatPartId());
 
     // 4) DTO 변환
-    return toResponse(chatPart);
+    return ChatPartResponse.of(chatPart);
   }
 
   /**
@@ -562,19 +557,6 @@ public class ChatServiceImpl implements ChatService {
     }
   }
 
-  /**
-   * ChatPartResponse DTO 변환 메서드
-   */
-  private ChatPartResponse toResponse(ChatPart chatPart) {
-    return ChatPartResponse.builder()
-        .chatPartId(chatPart.getChatPartId())
-        .userId(chatPart.getUser().getId())
-        .chatId(chatPart.getChatRoom().getChatId())
-        .userName(chatPart.getUser().getUserName())
-        .createdAt(chatPart.getCreatedAt())
-        .build();
-  }
-
   //메시지와 파일이 모두 없는지 여부 확인
   private void validateMessageOrFiles(String content, List<MultipartFile> files) {
     boolean noMessage = (content == null || content.trim().isEmpty());
@@ -629,12 +611,7 @@ public class ChatServiceImpl implements ChatService {
         // === 실제 경로 생성 ===
         String storedUrl = fileStore.storeMessageFile(chatId, messageId, file);
 
-        MessageAttachment att = MessageAttachment.builder()
-            .attachmentUrl(storedUrl)
-            .message(message)
-            .mimeType(file.getContentType())
-            .sizeBytes(file.getSize())
-            .build();
+        MessageAttachment att = MessageAttachment.create(message, file, storedUrl);
 
         result.add(attachmentRepository.save(att));
 
