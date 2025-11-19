@@ -206,13 +206,18 @@ public class ProductCommandService {
 	private ProductDetailResponse applyUpdates(Product product,
 											   ProductUpdateRequest request) {
 		if (!request.hasUpdatableField()) {
-			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 이름, 설명, 이미지 만 수정이 가능합니다.");
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "상품 이름, 설명, 판매가능여부, 이미지만 수정이 가능합니다.");
 		}
 
 		boolean changed = product.updateBasicInfo(
 			request.getProductName(),
 			request.getProductInfo()
 		);
+
+		if (request.getIsAvailable() != null) {
+			product.changeAvailability(request.getIsAvailable());
+			changed = true;
+		}
 
 		if (request.getImages() != null) {
 			if (request.getImages().isEmpty()) {
