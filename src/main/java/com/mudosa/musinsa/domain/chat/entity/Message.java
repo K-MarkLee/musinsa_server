@@ -42,7 +42,7 @@ public class Message {
   @Column(name = "content", columnDefinition = "TEXT")
   private String content;
 
-  @Column(name = "created_at", nullable = false, insertable = false, updatable = false,
+  @Column(name = "created_at", nullable = false, updatable = false,
       columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
   private LocalDateTime createdAt;
 
