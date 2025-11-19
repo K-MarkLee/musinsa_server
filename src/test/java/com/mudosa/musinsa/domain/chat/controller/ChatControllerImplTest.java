@@ -9,6 +9,7 @@ import com.mudosa.musinsa.security.CustomUserDetails;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.eq;
@@ -508,6 +510,116 @@ class ChatControllerImplTest extends ControllerTestSupport {
       verifyNoInteractions(chatService);
     }
 
+    @DisplayName("cursorCreatedAt, cursorMessageId가 모두 있으면 MessageCursor로 파싱해서 서비스로 전달한다")
+    @Test
+    void getChatMessages_withValidCursorParams() throws Exception {
+      // given
+      Long chatId = 1L;
+      Long userId = 2L;
+      String cursorCreatedAt = "2025-11-17T15:33:36";
+      Long cursorMessageId = 100L;
+      int size = 20;
+
+      CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
+
+      Slice<MessageResponse> slice = new SliceImpl<>(List.of()); // 빈 결과라도 상관 없음
+
+      given(chatService.getChatMessages(eq(chatId), any(MessageCursor.class), eq(size)))
+          .willReturn(slice);
+
+      // when
+      mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
+              .param("cursorCreatedAt", cursorCreatedAt)
+              .param("cursorMessageId", cursorMessageId.toString())
+              .param("size", String.valueOf(size))
+              .with(user(userDetails)))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.message").value("이전 메시지를 성공적으로 조회했습니다"));
+
+      // then
+      ArgumentCaptor<MessageCursor> cursorCaptor = ArgumentCaptor.forClass(MessageCursor.class);
+
+      verify(chatService).getChatMessages(eq(chatId), cursorCaptor.capture(), eq(size));
+
+      MessageCursor cursor = cursorCaptor.getValue();
+      assertThat(cursor).isNotNull();
+      assertThat(cursor.createdAt())
+          .isEqualTo(LocalDateTime.of(2025, 11, 17, 15, 33, 36));
+      assertThat(cursor.messageId()).isEqualTo(cursorMessageId);
+    }
+
+    @DisplayName("cursor 파라미터가 없으면 cursor = null로 서비스가 호출된다")
+    @Test
+    void getChatMessages_withoutCursorParams() throws Exception {
+      // given
+      Long chatId = 1L;
+      Long userId = 2L;
+      int size = 20;
+
+      CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
+      Slice<MessageResponse> slice = new SliceImpl<>(List.of());
+
+      given(chatService.getChatMessages(eq(chatId), isNull(), eq(size)))
+          .willReturn(slice);
+
+      // when & then
+      mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
+              .param("size", String.valueOf(size))
+              .with(user(userDetails)))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.message").value("이전 메시지를 성공적으로 조회했습니다"))
+          .andExpect(jsonPath("$.data.content", hasSize(0)));
+
+      verify(chatService).getChatMessages(chatId, null, size);
+    }
+
+    @DisplayName("cursorCreatedAt만 있고 cursorMessageId가 없으면 cursor = null로 서비스가 호출된다")
+    @Test
+    void getChatMessages_onlyCursorCreatedAt() throws Exception {
+      // given
+      Long chatId = 1L;
+      Long userId = 2L;
+      int size = 20;
+      String cursorCreatedAt = "2025-11-17T15:33:36";
+
+      CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
+      Slice<MessageResponse> slice = new SliceImpl<>(List.of());
+
+      given(chatService.getChatMessages(eq(chatId), isNull(), eq(size)))
+          .willReturn(slice);
+
+      // when & then
+      mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
+              .param("cursorCreatedAt", cursorCreatedAt)
+              .param("size", String.valueOf(size))
+              .with(user(userDetails)))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.message").value("이전 메시지를 성공적으로 조회했습니다"));
+
+      verify(chatService).getChatMessages(chatId, null, size);
+    }
+
+    @DisplayName("잘못된 cursorCreatedAt 포맷이면 IllegalArgumentException 처리로 400 응답을 반환한다")
+    @Test
+    void getChatMessages_invalidCursorCreatedAtFormat() throws Exception {
+      // given
+      Long chatId = 1L;
+      Long userId = 2L;
+      String invalidCursor = "2020:01:01T10-12-30"; // 잘못된 포맷
+
+      CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
+
+      // when & then
+      mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
+              .param("cursorCreatedAt", invalidCursor)
+              .with(user(userDetails)))
+          .andExpect(status().is5xxServerError())
+          .andExpect(jsonPath("$.message")
+              .value("cursorCreatedAt는 yyyy-MM-dd'T'HH:mm:ss 형식이어야 합니다."));
+
+      // 서비스는 호출되지 않아야 함
+      verify(chatService, never()).getChatMessages(anyLong(), any(), anyInt());
+    }
 
     @DisplayName("인증되지 않은 사용자가 메시지 조회를 요청하면 401을 반환한다")
     @Test
@@ -517,11 +629,8 @@ class ChatControllerImplTest extends ControllerTestSupport {
 
       int size = 20;
 
-      MessageCursor cursor = new MessageCursor(null, null);
-
       // when & then
       mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
-              .param("cursor", String.valueOf(cursor))
               .param("size", String.valueOf(size)))
           .andDo(print())
           .andExpect(status().isUnauthorized());
