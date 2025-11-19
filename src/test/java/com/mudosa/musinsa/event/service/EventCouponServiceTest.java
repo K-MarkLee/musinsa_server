@@ -2,9 +2,11 @@ package com.mudosa.musinsa.event.service;
 
 import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
+import com.mudosa.musinsa.brand.domain.model.BrandStatus;
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
-import com.mudosa.musinsa.category.domain.model.Category;
-import com.mudosa.musinsa.category.domain.repository.CategoryRepository;
+import com.mudosa.musinsa.common.vo.Money;
+import com.mudosa.musinsa.product.domain.model.*;
+import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.coupon.domain.model.Coupon;
 import com.mudosa.musinsa.coupon.domain.model.DiscountType;
 import com.mudosa.musinsa.coupon.domain.repository.CouponRepository;
@@ -13,10 +15,9 @@ import com.mudosa.musinsa.event.model.EventOption;
 import com.mudosa.musinsa.event.repository.EventOptionRepository;
 import com.mudosa.musinsa.event.repository.EventRepository;
 import com.mudosa.musinsa.exception.BusinessException;
-import com.mudosa.musinsa.product.domain.model.Product;
-import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
+import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,9 @@ class EventCouponServiceTest extends ServiceConfig {
     private ProductOptionRepository productOptionRepository;
 
     @Autowired
+    private BrandRepository brandRepository;
+
+    @Autowired
     private CategoryRepository categoryRepository;
 
     @Autowired
@@ -63,37 +67,41 @@ class EventCouponServiceTest extends ServiceConfig {
 
         // Brand 생성
         Brand brand = Brand.builder()
-                .brandName("테스트 브랜드")
-                .description("테스트 브랜드 설명")
+                .nameKo("테스트 브랜드")
+                .nameEn("Test Brand")
+                .commissionRate(new BigDecimal("10.00"))
+                .status(BrandStatus.ACTIVE)
                 .build();
         brandRepository.save(brand);
 
         // Category 생성
         Category category = Category.builder()
                 .categoryName("테스트 카테고리")
-                .categoryLevel(1)
-                .parentCategoryId(null)
+                .parent(null)
                 .build();
         categoryRepository.save(category);
 
         // Product 생성
         Product product = Product.builder()
                 .productName("테스트 상품")
-                .productPrice(new BigDecimal("100000"))
-                .productDescription("테스트 상품 설명")
+                .productInfo("테스트 상품 설명")
                 .brand(brand)
-                .category(category)
-                .productStatus("SALE")
-                .stockQuantity(100)
+                .brandName(brand.getNameKo())
+                .categoryPath(category.buildPath())
+                .productGenderType(ProductGenderType.ALL)
+                .isAvailable(true)
                 .build();
         productRepository.save(product);
 
         // ProductOption 생성
+        Money price = new Money(new BigDecimal("100000"));
+        StockQuantity stockQuantity = new StockQuantity(50);
+        Inventory inventory = new Inventory(stockQuantity);
+
         ProductOption productOption = ProductOption.create(
                 product,
-                "테스트 옵션",
-                new BigDecimal("100000"),
-                50
+                price,
+                inventory
         );
         productOptionRepository.save(productOption);
 
@@ -115,7 +123,6 @@ class EventCouponServiceTest extends ServiceConfig {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startDate,
@@ -159,37 +166,41 @@ class EventCouponServiceTest extends ServiceConfig {
 
         // Brand 생성
         Brand brand = Brand.builder()
-                .brandName("테스트 브랜드2")
-                .description("테스트 브랜드 설명2")
+                .nameKo("테스트 브랜드2")
+                .nameEn("Test Brand 2")
+                .commissionRate(new BigDecimal("10.00"))
+                .status(BrandStatus.ACTIVE)
                 .build();
         brandRepository.save(brand);
 
         // Category 생성
         Category category = Category.builder()
                 .categoryName("테스트 카테고리2")
-                .categoryLevel(1)
-                .parentCategoryId(null)
+                .parent(null)
                 .build();
         categoryRepository.save(category);
 
         // Product 생성
         Product product = Product.builder()
                 .productName("테스트 상품2")
-                .productPrice(new BigDecimal("100000"))
-                .productDescription("테스트 상품 설명2")
+                .productInfo("테스트 상품 설명2")
                 .brand(brand)
-                .category(category)
-                .productStatus("SALE")
-                .stockQuantity(100)
+                .brandName(brand.getNameKo())
+                .categoryPath(category.buildPath())
+                .productGenderType(ProductGenderType.ALL)
+                .isAvailable(true)
                 .build();
         productRepository.save(product);
 
         // ProductOption 생성
+        Money price = new Money(new BigDecimal("100000"));
+        StockQuantity stockQuantity = new StockQuantity(50);
+        Inventory inventory = new Inventory(stockQuantity);
+
         ProductOption productOption = ProductOption.create(
                 product,
-                "테스트 옵션2",
-                new BigDecimal("100000"),
-                50
+                price,
+                inventory
         );
         productOptionRepository.save(productOption);
 
@@ -211,7 +222,6 @@ class EventCouponServiceTest extends ServiceConfig {
                 "중복 테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 2, // 2번까지 발급 가능
                 true,
                 startDate,
@@ -274,37 +284,41 @@ class EventCouponServiceTest extends ServiceConfig {
 
         // Brand 생성
         Brand brand = Brand.builder()
-                .brandName("테스트 브랜드3")
-                .description("테스트 브랜드 설명3")
+                .nameKo("테스트 브랜드3")
+                .nameEn("Test Brand 3")
+                .commissionRate(new BigDecimal("10.00"))
+                .status(BrandStatus.ACTIVE)
                 .build();
         brandRepository.save(brand);
 
         // Category 생성
         Category category = Category.builder()
                 .categoryName("테스트 카테고리3")
-                .categoryLevel(1)
-                .parentCategoryId(null)
+                .parent(null)
                 .build();
         categoryRepository.save(category);
 
         // Product 생성
         Product product = Product.builder()
                 .productName("테스트 상품3")
-                .productPrice(new BigDecimal("100000"))
-                .productDescription("테스트 상품 설명3")
+                .productInfo("테스트 상품 설명3")
                 .brand(brand)
-                .category(category)
-                .productStatus("SALE")
-                .stockQuantity(100)
+                .brandName(brand.getNameKo())
+                .categoryPath(category.buildPath())
+                .productGenderType(ProductGenderType.ALL)
+                .isAvailable(true)
                 .build();
         productRepository.save(product);
 
         // ProductOption 생성
+        Money price = new Money(new BigDecimal("100000"));
+        StockQuantity stockQuantity = new StockQuantity(50);
+        Inventory inventory = new Inventory(stockQuantity);
+
         ProductOption productOption = ProductOption.create(
                 product,
-                "테스트 옵션3",
-                new BigDecimal("100000"),
-                50
+                price,
+                inventory
         );
         productOptionRepository.save(productOption);
 
@@ -326,7 +340,6 @@ class EventCouponServiceTest extends ServiceConfig {
                 "DRAFT 상태 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startDate,
@@ -366,37 +379,41 @@ class EventCouponServiceTest extends ServiceConfig {
 
         // Brand 생성
         Brand brand = Brand.builder()
-                .brandName("테스트 브랜드4")
-                .description("테스트 브랜드 설명4")
+                .nameKo("테스트 브랜드4")
+                .nameEn("Test Brand 4")
+                .commissionRate(new BigDecimal("10.00"))
+                .status(BrandStatus.ACTIVE)
                 .build();
         brandRepository.save(brand);
 
         // Category 생성
         Category category = Category.builder()
                 .categoryName("테스트 카테고리4")
-                .categoryLevel(1)
-                .parentCategoryId(null)
+                .parent(null)
                 .build();
         categoryRepository.save(category);
 
         // Product 생성
         Product product = Product.builder()
                 .productName("테스트 상품4")
-                .productPrice(new BigDecimal("100000"))
-                .productDescription("테스트 상품 설명4")
+                .productInfo("테스트 상품 설명4")
                 .brand(brand)
-                .category(category)
-                .productStatus("SALE")
-                .stockQuantity(100)
+                .brandName(brand.getNameKo())
+                .categoryPath(category.buildPath())
+                .productGenderType(ProductGenderType.ALL)
+                .isAvailable(true)
                 .build();
         productRepository.save(product);
 
         // ProductOption 생성
+        Money price = new Money(new BigDecimal("100000"));
+        StockQuantity stockQuantity = new StockQuantity(50);
+        Inventory inventory = new Inventory(stockQuantity);
+
         ProductOption productOption = ProductOption.create(
                 product,
-                "테스트 옵션4",
-                new BigDecimal("100000"),
-                50
+                price,
+                inventory
         );
         productOptionRepository.save(productOption);
 
@@ -418,7 +435,6 @@ class EventCouponServiceTest extends ServiceConfig {
                 "재고 부족 테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 10,
                 true,
                 startDate,

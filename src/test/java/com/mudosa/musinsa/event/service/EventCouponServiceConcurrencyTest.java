@@ -2,9 +2,11 @@ package com.mudosa.musinsa.event.service;
 
 import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
+import com.mudosa.musinsa.brand.domain.model.BrandStatus;
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
-import com.mudosa.musinsa.category.domain.model.Category;
-import com.mudosa.musinsa.category.domain.repository.CategoryRepository;
+import com.mudosa.musinsa.common.vo.Money;
+import com.mudosa.musinsa.product.domain.model.*;
+import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.coupon.domain.model.Coupon;
 import com.mudosa.musinsa.coupon.domain.model.DiscountType;
 import com.mudosa.musinsa.coupon.domain.repository.CouponRepository;
@@ -12,10 +14,9 @@ import com.mudosa.musinsa.event.model.Event;
 import com.mudosa.musinsa.event.model.EventOption;
 import com.mudosa.musinsa.event.repository.EventOptionRepository;
 import com.mudosa.musinsa.event.repository.EventRepository;
-import com.mudosa.musinsa.product.domain.model.Product;
-import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
+import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -273,37 +274,44 @@ class EventCouponServiceConcurrencyTest extends ServiceConfig {
     private TestData createTestData(int couponStock) {
         // Brand
         Brand brand = Brand.builder()
-                .brandName("동시성 테스트 브랜드")
-                .description("테스트용")
+                .nameKo("동시성 테스트 브랜드")  // brandName → nameKo
+                .nameEn("Concurrency Test Brand")  // nameEn 추가
+                .commissionRate(new BigDecimal("10.00"))
+                .status(BrandStatus.ACTIVE)
                 .build();
         brandRepository.save(brand);
 
         // Category
         Category category = Category.builder()
                 .categoryName("동시성 테스트 카테고리")
-                .categoryLevel(1)
-                .parentCategoryId(null)
+                .parent(null)
                 .build();
         categoryRepository.save(category);
 
         // Product
         Product product = Product.builder()
                 .productName("동시성 테스트 상품")
-                .productPrice(new BigDecimal("100000"))
-                .productDescription("테스트용")
+                .productInfo("테스트용 상품 정보")  // productDescription → productInfo
                 .brand(brand)
-                .category(category)
-                .productStatus("SALE")
-                .stockQuantity(1000)
+                .brandName(brand.getNameKo())  // 역정규화 필드
+                .categoryPath(category.buildPath())  // 역정규화 필드
+                .productGenderType(ProductGenderType.ALL)  // 필수 필드 (enum 값은 확인 필요)
+                .isAvailable(true)  // productStatus → isAvailable (Boolean)
+                // productPrice, stockQuantity 필드는 Product에 없습니다
                 .build();
         productRepository.save(product);
+
+
+        // ProdcutOption 관련 객체 생성
+        Money price = new Money(new BigDecimal("100000.00"));
+        StockQuantity stockQuantity = new StockQuantity(1000);
+        Inventory inventory = new Inventory(stockQuantity);
 
         // ProductOption
         ProductOption productOption = ProductOption.create(
                 product,
-                "테스트 옵션",
-                new BigDecimal("100000"),
-                1000
+                price ,  // 옵션 가격
+                inventory  // 옵션 재고
         );
         productOptionRepository.save(productOption);
 

@@ -5,7 +5,7 @@ import com.mudosa.musinsa.event.model.EventStatus;
 import com.mudosa.musinsa.event.repository.EventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.annotation.Scheduled; //스케줄러 사용
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

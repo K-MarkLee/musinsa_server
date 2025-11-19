@@ -5,6 +5,7 @@ import com.mudosa.musinsa.coupon.domain.model.Coupon;
 import com.mudosa.musinsa.coupon.domain.model.DiscountType;
 import com.mudosa.musinsa.coupon.domain.model.MemberCoupon;
 import com.mudosa.musinsa.coupon.domain.repository.CouponRepository;
+import com.mudosa.musinsa.coupon.domain.service.CouponListService;
 import com.mudosa.musinsa.coupon.domain.repository.MemberCouponRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CouponQueryServiceTest extends ServiceConfig {
 
     @Autowired
-    private CouponQueryService couponQueryService;
+    private CouponListService couponListService;
 
     @Autowired
     private CouponRepository couponRepository;
@@ -61,7 +62,7 @@ class CouponQueryServiceTest extends ServiceConfig {
         memberCouponRepository.save(memberCoupon2);
 
         // when
-        List<MemberCoupon> result = couponQueryService.getMemberCoupons(userId);
+        List<MemberCoupon> result = couponListService.getMemberCoupons(userId);
 
         // then
         assertThat(result).hasSize(2);
@@ -91,7 +92,7 @@ class CouponQueryServiceTest extends ServiceConfig {
         memberCouponRepository.save(memberCoupon);
 
         // when
-        List<MemberCoupon> result = couponQueryService.getAvailableMemberCoupons(userId);
+        List<MemberCoupon> result = couponListService.getAvailableMemberCoupons(userId);
 
         // then
         // MemberCoupon.issue()에서 expiredAt이 현재 시간으로 설정되므로
@@ -106,7 +107,7 @@ class CouponQueryServiceTest extends ServiceConfig {
         Long nonExistentUserId = 999999L;
 
         // when
-        List<MemberCoupon> result = couponQueryService.getMemberCoupons(nonExistentUserId);
+        List<MemberCoupon> result = couponListService.getMemberCoupons(nonExistentUserId);
 
         // then
         assertThat(result).isEmpty();
@@ -119,7 +120,7 @@ class CouponQueryServiceTest extends ServiceConfig {
         Long nonExistentUserId = 999999L;
 
         // when
-        List<MemberCoupon> result = couponQueryService.getAvailableMemberCoupons(nonExistentUserId);
+        List<MemberCoupon> result = couponListService.getAvailableMemberCoupons(nonExistentUserId);
 
         // then
         assertThat(result).isEmpty();
