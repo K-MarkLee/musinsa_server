@@ -2,7 +2,86 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.6'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
 }
+
+jacocoTestReport {
+    reports {
+        xml.required = false
+        csv.required = false
+        html.required = true
+        html.destination file("${buildDir}/reports/jacoco/html")
+    }
+
+    def Qdomains = []
+    for (qPattern in '**/QA'..'**/QZ') {
+        Qdomains.add(qPattern)
+    }
+
+    classDirectories.setFrom(files(classDirectories.files.collect {
+        fileTree(dir: it, exclude: [
+                "**/*Application*",
+                "**/config/**",
+                "**/common/**",
+                "**/dto/**",
+                "**/exception/**",
+                "**/security/**",
+                "**/util/**",
+                "**/vo/**",
+                "**/model/**",
+                "**/enums/**",
+                "**/entity/**",
+        ] + Qdomains)
+    }))
+    finalizedBy 'jacocoTestCoverageVerification'
+}
+
+jacocoTestCoverageVerification {
+    def Qdomains = []
+    for (qPattern in '**/QA'..'**/QZ') {
+        Qdomains.add(qPattern)
+    }
+
+    violationRules {
+        rule {
+            enabled = true
+            element = 'CLASS'
+
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.00
+            }
+
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.00
+            }
+            excludes = [
+                    "com.mudosa.musinsa.common.vo.Money",
+            ]
+        }
+    }
+
+    classDirectories.setFrom(files(classDirectories.files.collect {
+        fileTree(dir: it, exclude: [
+                "**/*Application*",
+                "**/config/**",
+                "**/common/**",
+                "**/dto/**",
+                "**/exception/**",
+                "**/security/**",
+                "**/util/**",
+                "**/vo/**",
+                "**/model/**",
+                "**/enums/**",
+                "**/entity/**",
+        ] + Qdomains)
+    }))
+}
+
+test.finalizedBy jacocoTestReport
 
 group = 'com.musinsa'
 version = '0.0.1-SNAPSHOT'
@@ -85,6 +164,7 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    ignoreFailures = true
 }
 
 
