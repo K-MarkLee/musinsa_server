@@ -52,7 +52,6 @@ class EventImageTest {
                 "테스트 이벤트",
                 "설명",
                 Event.EventType.DROP,
-                Event.LimitScope.EVENT,
                 1,
                 true,
                 startedAt,
