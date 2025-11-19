@@ -17,7 +17,10 @@ class ImageTest {
         String url = "http://example.com/x.jpg";
 
         // when
-        Image img = Image.create(url, true);
+        Image img = Image.builder()
+                .imageUrl(url)
+                .isThumbnail(true)
+                .build();
 
         // then
         assertThat(img.getImageUrl()).isEqualTo(url);
@@ -28,7 +31,7 @@ class ImageTest {
     @DisplayName("null 또는 공백 URL을 전달하면 Image.create 호출 시 BusinessException이 발생해야 한다")
     void create_invalidUrl_throws() {
         // when / then
-        assertThatThrownBy(() -> Image.create(null, false)).isInstanceOf(BusinessException.class);
-        assertThatThrownBy(() -> Image.create(" ", false)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> Image.create(null, null, false)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> Image.create(null, " ", false)).isInstanceOf(BusinessException.class);
     }
 }
