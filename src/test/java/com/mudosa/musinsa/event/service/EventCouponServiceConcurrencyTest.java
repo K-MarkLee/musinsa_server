@@ -306,6 +306,9 @@ class EventCouponServiceConcurrencyTest extends ServiceConfig {
         Money price = new Money(new BigDecimal("100000.00"));
         StockQuantity stockQuantity = new StockQuantity(1000);
         Inventory inventory = new Inventory(stockQuantity);
+        // Inventory inventory = Inventory.builder()
+        //         .stockQuantity(stockQuantity)
+        //         .build();
 
         // ProductOption
         ProductOption productOption = ProductOption.create(

@@ -86,7 +86,10 @@ class ProductQueryServiceTest {
                     .isAvailable(true)
                     .build();
 
-            Image img = Image.create("http://example.com/thumb.jpg", true);
+            Image img = Image.builder()
+                    .imageUrl("http://example.com/thumb.jpg")
+                    .isThumbnail(true)
+                    .build();
             product.addImage(img);
 
             Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
@@ -138,7 +141,10 @@ class ProductQueryServiceTest {
                     .isAvailable(true)
                     .build();
 
-            Image img = Image.create("http://example.com/img.jpg", false);
+            Image img = Image.builder()
+                    .imageUrl("http://example.com/image.jpg")
+                    .isThumbnail(false)
+                    .build();
             product.addImage(img);
             Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(2)).build();
             ProductOption option = ProductOption.create(product, new Money(30000), inv);
