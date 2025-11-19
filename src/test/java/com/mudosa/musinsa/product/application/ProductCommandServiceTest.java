@@ -177,21 +177,22 @@ class ProductCommandServiceTest {
             ProductOptionCreateRequest req = ProductOptionCreateRequest.builder()
                 .productPrice(BigDecimal.valueOf(5000))
                 .stockQuantity(3)
-                .optionValueIds(List.of(201L))
+                .optionValueIds(List.of(201L, 202L))
                 .build();
 
             given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(10L), anyLong())).willReturn(true);
             given(productRepository.findDetailByIdForManager(eq(200L), eq(10L))).willReturn(Optional.of(product));
 
-            OptionValue ov = buildOptionValue(201L, "색상", "blue");
-            given(optionValueRepository.findAllByOptionValueIdIn(anyList())).willReturn(List.of(ov));
+            OptionValue color = buildOptionValue(201L, "색상", "blue");
+            OptionValue size = buildOptionValue(202L, "사이즈", "M");
+            given(optionValueRepository.findAllByOptionValueIdIn(anyList())).willReturn(List.of(color, size));
 
             // when
             ProductDetailResponse.OptionDetail detail = service.addProductOption(10L, 200L, req, 999L);
 
             // then
             assertThat(detail).isNotNull();
-            assertThat(detail.getOptionValues()).hasSize(1);
+            assertThat(detail.getOptionValues()).hasSize(2);
             then(productRepository).should().flush();
         }
 

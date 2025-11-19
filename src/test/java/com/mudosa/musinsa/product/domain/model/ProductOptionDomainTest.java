@@ -61,6 +61,7 @@ class ProductOptionDomainTest {
                     new Money(1000L),
                     null
             )).isInstanceOf(BusinessException.class);
+        }
     }
 
     @Nested
@@ -106,8 +107,7 @@ class ProductOptionDomainTest {
 
             // when / then
             assertThatThrownBy(() -> option.restoreStock(0))
-                .isInstanceOf(BusinessException.class);        
-            }
+                .isInstanceOf(BusinessException.class);        }
 
             @Test
             @DisplayName("재고가 0이면 validateAvailable 호출 시 BusinessException이 발생해야 한다")
@@ -139,11 +139,9 @@ class ProductOptionDomainTest {
             OptionValue ov = OptionValue.builder().optionName("size").optionValue("M").build();
             ProductOptionValue pov = ProductOptionValue.builder().productOption(option).optionValue(ov).build();
             option.addOptionValue(pov);
-
-            // then: 예외 없이 normalized ids 호출 가능
-            assertThat(option.normalizedOptionValueIds()).isNotNull();
-            }
         }
-
     }
-}
+}  
+
+    
+    

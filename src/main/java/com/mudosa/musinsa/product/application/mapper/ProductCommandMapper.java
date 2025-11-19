@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.product.application.mapper;
 
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
+import com.mudosa.musinsa.product.application.dto.ProductManagerResponse;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
@@ -71,6 +72,41 @@ public final class ProductCommandMapper {
             .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
             .optionName(optionValue != null ? optionValue.getOptionName() : null)
             .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+            .build();
+    }
+
+    public static ProductManagerResponse toManagerResponse(Product product) {
+        List<ProductManagerResponse.ImageInfo> imageInfos = product.getImages().stream()
+            .map(image -> ProductManagerResponse.ImageInfo.builder()
+                .imageId(image.getImageId())
+                .imageUrl(image.getImageUrl())
+                .isThumbnail(image.getIsThumbnail())
+                .build())
+            .collect(Collectors.toList());
+
+        List<ProductManagerResponse.OptionInfo> optionInfos = product.getProductOptions().stream()
+            .map(option -> ProductManagerResponse.OptionInfo.builder()
+                .optionId(option.getProductOptionId())
+                .price(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
+                .stockQuantity(option.getInventory().getStockQuantity().getValue())
+                .optionValues(option.getProductOptionValues().stream()
+                    .map(pov -> pov.getOptionValue().getOptionValue())
+                    .collect(Collectors.toList()))
+                .build())
+            .collect(Collectors.toList());
+
+        return ProductManagerResponse.builder()
+            .productId(product.getProductId())
+            .productName(product.getProductName())
+            .productInfo(product.getProductInfo())
+            .isAvailable(product.getIsAvailable())
+            .brandName(product.getBrandName())
+            .categoryPath(product.getCategoryPath())
+            .productGenderType(product.getProductGenderType())
+            .createdAt(product.getCreatedAt())
+            .updatedAt(product.getUpdatedAt())
+            .images(imageInfos)
+            .options(optionInfos)
             .build();
     }
 }
