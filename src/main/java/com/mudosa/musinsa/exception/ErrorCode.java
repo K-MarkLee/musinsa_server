@@ -135,10 +135,10 @@ public enum ErrorCode {
   RECOVER_VALUE_INVALID("D0006", "복구 값이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
 
   // user
-  USER_ID_REQUIRED("C0001", "사용자 ID는 필수입니다.", HttpStatus.BAD_REQUEST),
+  USER_ID_REQUIRED("E0001", "사용자 ID는 필수입니다.", HttpStatus.BAD_REQUEST),
 
   //stock
-  STOCK_QUANTITY_INVALID("E0001", "재고 수량이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
+  STOCK_QUANTITY_INVALID("F0001", "재고 수량이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
   
   
 
