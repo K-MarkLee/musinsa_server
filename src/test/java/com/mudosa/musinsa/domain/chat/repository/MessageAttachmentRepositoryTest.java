@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -83,6 +84,7 @@ class MessageAttachmentRepositoryTest extends ServiceConfig {
         .chatPart(chatPart)
         .chatId(chatPart.getChatRoom().getChatId())
         .content(content)
+        .createdAt(LocalDateTime.now())
         .build();
 
     messageRepository.save(message); // id 확보

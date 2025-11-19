@@ -2,6 +2,7 @@ package com.mudosa.musinsa.domain.chat.controller;
 
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
+import com.mudosa.musinsa.domain.chat.dto.MessageCursor;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
 import com.mudosa.musinsa.domain.chat.enums.ChatRoomType;
 import com.mudosa.musinsa.security.CustomUserDetails;
@@ -413,7 +414,6 @@ class ChatControllerImplTest extends ControllerTestSupport {
       CustomUserDetails userDetails = new CustomUserDetails(1L, "USER");
 
       Long chatId = 1L;
-      int page = 1;
       int size = 20;
 
       List<MessageResponse> messages = new ArrayList<>();
@@ -423,12 +423,12 @@ class ChatControllerImplTest extends ControllerTestSupport {
 
       Slice<MessageResponse> response = new SliceImpl<>(new ArrayList<>(messages));
 
-      given(chatService.getChatMessages(chatId, page, size))
+      //  첫 페이지는 cursor=null 이므로 이렇게 stub
+      given(chatService.getChatMessages(eq(chatId), isNull(), eq(size)))
           .willReturn(response);
 
       // when & then
       mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
-              .param("page", String.valueOf(page))
               .param("size", String.valueOf(size))
               .with(user(userDetails)))
           .andDo(print())
@@ -438,7 +438,7 @@ class ChatControllerImplTest extends ControllerTestSupport {
           .andExpect(jsonPath("$.data.size").value(size))
           .andExpect(jsonPath("$.data.content", hasSize(size)));
 
-      verify(chatService).getChatMessages(chatId, page, size);
+      verify(chatService).getChatMessages(eq(chatId), isNull(), eq(size));
     }
 
     @DisplayName("채팅방 이전 메시지가 없으면 빈 페이지 정보를 반환한다")
@@ -447,44 +447,46 @@ class ChatControllerImplTest extends ControllerTestSupport {
       // given
       CustomUserDetails userDetails = new CustomUserDetails(1L, "USER");
       Long chatId = 1L;
-      int page = 0;
+
       int size = 20;
       Slice<MessageResponse> response = new SliceImpl<>(new ArrayList<>());
 
-      given(chatService.getChatMessages(chatId, page, size))
+      // 첫 페이지 → cursor = null
+      given(chatService.getChatMessages(eq(chatId), isNull(), eq(size)))
           .willReturn(response);
 
       // when & then
       mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
-              .param("page", String.valueOf(page))
               .param("size", String.valueOf(size))
               .with(user(userDetails)))
           .andDo(print())
-          .andExpect(status().isOk()).
-          andExpect(jsonPath("$.message").value(containsString("이전 메시지를 성공적으로 조회했습니다")))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.message").value(containsString("이전 메시지를 성공적으로 조회했습니다")))
           .andExpect(jsonPath("$.data.content", hasSize(0)));
 
-      verify(chatService).getChatMessages(chatId, page, size);
+      verify(chatService).getChatMessages(eq(chatId), isNull(), eq(size));
     }
 
-    @DisplayName("page, size 미지정 시 기본값(0, 20)으로 메시지를 조회한다")
+    @DisplayName("size 미지정 시 기본값(20)으로 메시지를 조회한다")
     @Test
     void getChatMessages_defaultParams() throws Exception {
+      // given
       CustomUserDetails userDetails = new CustomUserDetails(1L, "USER");
       Long chatId = 1L;
-      int page = 0;
-      int size = 20;
 
-      given(chatService.getChatMessages(chatId, page, size))
+      int size = 20; // 기본값
+
+      // 첫 페이지 → cursor=null 이므로 isNull()로 매칭
+      given(chatService.getChatMessages(eq(chatId), isNull(), eq(size)))
           .willReturn(new SliceImpl<>(List.of()));
 
       // when & then
       mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
-              .with(user(userDetails)))
+              .with(user(userDetails))) // size 파라미터 없음 → 기본값 20
           .andDo(print())
           .andExpect(status().isOk());
 
-      verify(chatService).getChatMessages(chatId, page, size);
+      verify(chatService).getChatMessages(eq(chatId), isNull(), eq(size));
     }
 
     @DisplayName("채팅방 이전 메시지 조회 시 채팅 ID는 숫자여야 한다")
@@ -512,12 +514,14 @@ class ChatControllerImplTest extends ControllerTestSupport {
     void getChatMessages_unauthenticated() throws Exception {
       // given
       Long chatId = 1L;
-      int page = 0;
+
       int size = 20;
+
+      MessageCursor cursor = new MessageCursor(null, null);
 
       // when & then
       mockMvc.perform(get("/api/chat/{chatId}/messages", chatId)
-              .param("page", String.valueOf(page))
+              .param("cursor", String.valueOf(cursor))
               .param("size", String.valueOf(size)))
           .andDo(print())
           .andExpect(status().isUnauthorized());

@@ -59,19 +59,21 @@ public interface ChatController {
 
   /**
    * 채팅방 이전 메시지 조회 (페이징)
-   * GET /api/chat/1/messages?page=0&size=20
+   * GET /api/chat/1/messages?cursorCreatedAt=2025-11-17T19:00:00&cursorMessageId=123
    */
   @Operation(
       summary = "메시지 조회",
       description = "특정 채팅방의 메시지를 조회합니다. (페이지 처리)"
   )
   ApiResponse<Slice<MessageResponse>> getChatMessages(
-      @Parameter(description = "채팅방 ID", example = "1", required = true)
+      @Parameter(description = "채팅방 ID", example = "2025-11-17T15:33:36", required = true)
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails,
-      @Parameter(description = "페이지 번호", example = "0")
-      @RequestParam(defaultValue = "0") int page,
-      @Parameter(description = "불러올 메시지 개수", example = "20")
+      @Parameter(description = "이전 마지막 메시지 날짜", example = "1")
+      @RequestParam(required = false) String cursorCreatedAt,
+      @Parameter(description = "이전 마지막 메시지 ID", example = "1")
+      @RequestParam(required = false)
+      Long cursorMessageId,
       @RequestParam(defaultValue = "20") int size
   );
 

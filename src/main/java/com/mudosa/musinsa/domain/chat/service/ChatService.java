@@ -3,6 +3,7 @@ package com.mudosa.musinsa.domain.chat.service;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
+import com.mudosa.musinsa.domain.chat.dto.MessageCursor;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
 import org.springframework.data.domain.Slice;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,12 +32,12 @@ public interface ChatService {
    * 특정 채팅방의 메시지 페이지 조회(최신순).
    *
    * @param chatId 채팅방 ID
-   * @param page   페이지 번호(0-base)
+   * @param cursor 이전 마지막 메시지
    * @param size   페이지 크기
    * @return 메시지 응답 페이지
    * @throws RuntimeException 비참여자 접근 등 권한 오류
    */
-  Slice<MessageResponse> getChatMessages(Long chatId, int page, int size);
+  Slice<MessageResponse> getChatMessages(Long chatId, MessageCursor cursor, int size);
 
   /**
    * 특정 채팅방의 정보 조회
