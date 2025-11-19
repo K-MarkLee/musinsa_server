@@ -1138,7 +1138,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       int size = 20;
 
-      MessageCursor cursor = new MessageCursor(null, null);
+      MessageCursor cursor = null;
 
       // when
       Slice<MessageResponse> chatMessages = chatService.getChatMessages(chatRoom1.getChatId(), cursor, size);
@@ -1159,7 +1159,7 @@ class ChatServiceImplTest extends ServiceConfig {
       // given
       int size = 20;
 
-      MessageCursor cursor = new MessageCursor(null, null);
+      MessageCursor cursor = null;
 
       // when & then
       assertThatThrownBy(() -> chatService.getChatMessages(99999L, cursor, size))
@@ -1167,6 +1167,8 @@ class ChatServiceImplTest extends ServiceConfig {
           .extracting("errorCode")
           .isEqualTo(ErrorCode.CHAT_NOT_FOUND);
     }
+
+
   }
 
   /**
