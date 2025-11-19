@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -84,6 +86,17 @@ class MessageRepositoryTest extends ServiceConfig {
         .chatId(chatPart.getChatRoom().getChatId())
         .content(content)
         .createdAt(timestamp)
+        .build();
+
+    messageRepository.save(message);
+    return message;
+  }
+
+  private Message saveMessage(ChatPart chatPart, String content) {
+    Message message = Message.builder()
+        .chatPart(chatPart)
+        .chatId(chatPart.getChatRoom().getChatId())
+        .content(content)
         .build();
 
     messageRepository.save(message);
@@ -460,6 +473,243 @@ class MessageRepositoryTest extends ServiceConfig {
       assertThat(messages.getContent())
           .extracting(Message::getContent)
           .containsExactly("alive");
+    }
+  }
+
+  @Nested
+  @DisplayName("최신순 첫 페이지 ID를 반환한다")
+  class findIdSliceByChatId {
+    /* === helper === */
+
+    /**
+     * 첫 페이지이면서, 다음 페이지가 있는 경우 검증
+     */
+    private static void assertSlice_hasNext(Slice<Long> messages, int size, int count) {
+      // 요청한 사이즈 그대로 들어왔는지
+      assertThat(messages.getSize()).isEqualTo(size);
+
+      // 첫 페이지라 이전 페이지는 없음
+      assertThat(messages.hasPrevious()).isFalse();
+
+      // 이 테스트에서는 항상 "가득 찬 페이지 + 다음 페이지 존재" 시나리오
+      assertThat(messages.getNumberOfElements()).isEqualTo(size);
+      assertThat(messages.hasNext()).isTrue();
+
+      // 전체 개수를 알고 있으니, 기대값도 계산해 볼 수 있음
+      boolean expectedHasNext = (count > size);
+      assertThat(messages.hasNext()).isEqualTo(expectedHasNext);
+    }
+
+    /**
+     * 마지막 페이지(또는 전체 개수가 size 이하인 케이스) 검증
+     */
+    private static void assertSlice_theEnd(Slice<Long> messages, int count, int size) {
+      // 현재 페이지의 실제 요소 수 = 총 메시지 수 (마지막 페이지라서)
+      assertThat(messages.getNumberOfElements()).isEqualTo(count);
+
+      assertThat(messages.getSize()).isEqualTo(size);
+
+      // 마지막 페이지이므로 다음 페이지 없음
+      assertThat(messages.hasNext()).isFalse();
+    }
+
+    @DisplayName("메시지가 존재할 경우 최신순(messageId)으로 정렬된 결과를 반환한다")
+    @Test
+    void findIdSliceByChatId_Success() {
+      // given
+      User user = saveUser("user");
+      Brand brand = saveBrand("브랜드", "Brand");
+      ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
+      ChatPart p = saveChatPart(chatRoom, user);
+
+      int count = 30;
+      LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
+
+      // 생성된 메시지 ID를 순서대로 저장
+      List<Long> createdMessageIds = new ArrayList<>();
+      for (int i = 1; i <= count; i++) {
+        Message message = saveMessage(p, String.valueOf(i), base.plusSeconds(i));
+        createdMessageIds.add(message.getMessageId());
+      }
+
+      int size = 10;
+      Pageable pageable = PageRequest.of(0, size);
+
+      // when
+      Slice<Long> messages = messageRepository.findIdSliceByChatId(chatRoom.getChatId(), pageable);
+
+      // then
+      assertSlice_hasNext(messages, size, count);
+
+      // 실제 생성된 ID 중 최신 10개 추출 (역순)
+      List<Long> expectedIds = createdMessageIds.stream()
+          .sorted(Comparator.reverseOrder())  // 최신순 정렬
+          .limit(size)
+          .toList();
+
+      assertThat(messages.getContent())
+          .hasSize(size)
+          .containsExactlyElementsOf(expectedIds)  // 하드코딩된 값 대신 실제 ID 사용
+          .isSortedAccordingTo(Comparator.reverseOrder());
+    }
+
+    @DisplayName("메시지가 존재하지 않으면 빈 Slice를 반환한다")
+    @Test
+    void findIdSliceByChatId_emptyResult() {
+      // given
+      User user = saveUser("user");
+      Brand brand = saveBrand("브랜드", "Brand");
+      ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
+      saveChatPart(chatRoom, user);
+
+      int count = 0;
+      int size = 10;
+      Pageable pageable = PageRequest.of(0, size);
+
+      // when
+      Slice<Long> messages = messageRepository.findIdSliceByChatId(chatRoom.getChatId(), pageable);
+
+      // then
+      assertSlice_theEnd(messages, count, size);
+      assertThat(messages.getContent()).isEmpty();
+    }
+
+    @DisplayName("메시지 개수가 페이지 크기보다 적을 경우, 모든 메시지를 반환한다")
+    @Test
+    void findIdSliceByChatId_lessMessageThanSize() {
+      // given
+      User user = saveUser("user");
+      Brand brand = saveBrand("브랜드", "Brand");
+      ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
+      ChatPart p = saveChatPart(chatRoom, user);
+
+      int count = 1;
+      LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
+
+      // 생성된 메시지 저장
+      Message message = saveMessage(p, String.valueOf(count), base);
+
+      int size = 2;
+      Pageable pageable = PageRequest.of(0, size);
+
+      // when
+      Slice<Long> messages = messageRepository.findIdSliceByChatId(chatRoom.getChatId(), pageable);
+
+      // then
+      assertSlice_theEnd(messages, count, size);
+
+      // 실제 생성된 메시지 ID 사용
+      assertThat(messages.getContent())
+          .hasSize(count)
+          .containsExactly(message.getMessageId());
+    }
+
+    @DisplayName("여러 채팅방이 존재해도 조회한 채팅방의 메시지만 페이징된다")
+    @Test
+    void findIdSliceByChatId_ignoreOtherChatRooms() {
+      // given
+      User user = saveUser("user");
+      Brand brand = saveBrand("브랜드", "Brand");
+
+      ChatRoom chatRoom1 = saveChatRoom(brand, ChatRoomType.GROUP);
+      ChatPart p1 = saveChatPart(chatRoom1, user);
+
+      ChatRoom chatRoom2 = saveChatRoom(brand, ChatRoomType.GROUP);
+      ChatPart p2 = saveChatPart(chatRoom2, user);
+
+      LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
+
+      // 🔹 각 채팅방의 메시지 ID를 저장해두면 검증하기 좋음
+      List<Long> chatRoom1Ids = new ArrayList<>();
+      int chat1messageNum = 5;
+      for (int i = 1; i <= chat1messageNum; i++) {
+        Long id = saveMessage(p1, "room1-" + i, base.plusSeconds(i))
+            .getMessageId();
+        chatRoom1Ids.add(id);
+      }
+
+      List<Long> chatRoom2Ids = new ArrayList<>();
+      int chat2messageNum = 10;
+      for (int i = 1; i <= chat2messageNum; i++) {
+        Long id = saveMessage(p2, "room2-" + i, base.plusSeconds(i))
+            .getMessageId();
+        chatRoom2Ids.add(id);
+      }
+
+      int size = 10;
+      Pageable pageable = PageRequest.of(0, size);
+
+      // when
+      Slice<Long> messages = messageRepository.findIdSliceByChatId(chatRoom1.getChatId(), pageable);
+
+      // then
+      // 전체 message 개수는 두 채팅방 합산
+      assertThat(messageRepository.count()).isEqualTo(chat1messageNum + chat2messageNum);
+
+      // 조회된 건 오직 chatRoom1의 5개만
+      assertThat(messages.getNumberOfElements()).isEqualTo(chat1messageNum);
+      assertThat(messages.hasNext()).isFalse();
+
+      // 슬라이스에 담긴 ID는 전부 chatRoom1에 속한 메시지여야 한다
+      assertThat(messages.getContent())
+          .hasSize(chat1messageNum)
+          .containsExactlyElementsOf(
+              chatRoom1Ids.stream()
+                  .sorted(Comparator.reverseOrder()) // createdAt desc, messageId desc 기준으로 최신순
+                  .toList()
+          )
+          .doesNotContainAnyElementsOf(chatRoom2Ids); // chatRoom2 메시지는 절대
+
+    }
+
+    @DisplayName("존재하지 않는 채팅방 ID로 조회해도 빈 Slice를 반환한다")
+    @Test
+    void findIdSliceByChatId_notExistsChatId() {
+      // given
+      User user = saveUser("user");
+      Brand brand = saveBrand("브랜드", "Brand");
+      ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
+      ChatPart p = saveChatPart(chatRoom, user);
+
+      LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
+      saveMessage(p, "안녕", base);
+
+      Pageable pageable = PageRequest.of(0, 10);
+
+      // when
+      Slice<Long> messages = messageRepository.findIdSliceByChatId(999999L, pageable);
+
+      // then
+      assertThat(messages.getContent()).isEmpty();
+      assertThat(messages.getNumberOfElements()).isZero();
+      assertThat(messages.hasNext()).isFalse();
+    }
+
+    @DisplayName("삭제된 메시지는 조회 결과에 포함되지 않는다")
+    @Test
+    void findIdSliceByChatId_excludeDeletedMessages() {
+      // given
+      User user = saveUser("user");
+      Brand brand = saveBrand("브랜드", "Brand");
+      ChatRoom chatRoom = saveChatRoom(brand, ChatRoomType.GROUP);
+      ChatPart p = saveChatPart(chatRoom, user);
+
+      LocalDateTime base = LocalDateTime.of(2000, 1, 1, 0, 0);
+      Message alive = saveMessage(p, "alive", base.plusSeconds(1));
+      Message deleted = saveMessage(p, "delete", base.plusSeconds(2));
+
+      deleted.setDeletedAt(LocalDateTime.now());
+      messageRepository.save(deleted);
+
+      Pageable pageable = PageRequest.of(0, 10);
+
+      // when
+      Slice<Long> messages = messageRepository.findIdSliceByChatId(chatRoom.getChatId(), pageable);
+
+      // then
+      assertThat(messages.getNumberOfElements()).isEqualTo(1);
+      assertThat(messages.getContent())
+          .containsExactly(alive.getMessageId());
     }
   }
 }
