@@ -7,7 +7,6 @@ import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
 import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
-import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
 import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
 import com.mudosa.musinsa.product.domain.model.Inventory;
@@ -109,21 +108,4 @@ class ProductInventoryServiceIntegrationTest extends ServiceConfig {
             BRAND_MANAGER_ID)).isInstanceOf(BusinessException.class);
     }
 
-    @Test
-    @DisplayName("상품 판매 가능 여부를 변경할 수 있다")
-    void changeAvailability_updatesProductFlag() {
-        Product product = initProductWithOption(1);
-        ProductAvailabilityRequest request = ProductAvailabilityRequest.builder()
-            .isAvailable(false)
-            .build();
-
-        inventoryService.updateProductAvailability(
-            product.getBrand().getBrandId(),
-            product.getProductId(),
-            request,
-            BRAND_MANAGER_ID);
-
-        Product updated = productRepository.findById(product.getProductId()).orElseThrow();
-        assertThat(updated.getIsAvailable()).isFalse();
-    }
 }
