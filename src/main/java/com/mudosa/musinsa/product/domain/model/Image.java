@@ -31,16 +31,17 @@ public class Image extends BaseEntity {
     @Column(name = "is_thumbnail", nullable = false)
     private Boolean isThumbnail;
     
-    // 이미지를 생성하며 필수 정보를 검증한다.
-    public static Image create(String imageUrl, boolean isThumbnail) {
-        return new Image(imageUrl, isThumbnail);
-    }
-
-    @Builder
-    Image(String imageUrl, boolean isThumbnail) {
+    // 외부 노출 생성 메서드 + 필수 값 검증
+    public static Image create(Product product,String imageUrl, boolean isThumbnail) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             throw new BusinessException(ErrorCode.IMAGE_REQUIRED);
         }
+        return new Image(product, imageUrl, isThumbnail);
+    }
+
+    @Builder
+    private Image(Product product,String imageUrl, boolean isThumbnail) {
+        this.product = product;
         this.imageUrl = imageUrl;   
         this.isThumbnail = isThumbnail;
     }

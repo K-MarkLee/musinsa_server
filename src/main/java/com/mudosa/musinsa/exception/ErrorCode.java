@@ -77,6 +77,7 @@ public enum ErrorCode {
   BRAND_NOT_MATCHED("70002", "브랜드 정보가 일치하지 않습니다", HttpStatus.BAD_REQUEST),
   NOT_BRAND_PRODUCT("70003", "해당 브랜드의 상품이 아닙니다", HttpStatus.BAD_REQUEST),
 
+
   //product
   PRODUCT_OPTION_NOT_AVAILABLE("80001", "상품 옵션이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
   DUPLICATE_PRODUCT_OPTION("80002", "상품 옵션은 중복될 수 없습니다.", HttpStatus.BAD_REQUEST),
@@ -85,6 +86,12 @@ public enum ErrorCode {
   PRODUCT_OPTION_REQUIRED("80005", "상품 옵션은 필수입니다.", HttpStatus.BAD_REQUEST),
   CATEGORY_NOT_FOUND("80006", "카테고리를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
   PRODUCT_NOT_FOUND("80007", "상품을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+  PRODUCT_NAME_REQUIRED("80008", "상품 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_BRAND_REQUIRED("80009", "상품 브랜드는 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_GENDER_TYPE_REQUIRED("80010", "상품 성별 타입은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_BRAND_NAME_REQUIRED("80011", "역정규화 브랜드 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_CATEGORY_PATH_REQUIRED("80012", "역정규화 카테고리 경로는 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_REQUIRED("80013", "상품은 필수입니다.", HttpStatus.BAD_REQUEST),
 
   //chat
   MESSAGE_OR_FILE_REQUIRED("110001", "메시지 또는 파일 중 하나는 반드시 포함되어야 합니다.", HttpStatus.BAD_REQUEST),
@@ -98,14 +105,42 @@ public enum ErrorCode {
 
   //inventory
   INVENTORY_NOT_AVAILABLE("90001", "재고가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+  INVENTORY_STOCK_QUANTITY_REQUIRED("90002", "재고 수량은 필수입니다.", HttpStatus.BAD_REQUEST),
+  INVENTORY_INSUFFICIENT_STOCK("90003", "재고가 부족합니다.", HttpStatus.BAD_REQUEST),
+  INVALID_INVENTORY_UPDATE_VALUE("90004", "재고 변경 값은 0이 될 수 없습니다.", HttpStatus.BAD_REQUEST),
 
   //image
-  IMAGE_REQUIRED("100001", "이미지 또는 썸네일은 필수입니다.", HttpStatus.BAD_REQUEST),
-  THUMBNAIL_ONLY_ONE("100002", "썸네일 이미지는 반드시 하나여야 합니다.", HttpStatus.BAD_REQUEST),
+  IMAGE_REQUIRED("100001", "이미지는 필수입니다.", HttpStatus.BAD_REQUEST),
+  THUMBNAIL_REQUIRED("10002","썸네일은 필수입니다.", HttpStatus.BAD_REQUEST),
+  THUMBNAIL_ONLY_ONE("100003", "썸네일 이미지는 반드시 하나여야 합니다.", HttpStatus.BAD_REQUEST),
 
   //settlement
-  SETTLEMENT_NOT_FOUND("A0001", "정산 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND);
+  SETTLEMENT_NOT_FOUND("A0001", "정산 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
 
+  // cartitem
+  CART_ITEM_USER_REQUIRED("B0001", "사용자는 필수입니다.", HttpStatus.BAD_REQUEST),
+  CART_ITEM_PRODUCT_OPTION_REQUIRED("B0002", "상품 옵션은 필수입니다.", HttpStatus.BAD_REQUEST),
+  CART_ITEM_QUANTITY_INVALID("B0003", "수량은 1개 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
+
+  //category
+  CATEGORY_NAME_REQUIRED("C0001", "카테고리 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
+
+
+  // Option
+  OPTION_NAME_REQUIRED("D0001", "옵션명은 필수입니다.", HttpStatus.BAD_REQUEST),
+  OPTION_VALUE_REQUIRED("D0002", "옵션 값은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_PRICE_INVALID("D0003", "상품 옵션 가격이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+  OPTION_VALUE_ID_REQUIRED("D0004", "옵션 값 식별자는 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_ID_REQUIRED("D0005", "상품 옵션 식별자는 필수입니다.", HttpStatus.BAD_REQUEST),
+  RECOVER_VALUE_INVALID("D0006", "복구 값이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+
+  // user
+  USER_ID_REQUIRED("C0001", "사용자 ID는 필수입니다.", HttpStatus.BAD_REQUEST),
+
+  //stock
+  STOCK_QUANTITY_INVALID("E0001", "재고 수량이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
+  
+  
 
   private final String code;
   private final String message;

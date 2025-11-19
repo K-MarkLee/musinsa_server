@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.product.domain.model;
 
+import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
@@ -13,18 +14,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ProductOptionValueTest {
 
     @Test
-    @DisplayName("productOption 또는 optionValue가 null이면 생성 시 IllegalArgumentException이 발생해야 한다")
+    @DisplayName("productOption 또는 optionValue가 null이면 생성 시 BusinessException이 발생해야 한다")
     void constructor_nullArgs_throws() {
         // given
         OptionValue ov = OptionValue.builder().optionName("size").optionValue("M").build();
         Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
         Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
         Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-        ProductOption option = ProductOption.create(product, new Money(1000L), inv);
+        ProductOption option = ProductOption.builder().product(product).productPrice(new Money(1000L)).inventory(inv).build();
 
         // when / then
-        assertThatThrownBy(() -> ProductOptionValue.create(null, ov)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> ProductOptionValue.create(option, null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ProductOptionValue.create(option, null)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> ProductOptionValue.create(null, ov)).isInstanceOf(BusinessException.class);
     }
 
     @Test
@@ -35,10 +36,10 @@ class ProductOptionValueTest {
         Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
         Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
         Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-        ProductOption option = ProductOption.create(product, new Money(1000L), inv);
+        ProductOption option = ProductOption.builder().product(product).productPrice(new Money(1000L)).inventory(inv).build();
 
         // when
-        ProductOptionValue pov = ProductOptionValue.create(option, ov);
+        ProductOptionValue pov = ProductOptionValue.builder().productOption(option).optionValue(ov).build();
 
         // then: getters reflect associations
         assertThat(pov.getOptionValue()).isEqualTo(ov);

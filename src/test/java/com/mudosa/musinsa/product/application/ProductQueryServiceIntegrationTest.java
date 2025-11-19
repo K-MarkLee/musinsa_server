@@ -73,7 +73,10 @@ class ProductQueryServiceIntegrationTest extends ServiceConfig {
             .isAvailable(true)
             .build();
 
-        product.addImage(Image.create("https://cdn.musinsa.test/" + name + ".jpg", true));
+        product.addImage(Image.builder()
+            .imageUrl("http://example.com/images/" + name.replaceAll(" ", "_") + ".jpg")
+            .isThumbnail(true)
+            .build());
 
         Inventory inventory = Inventory.builder()
             .stockQuantity(new StockQuantity(stock))

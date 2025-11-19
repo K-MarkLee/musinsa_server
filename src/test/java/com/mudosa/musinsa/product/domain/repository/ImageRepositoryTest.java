@@ -40,7 +40,10 @@ class ImageRepositoryTest {
         Product p = Product.builder().brand(brand).productName("p").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
         em.persist(p);
 
-    Image img = Image.create("/img/1.png", true);
+    Image img = Image.builder()
+            .imageUrl("/img/1.png")
+            .isThumbnail(true)
+            .build();
     p.addImage(img);
     em.persist(p);
         em.flush();

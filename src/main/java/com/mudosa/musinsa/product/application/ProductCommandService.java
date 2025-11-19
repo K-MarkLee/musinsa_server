@@ -227,7 +227,7 @@ public class ProductCommandService {
 			product.getImages().clear();
 			// 새로운 이미지 직접 생성하여 추가
 			request.getImages().forEach(image -> {
-				Image img = Image.create(image.getImageUrl(), Boolean.TRUE.equals(image.getIsThumbnail()));
+				Image img = Image.create(product, image.getImageUrl(), Boolean.TRUE.equals(image.getIsThumbnail()));
 				product.addImage(img);
 			});
 			changed = true;
@@ -311,7 +311,7 @@ public class ProductCommandService {
 	// 상품에 이미지를 추가하는 헬퍼 메서드
 	private void addImagesToProduct(Product product, List<ProductCreateRequest.ImageCreateRequest> images) {
 		images.forEach(image -> {
-			Image img = Image.create(image.getImageUrl(), image.getIsThumbnail());
+			Image img = Image.create(product, image.getImageUrl(), image.getIsThumbnail());
 			product.addImage(img);
 		});
 	}
