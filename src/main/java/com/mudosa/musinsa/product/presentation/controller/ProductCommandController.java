@@ -34,7 +34,7 @@ import java.util.List;
 // 브랜드 관리자가 상품을 생성, 수정, 삭제하고 옵션을 관리하는 엔드포인트를 제공한다.
 @RestController
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasRole('SELLER') or hasRole('ADMIN')")
 @RequestMapping("/api/brands/{brandId}/products")
 public class ProductCommandController {
 
@@ -59,6 +59,7 @@ public class ProductCommandController {
         }
 
         Long userId = userDetails.getUserId();
+
         Long productId = productService.createProduct(request, brand, category, userId);
         URI location = URI.create(String.format("/api/brands/%d/products/%d", brandId, productId));
         return ResponseEntity.created(location)
