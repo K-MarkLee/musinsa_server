@@ -26,5 +26,5 @@ public class ProductOptionCreateRequest {
     private Integer stockQuantity;
 
     @NotEmpty(message = "옵션 값 ID는 최소 1개 이상이어야 합니다.")
-    private List<Long> optionValueIds;
+    private List<@NotNull Long> optionValueIds;
 }

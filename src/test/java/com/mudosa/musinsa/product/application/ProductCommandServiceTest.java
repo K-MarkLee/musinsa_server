@@ -9,7 +9,9 @@ import com.mudosa.musinsa.product.application.dto.ProductOptionCreateRequest;
 import com.mudosa.musinsa.product.domain.model.*;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
+import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
+import com.mudosa.musinsa.product.domain.repository.ImageRepository;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.STRICT_STUBS)
@@ -45,6 +48,12 @@ class ProductCommandServiceTest {
 
     @Mock
     private BrandMemberRepository brandMemberRepository;
+
+    @Mock
+    private ProductOptionRepository productOptionRepository;
+
+    @Mock
+    private ImageRepository imageRepository;
 
     @InjectMocks
     private ProductCommandService service;
@@ -181,11 +190,13 @@ class ProductCommandServiceTest {
                 .build();
 
             given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(10L), anyLong())).willReturn(true);
-            given(productRepository.findDetailByIdForManager(eq(200L), eq(10L))).willReturn(Optional.of(product));
+            given(productRepository.findDetailByIdForManagerWithLock(eq(200L), eq(10L))).willReturn(Optional.of(product));
 
             OptionValue color = buildOptionValue(201L, "색상", "blue");
             OptionValue size = buildOptionValue(202L, "사이즈", "M");
             given(optionValueRepository.findAllByOptionValueIdIn(anyList())).willReturn(List.of(color, size));
+            given(productOptionRepository.existsByProductIdAndOptionValueIds(anyLong(), anyLong(), anyLong()))
+                .willReturn(false);
 
             // when
             ProductDetailResponse.OptionDetail detail = service.addProductOption(10L, 200L, req, 999L);
@@ -193,7 +204,10 @@ class ProductCommandServiceTest {
             // then
             assertThat(detail).isNotNull();
             assertThat(detail.getOptionValues()).hasSize(2);
-            then(productRepository).should().flush();
+            then(productRepository).should().findDetailByIdForManagerWithLock(eq(200L), eq(10L));
+            then(productRepository).should(never()).findDetailByIdForManager(anyLong(), anyLong());
+            then(productOptionRepository).should()
+                .existsByProductIdAndOptionValueIds(eq(200L), eq(size.getOptionValueId()), eq(color.getOptionValueId()));
         }
 
         @Test
@@ -205,10 +219,27 @@ class ProductCommandServiceTest {
             setId(product, "productId", 200L);
 
             given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(10L), anyLong())).willReturn(true);
-            given(productRepository.findDetailByIdForManager(eq(200L), eq(10L))).willReturn(Optional.of(product));
+            given(productRepository.findDetailByIdForManagerWithLock(eq(200L), eq(10L))).willReturn(Optional.of(product));
 
             assertThatThrownBy(() -> service.addProductOption(10L, 200L, null, 999L))
                 .isInstanceOf(BusinessException.class);
+        }
+
+        @Test
+        @DisplayName("락 조회 시 상품을 찾지 못하면 예외를 던진다")
+        void addOption_whenProductMissing_shouldThrow() {
+            given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(10L), anyLong())).willReturn(true);
+            given(productRepository.findDetailByIdForManagerWithLock(eq(200L), eq(10L))).willReturn(Optional.empty());
+
+            ProductOptionCreateRequest req = ProductOptionCreateRequest.builder()
+                .productPrice(BigDecimal.valueOf(5000))
+                .stockQuantity(3)
+                .optionValueIds(List.of(201L, 202L))
+                .build();
+
+            assertThatThrownBy(() -> service.addProductOption(10L, 200L, req, 999L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("상품을 찾을 수 없습니다");
         }
     }
 

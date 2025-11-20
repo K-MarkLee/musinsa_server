@@ -29,4 +29,18 @@ public interface ProductOptionRepository extends JpaRepository<ProductOption, Lo
     // 특정 상품에 속한 옵션 목록을 조회한다.
     List<ProductOption> findAllByProduct(Product product);
     Optional<ProductOption> findByInventory(Inventory inventory);
+
+    // 동일한 옵션 값 조합이 이미 존재하는지 확인한다.
+    @Query("""
+        select (count(po) > 0)
+        from ProductOption po
+        join po.productOptionValues pov
+        where po.product.productId = :productId
+        and pov.optionValue.optionValueId in (:sizeOptionValueId, :colorOptionValueId)
+        group by po.productOptionId
+        having count(distinct pov.optionValue.optionValueId) = 2
+        """)
+    boolean existsByProductIdAndOptionValueIds(@Param("productId") Long productId,
+                                               @Param("sizeOptionValueId") Long sizeOptionValueId,
+                                               @Param("colorOptionValueId") Long colorOptionValueId);
 }
