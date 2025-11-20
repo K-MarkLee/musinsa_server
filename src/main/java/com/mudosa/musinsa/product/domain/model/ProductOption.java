@@ -109,17 +109,6 @@ public class ProductOption extends BaseEntity {
         }
     }
 
-    // 동일한 옵션 조합이 있는지 확인하기 위한 정규화된 옵션 값 ID 리스트를 반환한다. TODO: 가져가서 조합 검증 코드 구현해야함.
-    List<Long> normalizedOptionValueIds() {
-        return this.productOptionValues.stream()
-            .map(ProductOptionValue::getOptionValue)
-            .filter(Objects::nonNull)
-            .map(OptionValue::getOptionValueId)
-            .filter(Objects::nonNull)
-            .sorted(Comparator.naturalOrder())
-            .toList();
-    }
-
     // 현재 재고 수량을 반환한다.
     public Integer getStockQuantity() {
         return this.getInventory().getStockQuantity().getValue();

@@ -2,7 +2,9 @@ package com.mudosa.musinsa.product.domain.repository;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.product.domain.model.Product;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -44,6 +46,18 @@ public interface ProductRepository extends JpaRepository<Product, Long>, Product
     and p.brand.brandId = :brandId
     """)
   Optional<Product> findDetailByIdForManager(Long productId, Long brandId);
+
+  // 옵션 추가 등 동시성 제어가 필요한 경우 비관적 락으로 조회한다.
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("""
+    select distinct p
+    from Product p
+    left join fetch p.brand
+    left join fetch p.images
+    where p.productId = :productId
+    and p.brand.brandId = :brandId
+    """)
+  Optional<Product> findDetailByIdForManagerWithLock(Long productId, Long brandId);
 
   List<Product> findTop6ByBrandOrderByCreatedAtDesc(Brand brand);
 }

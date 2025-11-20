@@ -76,6 +76,8 @@ public enum ErrorCode {
   BRAND_NOT_FOUND("70001", "브랜드를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
   BRAND_NOT_MATCHED("70002", "브랜드 정보가 일치하지 않습니다", HttpStatus.BAD_REQUEST),
   NOT_BRAND_PRODUCT("70003", "해당 브랜드의 상품이 아닙니다", HttpStatus.BAD_REQUEST),
+  NOT_BRAND_MEMBER("70004", "해당 브랜드의 멤버가 아닙니다", HttpStatus.FORBIDDEN),
+  BRAND_ID_REQUIRED("70005", "브랜드 아이디는 필수입니다.", HttpStatus.BAD_REQUEST),
 
 
   //product
@@ -133,6 +135,10 @@ public enum ErrorCode {
   OPTION_VALUE_ID_REQUIRED("D0004", "옵션 값 식별자는 필수입니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_OPTION_ID_REQUIRED("D0005", "상품 옵션 식별자는 필수입니다.", HttpStatus.BAD_REQUEST),
   RECOVER_VALUE_INVALID("D0006", "복구 값이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_PRICE_REQUIRED("D0007", "상품 옵션 가격은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_STOCK_QUANTITY_REQUIRED("D0008", "상품 옵션 재고 수량은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_VALUE_ID_REQUIRED("D0009", "상품 옵션 값 식별자는 최소 1개 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
+  INVALID_PRODUCT_OPTION_VALUE_IDS("D0010", "상품 옵션 값 식별자가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
 
   // user
   USER_ID_REQUIRED("E0001", "사용자 ID는 필수입니다.", HttpStatus.BAD_REQUEST),

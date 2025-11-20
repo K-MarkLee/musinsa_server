@@ -128,8 +128,10 @@ class ProductCommandServiceIntegrationTest extends ServiceConfig {
             .parent(null)
             .build());
 
-        OptionValue singleOption = optionValueRepository.save(
+        OptionValue color = optionValueRepository.save(
             OptionValue.builder().optionName("색상").optionValue("Black").build());
+        OptionValue size = optionValueRepository.save(
+            OptionValue.builder().optionName("사이즈").optionValue("M").build());
 
         ProductCreateRequest request = ProductCreateRequest.builder()
             .productName("블랙 자켓")
@@ -143,7 +145,7 @@ class ProductCommandServiceIntegrationTest extends ServiceConfig {
             .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(BigDecimal.valueOf(99000))
                 .stockQuantity(3)
-                .optionValueIds(List.of(singleOption.getOptionValueId()))
+                .optionValueIds(List.of(color.getOptionValueId(), size.getOptionValueId()))
                 .build()))
             .build();
 
