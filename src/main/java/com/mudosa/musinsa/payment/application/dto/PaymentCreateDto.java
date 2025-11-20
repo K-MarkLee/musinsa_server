@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.payment.application.dto;
 
+import com.mudosa.musinsa.payment.domain.model.PgProvider;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -7,12 +8,12 @@ import java.math.BigDecimal;
 
 @Getter
 public class PaymentCreateDto {
-    private String pgProvider;
+    private PgProvider pgProvider;
     private BigDecimal totalAmount;
     private String orderNo;
 
     @Builder
-    public PaymentCreateDto(String pgProvider, BigDecimal totalAmount, String orderNo) {
+    public PaymentCreateDto(PgProvider pgProvider, BigDecimal totalAmount, String orderNo) {
         this.pgProvider = pgProvider;
         this.totalAmount = totalAmount;
         this.orderNo = orderNo;

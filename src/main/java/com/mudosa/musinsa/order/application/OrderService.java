@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -30,7 +29,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -151,13 +149,20 @@ public class OrderService {
         );
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(readOnly = false)
     public void rollbackOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 
-        order.restoreStock();
-        order.rollback();
+        for (OrderProduct orderProduct : order.getOrderProducts()) {
+            ProductOption productOption = productOptionRepository.findById(
+                    orderProduct.getProductOption().getProductOptionId()
+            ).orElseThrow();
+
+            productOption.restoreStock(orderProduct.getProductQuantity());
+        }
+
+        order.rollbackStatus();
         orderRepository.save(order);
     }
 

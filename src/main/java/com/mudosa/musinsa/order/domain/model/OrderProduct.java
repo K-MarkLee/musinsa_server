@@ -2,6 +2,8 @@ package com.mudosa.musinsa.order.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.common.vo.Money;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.event.model.Event;
 import com.mudosa.musinsa.event.model.EventOption;
@@ -48,6 +50,7 @@ public class OrderProduct extends BaseEntity {
     }
 
     public static OrderProduct create(Order order, ProductOption productOption, int productQuantity){
+        validateQuantity(productQuantity);
         return OrderProduct.builder()
                 .order(order)
                 .productPrice(productOption.getProductPrice())
@@ -56,31 +59,30 @@ public class OrderProduct extends BaseEntity {
                 .build();
     }
 
+    private static void validateQuantity(int quantity) {
+        if (quantity < 1) {
+            throw new BusinessException(
+                    ErrorCode.ORDER_CREATE_FAIL,
+                    "상품은 1개 이상 주문 가능합니다"
+            );
+        }
+    }
+
     public Long getProductOptionId() {
         return productOption.getProductOptionId();  // productOption 객체의 ID 반환
     }
 
-    public void setOrder(Order order) {
-        this.order = order;
+    public Money calculateItemPrice(){
+        Money productPrice = productOption.getProductPrice();
+        return productPrice.multiply(this.productQuantity);
     }
 
-
-    /* 재고 복구 */
     public void restoreStock() {
         this.productOption.restoreStock(this.productQuantity);
     }
 
-    /* 재고 확인 */
-    public boolean hasEnoughStock() {
-        return this.productOption.getInventory().isSufficientStock(this.productQuantity);
+    public void setOrderForTest(Order order) {
+        this.order = order;
     }
 
-    /* 재고 개수 확인 */
-    public int getAvailableStock() {
-        return this.productOption.getInventory().getStockQuantity().getValue();
-    }
-
-    public Money calculatePrice() {
-        return this.productPrice.multiply(BigDecimal.valueOf(this.productQuantity));
-    }
 }

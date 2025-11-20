@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public enum ErrorCode {
 
+  INVALID_PARAMETER("00001","파라미터가 유효하지 않습니다",HttpStatus.BAD_REQUEST ),
+
   // auth
   VALIDATION_ERROR("10001", "입력 값 검증 오류입니다.", HttpStatus.BAD_REQUEST),
   INTERNAL_SERVER_ERROR("10002", "내부 서버 오류입니다.", HttpStatus.INTERNAL_SERVER_ERROR),
@@ -28,14 +30,17 @@ public enum ErrorCode {
   ALREADY_REGISTERED_EMAIL("20003", "이미 가입한 이메일입니다.", HttpStatus.CONFLICT),
 
   //payment
-  PAYMENT_APPROVAL_FAILED("30001", "결제 승인에 실패했습니다", HttpStatus.BAD_REQUEST),
+  PAYMENT_CREATE_FAILED("30001", "결제 생성에 실패했습니다", HttpStatus.BAD_REQUEST),
+  PAYMENT_APPROVAL_FAILED("30011", "결제 승인에 실패했습니다", HttpStatus.BAD_REQUEST),
   PAYMENT_PG_NOT_FOUND("30002", "존재하지 않는 PG사 입니다", HttpStatus.BAD_REQUEST),
   PAYMENT_NOT_FOUND("30003", "존재하지 않는 결제입니다", HttpStatus.NOT_FOUND),
   PAYMENT_ALREADY_APPROVED("30004", "이미 승인된 결제입니다", HttpStatus.CONFLICT),
   PAYMENT_AMOUNT_MISMATCH("30005", "결제 금액이 일치하지 않습니다", HttpStatus.BAD_REQUEST),
   INVALID_PAYMENT_STATUS("30006", "결제 상태가 유효하지 않습니다", HttpStatus.BAD_REQUEST),
   INVALID_PG_TRANSACTION_ID("30007", "결제 PG 트랜잭션 ID가 유효하지 않습니다", HttpStatus.BAD_REQUEST),
-  INVALID_PAYMENT_METHOD("30008", "결제수단이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
+  INVALID_PAYMENT_METHOD("30008", "결제수단이 유효하지 않습니다", HttpStatus.BAD_REQUEST),PAYMENT_STRATEGY_NOT_FOUND("30009","결제전략을 찾을 수 없습니다",HttpStatus.BAD_REQUEST ),
+  PAYMENT_TIMEOUT("30010","결제 처리 시간 초과", HttpStatus.BAD_REQUEST),
+  PAYMENT_SYSTEM_ERROR("30012","결제는 승인되었으나 후속 처리 중 오류가 발생했습니다.",HttpStatus.CONFLICT),
 
   //order
   ORDER_NOT_FOUND("40001", "존재하지 않는 주문입니다", HttpStatus.NOT_FOUND),

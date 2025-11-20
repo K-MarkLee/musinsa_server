@@ -14,10 +14,8 @@ import com.mudosa.musinsa.order.domain.model.Order;
 import com.mudosa.musinsa.order.domain.model.OrderProduct;
 import com.mudosa.musinsa.order.domain.model.OrderStatus;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
-import com.mudosa.musinsa.product.domain.model.Inventory;
-import com.mudosa.musinsa.product.domain.model.Product;
-import com.mudosa.musinsa.product.domain.model.ProductGenderType;
-import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.product.domain.model.*;
+import com.mudosa.musinsa.product.domain.repository.CartItemRepository;
 import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
@@ -66,6 +64,9 @@ class OrderServiceTest extends ServiceConfig {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
 
     @DisplayName("상품 옵션과 수량을 갖는 맵으로 주문을 생성한다.")
     @Test
@@ -179,8 +180,8 @@ class OrderServiceTest extends ServiceConfig {
         orderProducts.add(orderProduct);
 
         String orderNo = "ORD123";
-        Order order = createOrder(user.getId(), orderNo, orderProducts, 40000L);
-        orderProducts.forEach(op -> op.setOrder(order));
+        Order order = createOrder(user.getId(), orderNo, orderProducts, 40000L, OrderStatus.PENDING);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
         orderRepository.save(order);
 
         //when
@@ -208,8 +209,8 @@ class OrderServiceTest extends ServiceConfig {
         orderProducts.add(orderProduct);
 
         String testOrderNo = "ORD101";
-        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L);
-        orderProducts.forEach(op -> op.setOrder(order));
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.PENDING);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
         orderRepository.save(order);
 
         //when
@@ -237,8 +238,8 @@ class OrderServiceTest extends ServiceConfig {
         orderProducts.add(orderProduct);
 
         String testOrderNo = "ORD101";
-        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L);
-        orderProducts.forEach(op -> op.setOrder(order));
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.PENDING);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
         orderRepository.save(order);
 
         //when & then
@@ -270,9 +271,9 @@ class OrderServiceTest extends ServiceConfig {
             OrderProduct orderProduct = createOrderProduct(productOption, 1);
             orderProducts.add(orderProduct);
 
-            String orderNo = "ORD101_" + init + "_" + i;  // 고유한 주문 번호
-            Order order = createOrder(user.getId(), orderNo, orderProducts, 40000L);
-            orderProducts.forEach(op -> op.setOrder(order));
+            String orderNo = "ORD101_" + init + "_" + i;
+            Order order = createOrder(user.getId(), orderNo, orderProducts, 40000L, OrderStatus.PENDING);
+            orderProducts.forEach(op -> op.setOrderForTest(order));
             orderRepository.save(order);
 
             orderNos.add(orderNo);
@@ -301,6 +302,98 @@ class OrderServiceTest extends ServiceConfig {
         //then
         Inventory result = inventoryRepository.findById(inventory.getInventoryId()).orElseThrow();
         assertThat(result.getStockQuantity().getValue()).isEqualTo(finalQuantity - init);
+    }
+
+    @DisplayName("PG사 결제 승인에 성공하면 사용자의 장바구니에서 관련된 상품 옵션을 제거한다. ")
+    @Test
+    void deleteCartItemsAfterPaymentConfirmSuccess(){
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = inventoryRepository.save(createInventory(1));
+        ProductOption productOption = productOptionRepository.save(
+                createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, 5);
+        orderProducts.add(orderProduct);
+
+        String testOrderNo = "ORD101";
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.COMPLETED);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        CartItem cartItem = createCartItem(productOption, user);
+        cartItemRepository.save(cartItem);
+
+        //when
+        orderService.deleteCartItems(order.getId(),user.getId());
+
+        //then
+        List<CartItem> result = cartItemRepository.findAllByUserId(user.getId());
+        assertThat(result).isEmpty();
+    }
+
+    @DisplayName("PG사 승인 실패 시 주문 상태를 PENDING으로 변경한다.")
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void updateOrderStatusToPendingWhenPaymentConfirmFail(){
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = createInventory(1);
+        ProductOption productOption = productOptionRepository.save(
+                createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, 5);
+        orderProducts.add(orderProduct);
+
+        String testOrderNo = "ORD102";
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.COMPLETED);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        //when
+        orderService.rollbackOrder(order.getId());
+
+        //then
+        Order result = orderRepository.findById(order.getId()).orElseThrow(null);
+        assertThat(result.getStatus()).isEqualTo(OrderStatus.PENDING);
+    }
+
+    @DisplayName("PG사 승인 실패 시 재고를 원복한다. ")
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void updateInventoryQuantityToPendingWhenPaymentConfirmFail(){
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = createInventory(10);
+        ProductOption productOption = productOptionRepository.save(
+                createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, 5);
+        orderProducts.add(orderProduct);
+
+        String testOrderNo = "ORD102";
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.COMPLETED);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        //when
+        orderService.rollbackOrder(order.getId());
+
+        //then
+        Inventory result = inventoryRepository.findById(inventory.getInventoryId()).orElseThrow(null);
+        assertThat(result.getStockQuantity().getValue()).isEqualTo(15);
     }
 
 
@@ -366,12 +459,12 @@ class OrderServiceTest extends ServiceConfig {
                 .build();
     }
 
-    private Order createOrder(Long userId, String orderNo, List<OrderProduct> orderProducts, Long totalPrice) {
+    private Order createOrder(Long userId, String orderNo, List<OrderProduct> orderProducts, Long totalPrice, OrderStatus orderStatus) {
         return Order
                 .builder()
                 .userId(userId)
                 .orderNo(orderNo)
-                .status(OrderStatus.PENDING)
+                .status(orderStatus)
                 .totalPrice(new Money(totalPrice))
                 .orderProducts(orderProducts)
                 .build();
@@ -382,6 +475,14 @@ class OrderServiceTest extends ServiceConfig {
                 .productOption(productOption)
                 .productQuantity(quantity)
                 .productPrice(productOption.getProductPrice())
+                .build();
+    }
+
+    private static CartItem createCartItem(ProductOption productOption, User user){
+        return CartItem.builder()
+                .user(user)
+                .quantity(3)
+                .productOption(productOption)
                 .build();
     }
 }

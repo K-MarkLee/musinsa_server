@@ -2,6 +2,7 @@ package com.mudosa.musinsa.order.domain.repository;
 
 import com.mudosa.musinsa.order.application.dto.PendingOrderItem;
 import com.mudosa.musinsa.order.application.dto.QPendingOrderItem;
+import com.mudosa.musinsa.product.domain.model.ValueName;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.JPAExpressions;
@@ -32,12 +33,12 @@ public class OrderRepositoryImpl implements OrderRepositoryCustom{
     public List<PendingOrderItem> findOrderItems(String orderNo) {
 
         StringExpression sizeValue = new CaseBuilder()
-                .when(optionValue1.optionName.eq("SIZE"))
+                .when(optionValue1.optionName.eq(ValueName.SIZE.getName()))
                 .then(optionValue1.optionValue)
                 .otherwise((String) null);
 
         StringExpression colorValue = new CaseBuilder()
-                .when(optionValue1.optionName.eq("COLOR"))
+                .when(optionValue1.optionName.eq(ValueName.COLOR.getName()))
                 .then(optionValue1.optionValue)
                 .otherwise((String) null);
 
@@ -68,7 +69,7 @@ public class OrderRepositoryImpl implements OrderRepositoryCustom{
                 .join(productOption.productOptionValues, productOptionValue)
                 .join(productOptionValue.optionValue, optionValue1)
                 .where(order.orderNo.eq(orderNo)
-                        .and(optionValue1.optionName.in("SIZE", "COLOR")))
+                        .and(optionValue1.optionName.in(ValueName.SIZE.getName(),ValueName.COLOR.getName())))
                 .groupBy(
                         productOption.productOptionId,
                         brand.nameKo,

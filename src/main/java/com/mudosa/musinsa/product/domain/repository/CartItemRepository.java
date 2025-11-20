@@ -11,6 +11,8 @@ import java.util.Optional;
 
 public interface CartItemRepository extends JpaRepository<CartItem, Long>, CartItemRepositoryCustom{
 
+    List<CartItem> findAllByUserId(Long userId);
+
     @Query("""
         select distinct c from CartItem c
             join fetch c.productOption po
@@ -27,15 +29,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long>, CartI
                 where c.user.id = :userId
                     and c.productOption.productOptionId = :productOptionId
         """)
-        Optional<CartItem> findByUserIdAndProductOptionId(
-                        @Param("userId") Long userId,
-                        @Param("productOptionId") Long productOptionId
-        );
-
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("DELETE FROM CartItem c WHERE c.user.id = :userId AND c.productOption.productOptionId IN :productOptionIds")
-    int deleteByUserIdAndProductOptionIdIn(
-            @Param("userId") Long userId,
-            @Param("productOptionIds") List<Long> productOptionIds
+    Optional<CartItem> findByUserIdAndProductOptionId(
+                    @Param("userId") Long userId,
+                    @Param("productOptionId") Long productOptionId
     );
 }

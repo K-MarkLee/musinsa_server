@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentProcessor {
@@ -14,9 +13,9 @@ public class PaymentProcessor {
     private final PaymentStrategyFactory strategyFactory;
 
     public PaymentResponseDto processPayment(PaymentConfirmRequest request) {
-        
-        String pgProvider = request.getPgProvider();
-        PaymentStrategy strategy = strategyFactory.getStrategy(pgProvider);
+        PaymentContext context = PaymentContext.from(request);
+
+        PaymentStrategy strategy = strategyFactory.getStrategy(context);
 
         return strategy.confirmPayment(request);
     }

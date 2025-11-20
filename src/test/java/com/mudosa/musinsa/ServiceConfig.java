@@ -38,7 +38,6 @@ import org.springframework.transaction.annotation.Transactional;
     MybatisAutoConfiguration.class,
     org.springframework.boot.autoconfigure.batch.BatchAutoConfiguration.class
 })
-@Transactional
 public abstract class ServiceConfig {
 
   @MockitoBean

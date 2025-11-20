@@ -20,6 +20,7 @@ public class CartItemRepositoryImpl implements CartItemRepositoryCustom{
                 .where(
                         cartItem.user.id.eq(userId)
                                 .and(cartItem.productOption.productOptionId.in(productOptionIds))
-                );
+                )
+                .execute();
     }
 }

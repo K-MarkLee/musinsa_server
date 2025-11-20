@@ -41,8 +41,8 @@ class OrderRepositoryImplTest extends ServiceConfig {
         Brand brand = createBrand();
         em.persist(brand);
 
-        OptionValue sizeL = createOptionValue("SIZE", "L");
-        OptionValue colorBlack = createOptionValue("COLOR", "BLACK");
+        OptionValue sizeL = createOptionValue(ValueName.SIZE.getName(), "L");
+        OptionValue colorBlack = createOptionValue(ValueName.COLOR.getName(), "BLACK");
         em.persist(sizeL);
         em.persist(colorBlack);
 
@@ -69,7 +69,7 @@ class OrderRepositoryImplTest extends ServiceConfig {
         orderProducts.add(orderProduct);
 
         Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L);
-        orderProducts.forEach(op -> op.setOrder(order));
+        orderProducts.forEach(op -> op.setOrderForTest(order));
         em.persist(order);
 
         em.flush();

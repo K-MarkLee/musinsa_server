@@ -95,7 +95,7 @@ public class ProductOption extends BaseEntity {
         try {
             this.inventory.decrease(quantity);
         } catch (IllegalStateException ex) {
-            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK, ex.getMessage());
+            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK, "재고가 부족한 상품이 있습니다");
         }
     }
 

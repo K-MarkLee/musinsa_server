@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.payment.application.dto.request;
 
 import com.mudosa.musinsa.payment.application.dto.PaymentCreateDto;
+import com.mudosa.musinsa.payment.domain.model.PgProvider;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -24,7 +25,7 @@ public class PaymentConfirmRequest {
     @NotNull(message = "결제 금액은 필수입니다")
     private Long amount;
 
-    private String pgProvider = "TOSS";
+    private PgProvider pgProvider = PgProvider.TOSS;
 
     public TossPaymentConfirmRequest toTossRequest() {
         return TossPaymentConfirmRequest.builder()

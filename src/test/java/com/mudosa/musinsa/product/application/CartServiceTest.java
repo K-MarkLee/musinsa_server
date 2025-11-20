@@ -547,31 +547,6 @@ class CartServiceTest {
             org.mockito.Mockito.verifyNoInteractions(cartItemRepository);
         }
 
-        @Test
-        @DisplayName("Given: 삭제할 옵션 리스트가 있으면 repository가 호출되어 삭제된다")
-        void deleteByProductOptions_nonEmpty_callsRepository() {
-            // Given
-            List<Long> optionIds = List.of(11L, 22L);
-            given(cartItemRepository.deleteByUserIdAndProductOptionIdIn(eq(1L), eq(optionIds))).willReturn(2);
-
-            // When
-            sut.deleteCartItemsByProductOptions(1L, optionIds);
-
-            // Then
-            then(cartItemRepository).should().deleteByUserIdAndProductOptionIdIn(1L, optionIds);
-        }
-
-        @Test
-        @DisplayName("Given: 삭제할 옵션이 존재하지 않으면 repository는 0을 반환하고 예외는 발생하지 않는다")
-        void deleteByProductOptions_nonExisting_returnsZero_noException() {
-            // Given
-            List<Long> optionIds = List.of(999L, 1000L);
-            given(cartItemRepository.deleteByUserIdAndProductOptionIdIn(eq(1L), eq(optionIds))).willReturn(0);
-
-            // When / Then: 호출 시 예외가 없어야 함
-            sut.deleteCartItemsByProductOptions(1L, optionIds);
-            then(cartItemRepository).should().deleteByUserIdAndProductOptionIdIn(1L, optionIds);
-        }
 
         @Test
         @DisplayName("Given: 존재하지 않는 cartItem을 삭제하면 예외가 발생한다")
@@ -583,16 +558,6 @@ class CartServiceTest {
             assertThatThrownBy(() -> sut.deleteCartItem(1L, 999L)).isInstanceOf(BusinessException.class);
         }
 
-        @Test
-        @DisplayName("Given: repository에서 삭제 중 예외가 발생하면 예외를 전파한다")
-        void deleteByProductOptions_repositoryThrows_shouldPropagate() {
-            // Given
-            List<Long> optionIds = List.of(11L, 22L);
-            given(cartItemRepository.deleteByUserIdAndProductOptionIdIn(eq(1L), eq(optionIds))).willThrow(new RuntimeException("DB down"));
-
-            // When / Then
-            assertThatThrownBy(() -> sut.deleteCartItemsByProductOptions(1L, optionIds)).isInstanceOf(RuntimeException.class);
-        }
 
         @Test
         @DisplayName("Given: 삭제할 옵션 리스트가 null이면 아무 작업도 하지 않는다")

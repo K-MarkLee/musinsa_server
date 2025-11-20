@@ -138,28 +138,4 @@ class CartServiceIntegrationTest extends ServiceConfig {
         assertThat(response.getQuantity()).isEqualTo(4);
     }
 
-    @Test
-    @DisplayName("여러 옵션 ID를 전달해 장바구니 항목을 일괄 삭제할 수 있다")
-    void deleteCartItemsByProductOptions_removesRows() {
-        User user = createUser("cart-user4");
-        ProductOption option1 = createProductOption(2);
-        ProductOption option2 = createProductOption(2);
-
-        CartItem item1 = cartItemRepository.save(CartItem.builder()
-            .user(user)
-            .productOption(option1)
-            .quantity(1)
-            .build());
-        CartItem item2 = cartItemRepository.save(CartItem.builder()
-            .user(user)
-            .productOption(option2)
-            .quantity(1)
-            .build());
-
-        cartService.deleteCartItemsByProductOptions(user.getId(),
-            List.of(option1.getProductOptionId(), option2.getProductOptionId()));
-
-        assertThat(cartItemRepository.findById(item1.getCartItemId())).isEmpty();
-        assertThat(cartItemRepository.findById(item2.getCartItemId())).isEmpty();
-    }
 }

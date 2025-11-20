@@ -66,7 +66,7 @@ class ProductOptionDomainTest {
             ProductOption option = ProductOption.create(product, new Money(1000L), inv);
 
             // when / then
-            assertThatThrownBy(() -> option.decreaseStock(0))
+            assertThatThrownBy(() -> option.deductStock(0))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.VALIDATION_ERROR));
         }
@@ -81,7 +81,7 @@ class ProductOptionDomainTest {
             ProductOption option = ProductOption.create(product, new Money(1000L), inv);
 
             // when / then
-            assertThatThrownBy(() -> option.decreaseStock(3))
+            assertThatThrownBy(() -> option.deductStock(3))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INSUFFICIENT_STOCK));
         }

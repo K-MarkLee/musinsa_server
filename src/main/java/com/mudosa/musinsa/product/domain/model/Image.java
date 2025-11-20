@@ -37,6 +37,13 @@ public class Image extends BaseEntity {
     }
 
     @Builder
+    private Image(Product product, String imageUrl, Boolean isThumbnail) {
+        this.product = product;
+        this.imageUrl = imageUrl;
+        this.isThumbnail = isThumbnail;
+    }
+
+    @Builder
     Image(String imageUrl, boolean isThumbnail) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             throw new BusinessException(ErrorCode.IMAGE_REQUIRED);
