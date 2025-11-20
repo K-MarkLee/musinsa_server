@@ -57,43 +57,4 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @Operation(
-            summary = "주문 상세 조회",
-            description = "주문 상세 정보를 조회합니다 (PENDING, COMPLETED 모두 가능)"
-    )
-    @GetMapping("/{orderNo}")
-    public ResponseEntity<ApiResponse<OrderDetailResponse>> fetchOrderDetail(
-            @PathVariable String orderNo
-    ){
-        OrderDetailResponse response = orderService.fetchOrderDetail(orderNo);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    @Operation(
-            summary = "주문 목록 조회",
-            description = "사용자의 주문 목록을 페이징하여 조회합니다."
-    )
-    @GetMapping
-    public ResponseEntity<ApiResponse<OrderListResponse>> fetchOrderList(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Parameter(hidden = true) Pageable pageable
-    ){
-        Long userId = userDetails.getUserId();
-        OrderListResponse response = orderService.fetchOrderList(userId, pageable);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-
-    @Operation(
-            summary = "주문 취소",
-            description = "주문을 취소합니다."
-    )
-    @PostMapping("/{orderNo}/cancel")
-    public ResponseEntity<ApiResponse<OrderListResponse>> cancelOrder(
-            @PathVariable String orderNo
-    ){
-        orderService.cancelOrder(orderNo);
-        return ResponseEntity.ok(ApiResponse.success(null));
-    }
-
 }

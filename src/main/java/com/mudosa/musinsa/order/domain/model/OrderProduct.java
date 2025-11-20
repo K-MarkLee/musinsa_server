@@ -77,10 +77,6 @@ public class OrderProduct extends BaseEntity {
         return productPrice.multiply(this.productQuantity);
     }
 
-    public void restoreStock() {
-        this.productOption.restoreStock(this.productQuantity);
-    }
-
     public void setOrderForTest(Order order) {
         this.order = order;
     }

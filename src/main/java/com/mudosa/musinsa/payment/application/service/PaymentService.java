@@ -30,7 +30,6 @@ import static com.mudosa.musinsa.exception.ErrorCode.PAYMENT_TIMEOUT;
 @RequiredArgsConstructor
 public class PaymentService {
 
-    private final PaymentRepository paymentRepository;
     private final PaymentProcessor paymentProcessor;
     private final PaymentConfirmService paymentConfirmService;
 
@@ -65,23 +64,12 @@ public class PaymentService {
 
             //PG사에 의한 오류 처리
             if(!pgApproved && isPgRelatedError(e.getErrorCode())){
-                try{
-                    paymentConfirmService.failPayment(paymentId, e.getMessage(), userId, orderId);
-                }catch(Exception compensationError){
-                    //TODO: 긴급 알림 발송
-                }
+                paymentConfirmService.failPayment(paymentId, e.getMessage(), userId, orderId);
                 throw e;
             }
 
             if(pgApproved){
-                try {
-                    paymentConfirmService.manualPaymentCheck(paymentId, userId);
-                } catch (Exception markError) {
-                    log.error("결제 상태 마킹도 실패: {}", markError.getMessage());
-                }
-
-                //TODO: 긴급 알림 발송
-
+                paymentConfirmService.manualPaymentCheck(paymentId, userId);
                 throw new BusinessException(
                         ErrorCode.PAYMENT_SYSTEM_ERROR,
                         "결제는 승인되었으나 후속 처리 중 오류가 발생했습니다. 고객센터로 문의해주세요."
@@ -89,29 +77,6 @@ public class PaymentService {
             }
 
             throw e;
-
-        }catch (Exception e){
-            if (paymentId != null && !pgApproved) {
-                log.warn("예상치 못한 오류로 보상 트랜잭션 시작: orderId={}", orderId);
-                try {
-                    paymentConfirmService.failPayment(paymentId, e.getMessage(), userId, orderId);
-                } catch (Exception compensationError) {
-                    log.error("failPayment 실패: {}", compensationError.getMessage(), compensationError);
-                }
-            }
-
-            if (pgApproved) {
-                try {
-                    paymentConfirmService.manualPaymentCheck(paymentId, userId);
-                } catch (Exception markError) {
-                    log.error("결제 상태 마킹도 실패: {}", markError.getMessage());
-                }
-            }
-
-            throw new BusinessException(
-                    ErrorCode.PAYMENT_SYSTEM_ERROR,
-                    "결제 처리 중 시스템 오류가 발생했습니다"
-            );
 
         }
     }
@@ -121,5 +86,7 @@ public class PaymentService {
         return errorCode == ErrorCode.PAYMENT_APPROVAL_FAILED
                 || errorCode == ErrorCode.PAYMENT_TIMEOUT;
     }
+
+
 
 }

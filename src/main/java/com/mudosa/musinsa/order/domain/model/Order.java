@@ -53,7 +53,7 @@ public class Order extends BaseEntity {
 
     @Embedded
     @AttributeOverride(name = "amount", column = @Column(name = "total_discount"))
-    private Money totalDiscount = Money.ZERO;
+    private Money totalDiscount;
 
     @CreatedDate
     private LocalDateTime registeredAt;
@@ -69,7 +69,7 @@ public class Order extends BaseEntity {
         this.status = status;
         this.orderNo = orderNo;
         this.totalPrice = totalPrice;
-        this.totalDiscount = totalDiscount;
+        this.totalDiscount = Money.ZERO;
         this.registeredAt = registeredAt;
         this.isSettleable = isSettleable;
         this.settledAt = settledAt;
@@ -124,10 +124,6 @@ public class Order extends BaseEntity {
     public void complete() {
         this.status = this.status.complete();
         this.isSettleable = true;
-    }
-
-    public void cancel() {
-        this.status = this.status.cancel();
     }
 
     public void refund() {

@@ -8,6 +8,7 @@ import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.order.application.dto.InsufficientStockItem;
 import com.mudosa.musinsa.order.application.dto.OrderCreateItem;
+import com.mudosa.musinsa.order.application.dto.PendingOrderResponse;
 import com.mudosa.musinsa.order.application.dto.request.OrderCreateRequest;
 import com.mudosa.musinsa.order.application.dto.response.OrderCreateResponse;
 import com.mudosa.musinsa.order.domain.model.Order;
@@ -397,6 +398,22 @@ class OrderServiceTest extends ServiceConfig {
         assertThat(result.getStockQuantity().getValue()).isEqualTo(15);
     }
 
+    @DisplayName("주문서를 조회한다.")
+    @Test
+    void fetchPendingOrder(){
+        //given
+        String orderNo = "ORD101";
+        createTestData(orderNo, 100, 2);
+
+        //when
+        PendingOrderResponse result = orderService.fetchPendingOrder(orderNo);
+
+        //then
+        assertThat(result)
+                .extracting("orderNo", "userName")
+                .contains(orderNo, "testUser");
+    }
+
 
     private Inventory createInventory(int stockQuantity) {
         return Inventory.builder()
@@ -485,5 +502,54 @@ class OrderServiceTest extends ServiceConfig {
                 .quantity(3)
                 .productOption(productOption)
                 .build();
+    }
+
+    private Order createOrder(Long userId, String orderNo, List<OrderProduct> orderProducts, Long totalPrice) {
+        return Order.builder()
+                .userId(userId)
+                .orderNo(orderNo)
+                .status(OrderStatus.PENDING)
+                .totalPrice(new Money(totalPrice))
+                .orderProducts(orderProducts)
+                .build();
+    }
+
+    private OrderServiceTest.TestData createTestData(String orderNo, int initialStock, int orderQuantity) {
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = createInventory(initialStock);
+        ProductOption productOption = productOptionRepository.save(
+                createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, orderQuantity);
+        orderProducts.add(orderProduct);
+
+        Order order = createOrder(user.getId(), orderNo, orderProducts, 20000L);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        return new OrderServiceTest.TestData(
+                user.getId(),
+                order.getId(),
+                inventory.getInventoryId(),
+                orderNo
+        );
+    }
+
+    private static class TestData {
+        final Long userId;
+        final Long orderId;
+        final Long inventoryId;
+        final String orderNo;
+
+        TestData(Long userId, Long orderId, Long inventoryId, String orderNo) {
+            this.userId = userId;
+            this.orderId = orderId;
+            this.inventoryId = inventoryId;
+            this.orderNo = orderNo;
+        }
     }
 }

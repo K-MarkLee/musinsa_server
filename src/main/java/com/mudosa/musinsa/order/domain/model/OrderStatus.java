@@ -117,12 +117,4 @@ public enum OrderStatus {
                 String.format("%s 상태에서는 %s할 수 없습니다", this.description, action)
         );
     }
-
-    public boolean isPending() {
-        return this == PENDING;
-    }
-
-    public boolean isCompleted() {
-        return this == COMPLETED;
-    }
 }

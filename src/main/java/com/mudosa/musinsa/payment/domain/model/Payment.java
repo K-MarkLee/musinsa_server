@@ -118,12 +118,6 @@ public class Payment extends BaseEntity{
         addLog(PaymentEventType.FAILED, errorMessage, userId);
     }
 
-    public void cancel(Long userId, String cancelReason){
-        validateUserId(userId);
-        this.status = this.status.cancel();
-        addLog(PaymentEventType.CANCELLED, cancelReason, userId);
-    }
-
     public void addLog(PaymentEventType eventType, String message, Long userId) {
         validateUserId(userId);
         PaymentLog log = PaymentLog.create(this, eventType, message, userId);

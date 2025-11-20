@@ -6,8 +6,6 @@ import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.dto.*;
 import com.mudosa.musinsa.order.application.dto.request.OrderCreateRequest;
 import com.mudosa.musinsa.order.application.dto.response.OrderCreateResponse;
-import com.mudosa.musinsa.order.application.dto.response.OrderDetailResponse;
-import com.mudosa.musinsa.order.application.dto.response.OrderListResponse;
 import com.mudosa.musinsa.order.domain.model.Order;
 import com.mudosa.musinsa.order.domain.model.OrderProduct;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
@@ -17,7 +15,6 @@ import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,24 +82,6 @@ public class OrderService {
         );
     }
 
-    public OrderDetailResponse fetchOrderDetail(String orderNo) {
-        //주문 조회
-
-        //사용자 정보 조회
-
-        //상품 목록 조회
-
-        //결제 정보 조회
-        return null;
-    }
-
-    public OrderListResponse fetchOrderList(Long userId, Pageable pageable) {
-        return null;
-    }
-
-    public void cancelOrder(String orderNo) {
-
-    }
 
     @Transactional(readOnly = false)
     public Long completeOrder(String orderNo) {

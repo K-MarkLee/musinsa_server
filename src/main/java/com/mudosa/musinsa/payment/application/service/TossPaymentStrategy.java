@@ -30,10 +30,10 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class TossPaymentStrategy implements PaymentStrategy {
 
-	private static final String TOSS_PAYMENTS_CONFIRM_URL =
-			"https://api.tosspayments.com/v1/payments/confirm";
-
 	private static final PgProvider PROVIDER_NAME = PgProvider.TOSS;
+
+	@Value("${tosspayments.url}")
+	private String tossPaymentsConfirmUrl;
 
 	@Value("${tosspayments.secret-key}")
 	private String tossPaymentsSecretKey;
@@ -47,9 +47,7 @@ public class TossPaymentStrategy implements PaymentStrategy {
 
 	@Override
 	public boolean supports(PaymentContext context) {
-		return context.getPgProvider() == PROVIDER_NAME
-				&& context.getAmount().compareTo(BigDecimal.valueOf(100_000)) <= 0
-				&& context.getPaymentType() == PaymentType.NORMAL;
+		return context.getPgProvider() == PROVIDER_NAME;
 	}
 
 	public PaymentResponseDto confirmPayment(PaymentConfirmRequest request) {
@@ -73,7 +71,7 @@ public class TossPaymentStrategy implements PaymentStrategy {
 		//API 요청 구성
 		ClientRequest<TossPaymentConfirmRequest> apiRequest =
 				ClientRequest.<TossPaymentConfirmRequest>post(
-								TOSS_PAYMENTS_CONFIRM_URL,
+								tossPaymentsConfirmUrl,
 								TossPaymentConfirmResponse.class
 						)
 						.body(request)
