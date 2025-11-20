@@ -15,7 +15,6 @@ import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Image;
 import com.mudosa.musinsa.product.domain.model.Product;
-import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.model.ProductLike;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
@@ -66,8 +65,6 @@ public class ProductCommandService {
 		validateBrandMember(brand.getBrandId(), currentUserId);
 
 		// 2. 성별, 이미지, 옵션 정보 로드 (이미지와 옵션은 dto 에서 검증)
-		ProductGenderType genderType = request.getProductGenderType();
-		List<ProductCreateRequest.ImageCreateRequest> images = request.getImages();
 		List<ProductCreateRequest.OptionCreateRequest> optionRequests = request.getOptions();
 
 		
@@ -85,7 +82,7 @@ public class ProductCommandService {
 			brand,
 			request.getProductName(),
 			request.getProductInfo(),
-			genderType,
+			request.getProductGenderType(),
 			brand.getNameKo(),
 			category.buildPath(),
 			request.getIsAvailable(),
@@ -94,7 +91,7 @@ public class ProductCommandService {
 		);
 
 		// 6. 이미지 및 옵션 추가
-		images.forEach(image -> {
+		request.getImages().forEach(image -> {
 			Image img = Image.create(product, image.getImageUrl(), image.getIsThumbnail());
 			product.addImage(img);
 		});
@@ -300,7 +297,7 @@ public class ProductCommandService {
 			? productRepository.findDetailByIdForManagerWithLock(productId, brandId)
 			: productRepository.findDetailByIdForManager(productId, brandId))
 			.orElseThrow(() -> new BusinessException(
-				ErrorCode.PRODUCT_NOT_FOUND));
+				ErrorCode.PRODUCT_NOT_FOUND, "해당 brandId :" + brandId+ " 에 속한 상품을 찾을 수 없습니다. productId=" + productId));
 		if (product.getBrand() == null
 			|| product.getBrand().getBrandId() == null
 			|| !Objects.equals(product.getBrand().getBrandId(), brandId)) {
