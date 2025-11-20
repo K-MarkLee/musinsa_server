@@ -4,6 +4,7 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.common.dto.ApiResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
+import com.mudosa.musinsa.domain.chat.dto.MessageCursor;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
 import com.mudosa.musinsa.domain.chat.service.ChatService;
 import com.mudosa.musinsa.security.CustomUserDetails;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
@@ -74,18 +77,37 @@ public class ChatControllerImpl implements ChatController {
   public ApiResponse<Slice<MessageResponse>> getChatMessages(
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails,
-      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(required = false) String cursorCreatedAt,
+      @RequestParam(required = false)
+      Long cursorMessageId,
       @RequestParam(defaultValue = "20") int size
   ) {
     Long userId = userDetails.getUserId();
-    log.info("[API][GET] /api/chat/{}/messages userId={} page={} size={}",
-        chatId, userId, page, size);
+    log.info("[API][GET] /api/chat/{}/messages userId={} size={}",
+        chatId, userId, size);
 
-    Slice<MessageResponse> messages = chatService.getChatMessages(chatId, page, size);
+    LocalDateTime cursorCreatedAtDt = null;
+
+    if (cursorCreatedAt != null && !cursorCreatedAt.isBlank()) {
+      try {
+        // "2025-11-17T15:33:36" 전용
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        cursorCreatedAtDt = LocalDateTime.parse(cursorCreatedAt, formatter);
+      } catch (DateTimeParseException e) {
+        log.warn("잘못된 cursorCreatedAt 포맷: {}", cursorCreatedAt, e);
+        throw new IllegalArgumentException("cursorCreatedAt는 yyyy-MM-dd'T'HH:mm:ss 형식이어야 합니다.");
+      }
+    }
+ 
+    MessageCursor cursor = (cursorCreatedAtDt != null && cursorMessageId != null)
+        ? new MessageCursor(cursorCreatedAtDt, cursorMessageId)
+        : null;
+
+    Slice<MessageResponse> messages = chatService.getChatMessages(chatId, cursor, size);
 
     return ApiResponse.success(
         messages,
-        "이전 메시지를 성공적으로 조회했습니다: " + (page * size) + " ~ " + ((page * size) + size)
+        "이전 메시지를 성공적으로 조회했습니다"
     );
   }
 

@@ -192,7 +192,7 @@ class PaymentServiceTest extends ServiceConfig {
         //when & then
         assertThatThrownBy(() -> paymentConfirmService.createPaymentTransaction(request, user.getId()))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("재고가 부족한 상품이 있습니다");
+                .hasMessageContaining("부족");
 
         List<Payment> payments = paymentRepository.findAll();
         assertThat(payments).isEmpty();

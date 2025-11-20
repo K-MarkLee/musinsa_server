@@ -2,7 +2,9 @@ package com.mudosa.musinsa.product.domain.repository;
 
 import com.mudosa.musinsa.product.domain.model.Image;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,4 +18,8 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
         AND i.isThumbnail = true
     """)
     List<Image> findThumbnailsByProductIds(List<Long> productIds);
+
+    @Modifying(clearAutomatically = true)
+    @Query("delete from Image i where i.product.productId = :productId")
+    void deleteByProductId(@Param("productId") Long productId);
 }

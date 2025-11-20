@@ -61,41 +61,10 @@ public class EventService {
     private EventListResDto mapEventToDto(Event event, LocalDateTime currentTime) {
         EventStatus status = EventStatus.calculateStatus(event, currentTime);
 
-//        // 1) 옵션 엔티티 조회
-//        List<EventOption> options = eventOptionRepository.findByEventId(event.getId()); // 레포지토리에 구현 필요 + List로 객체반환
-
-        // 2) 이벤트 썸네일 조회
+        // 이벤트 썸네일 조회
         String thumbnailUrl = eventImageRepository.findByEventIdAndIsThumbnailTrue(event.getId()) //레포지토리 구현 필요
                 .map(EventImage::getImageUrl)
                 .orElse(null);  // 썸네일 이미지가 없으면 null 반환
-
-        // 3) EventOption -> EventOptionResDto 매핑
-
-//        List<EventOptionResDto> optionDtos = options.stream()
-//                .map(eo -> {
-//                    //필요 시 상품명만 뽑기 ( 구조에 맞게 수정 )
-//                    String productName = null;
-//                    String optionLabel = null;
-//
-//                    ProductOption po = eo.getProductOption();
-//                    Long productOptionId = null;
-//                    Long productId = null;
-//
-//                    if (po != null) {
-//                        productOptionId = po.getProductOptionId();
-//                        optionLabel = null; // 추후에 로직 추가 필요,
-//
-//                        if(po.getProduct() != null) {
-//                            productName = po.getProduct().getProductName();
-//                            productId = po.getProduct().getProductId();
-//
-//                        }
-//                    }
-//
-//                    return EventOptionResDto.from(eo, productName, optionLabel, productOptionId, productId);
-//
-//                })
-//                .toList();
 
         var rows = eventOptionRepository.findRowsNativeByEventId(event.getId());
         List<EventOptionResDto> optionDtos = rows.stream()

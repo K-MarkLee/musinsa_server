@@ -1,8 +1,8 @@
 package com.mudosa.musinsa.domain.chat.repository;
 
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
-import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,6 +71,29 @@ class ChatPartRepositoryTest extends ServiceConfig {
             .role(ChatPartRole.USER)
             .build()
     );
+  }
+
+  @Nested
+  @DisplayName("채팅방에 어떤 참여자를 제외한 ChatPart 정보를 조회한다")
+  class findChatPartExcludingUser {
+      @Test
+      void findChatPartExcludingUserTest(){
+          // given
+          User user1 = saveUser("user1");
+          User user2 = saveUser("user2");
+
+          Brand brand1 = saveBrand("브랜드1", "brand1");
+
+          ChatRoom chatRoom1 = saveChatRoom(brand1, ChatRoomType.GROUP);
+
+          saveChatPart(chatRoom1, user1);
+          saveChatPart(chatRoom1, user2);
+          // when
+          List<ChatPart> chatParts = chatPartRepository.findChatPartsExcludingUser(user1.getId(), chatRoom1.getChatId());
+          // then
+          assertThat(chatParts).hasSize(1);
+
+      }
   }
 
   /* === countByChatRoom_ChatIdAndDeletedAtIsNull 메서드 테스트 === */

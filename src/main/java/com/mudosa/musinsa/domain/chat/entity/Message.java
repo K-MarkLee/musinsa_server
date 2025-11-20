@@ -42,7 +42,7 @@ public class Message {
   @Column(name = "content", columnDefinition = "TEXT")
   private String content;
 
-  @Column(name = "created_at", nullable = false, insertable = false, updatable = false,
+  @Column(name = "created_at", nullable = false, updatable = false,
       columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
   private LocalDateTime createdAt;
 
@@ -66,8 +66,6 @@ public class Message {
 
   public boolean isSameRoom(Long chatId) {
     ChatPart cp = this.getChatPart();
-    return cp != null
-        && cp.getChatRoom() != null
-        && cp.getChatRoom().getChatId().equals(chatId);
+    return cp.getChatRoom().getChatId().equals(chatId);
   }
 }

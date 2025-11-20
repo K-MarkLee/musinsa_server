@@ -6,7 +6,6 @@ import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
 import com.mudosa.musinsa.domain.chat.entity.Message;
 import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
-import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
 import com.mudosa.musinsa.domain.chat.event.MessageEventPublisher;
 import com.mudosa.musinsa.domain.chat.file.FileStore;
 import com.mudosa.musinsa.domain.chat.mapper.ChatRoomMapper;
@@ -19,6 +18,9 @@ import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.notification.domain.event.NotificationEventPublisher;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.Tracer.SpanInScope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -34,8 +36,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * 채팅 비즈니스 로직 처리 서비스
@@ -43,7 +45,6 @@ import java.util.stream.Stream;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ChatServiceImpl implements ChatService {
 
   private final ChatRoomRepository chatRoomRepository;
@@ -60,6 +61,7 @@ public class ChatServiceImpl implements ChatService {
 
   private final @Qualifier("localFileStore") FileStore fileStore;
 
+  private final Tracer tracer;
 
   @Override
   public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
@@ -86,7 +88,7 @@ public class ChatServiceImpl implements ChatService {
   public MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files, LocalDateTime now) {
 
     //시작 시간으로 고정(여러번 호출시 시간이 달라지는 문제 발생 가능)
-    log.info("[chatId={}][userId={}] 메시지 저장 시작. parentId={}, contentLength={}, fileCount={}",
+    log.debug("[chatId={}][userId={}] 메시지 저장 시작. parentId={}, contentLength={}, fileCount={}",
         chatId, userId, parentId,
         (content != null ? content.length() : 0),
         (files != null ? files.size() : 0));
@@ -95,7 +97,7 @@ public class ChatServiceImpl implements ChatService {
     validateMessageOrFiles(content, files);
     log.debug("[chatId={}][userId={}] 메시지/파일 검증 완료", chatId, userId);
 
-    // 1) 채팅방/참여자 확인
+    // 1) 채팅방 확인
     ChatRoom chatRoom = getChatRoomOrThrow(chatId);
     log.debug("[chatId={}] 채팅방 검증 완료.", chatId);
 
@@ -133,110 +135,309 @@ public class ChatServiceImpl implements ChatService {
     return dto;
   }
 
-  /**
-   * 채팅방 메시지 목록 조회 (페이징)
-   */
+  private Slice<Long> getChatMessagesSlice(Long chatId, MessageCursor cursor, int size) {
+    // hasNext 판단 위해 size+1
+    Pageable pageable = PageRequest.of(0, size + 1);
 
-  @Override
-  public Slice<MessageResponse> getChatMessages(Long chatId, int page, int size) {
-    ChatRoom chatRoom = getChatRoomOrThrow(chatId);
-
-    Pageable pageable = PageRequest.of(page, size);
-    
-    Slice<Message> messages = messageRepository.findSliceWithRelationsByChatId(chatId, pageable);
-
-    // 비어 있으면 즉시 반환
-    if (messages.isEmpty()) {
-      log.debug("[chatId={}] 메시지 없음. page={}, size={}", chatId, page, size);
-      return new SliceImpl<MessageResponse>(List.of(), pageable, false);
+    if (cursor == null) {
+      return messageRepository.findIdSliceByChatId(chatId, pageable);
     }
 
-    // 채팅방에서 브랜드 id 추출
-    Long brandId = chatRoom.getBrand().getBrandId();
+    if (cursor.messageId() == null) {
+      return messageRepository.findIdSliceByChatId(chatId, pageable);
+    }
 
-    // (1) 브랜드 관리자 유저 ID 집합 미리 로딩 → per-row exists 제거
-    List<Long> managerIds = brandMemberRepository.findActiveUserIdsByBrandId(brandId);
-    Set<Long> managerUserIds = new HashSet<>(managerIds);
+    return messageRepository.findIdSliceByChatIdAndCursor(chatId, cursor.createdAt(), cursor.messageId(), pageable);
+  }
 
-    // (2) 현재 페이지의 메시지/부모 메시지 ID 수집
-    List<Long> messageIds = messages.getContent().stream()
-        .map(Message::getMessageId)
-        .toList();
+  @Transactional(readOnly = true)
+  protected MessagesBundle loadMessages(Long chatId, MessageCursor cursor, int size) {
 
-    List<Long> parentIds = messages.getContent().stream()
-        .map(Message::getParent)
-        .filter(Objects::nonNull)
-        .map(Message::getMessageId)
-        .toList();
+    // 전체 loadMessages용 span
+    Span span = tracer.nextSpan()
+        .name("chat.loadMessages")
+        .tag("chat.id", String.valueOf(chatId))
+        .start();
 
-    // (3) 첨부 일괄 로딩 → 메시지ID별 그룹핑 맵 구성
-    List<Long> allIds = Stream.concat(messageIds.stream(), parentIds.stream()).toList();
-    Map<Long, List<AttachmentResponse>> attachmentMap =
-        attachmentRepository.findAllByMessageIdIn(allIds).stream()
-            .collect(Collectors.groupingBy(
-                ma -> ma.getMessage().getMessageId(),
-                Collectors.mapping(this::toAttachmentDto, Collectors.toList())
-            ));
+    try (Tracer.SpanInScope ignored = tracer.withSpan(span)) {
 
-    // (4) DTO 변환 (람다 내부에서 외부 맵/셋 참조)
-    return messages.map(msg -> {
-      var cp = msg.getChatPart();
-      var parent = msg.getParent();
+      // 1) 채팅방 유효성 검증
+      Span roomSpan = tracer.nextSpan()
+          .name("chat.loadChatRoom")
+          .start();
 
-      List<AttachmentResponse> currentAttachments =
-          attachmentMap.getOrDefault(msg.getMessageId(), Collections.emptyList());
-
-      ParentMessageResponse parentDto = null;
-      if (parent != null) {
-        List<AttachmentResponse> parentAttachments =
-            attachmentMap.getOrDefault(parent.getMessageId(), Collections.emptyList());
-        Long parentUserId = (parent.getChatPart() != null && parent.getChatPart().getUser() != null)
-            ? parent.getChatPart().getUser().getId() : null;
-        String parentUserName = (parent.getChatPart() != null && parent.getChatPart().getUser() != null)
-            ? parent.getChatPart().getUser().getUserName() : "SYSTEM";
-
-        parentDto = ParentMessageResponse.builder()
-            .messageId(parent.getMessageId())
-            .userId(parentUserId)
-            .userName(parentUserName)
-            .content(parent.getContent())
-            .createdAt(parent.getCreatedAt())
-            .attachments(parentAttachments)
-            .build();
+      ChatRoom chatRoom;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(roomSpan)) {
+        chatRoom = getChatRoomOrThrow(chatId);
+      } finally {
+        roomSpan.end();
       }
 
-      Long senderUserId = (cp != null && cp.getUser() != null) ? cp.getUser().getId() : null;
-      String senderName = (cp != null && cp.getUser() != null) ? cp.getUser().getUserName() : "SYSTEM";
-      boolean isManager = (senderUserId != null) && managerUserIds.contains(senderUserId);
+      // 2) 메시지 페이지 조회 (keyset)
+      Span msgPageSpan = tracer.nextSpan()
+          .name("chat.loadMessagesPage")
+          .start();
 
-      return MessageResponse.builder()
-          .messageId(msg.getMessageId())
-          .chatId(msg.getChatPart().getChatRoom().getChatId())
-          .chatPartId(cp != null ? cp.getChatPartId() : null)
-          .userId(senderUserId)
-          .userName(senderName)
-          .content(msg.getContent())
-          .attachments(currentAttachments)
-          .createdAt(msg.getCreatedAt())
-          .parent(parentDto)
-          .isManager(isManager)
-          .build();
-    });
+      Slice<Long> idSlice;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(msgPageSpan)) {
+        idSlice = getChatMessagesSlice(chatId, cursor, size);
+      } finally {
+        msgPageSpan.end();
+      }
+
+      List<Long> ids = idSlice.getContent();
+      if (ids.isEmpty()) {
+        return MessagesBundle.empty(size);
+      }
+
+      boolean hasNext = idSlice.hasNext();
+
+      // over-fetch 했으니까 content에서 앞에 size개만 사용
+      List<Long> pageIds = ids.size() > size ? ids.subList(0, size) : ids;
+
+      // 3) 실제 메시지 + sender 로딩
+      Span msgEntitySpan = tracer.nextSpan()
+          .name("chat.loadMessagesEntities")
+          .tag("message.count", String.valueOf(pageIds.size()))
+          .start();
+
+      List<Message> messages;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(msgEntitySpan)) {
+        messages = messageRepository.findAllByMessageIds(pageIds);
+      } finally {
+        msgEntitySpan.end();
+      }
+
+      // 🔹 DB에서 받은 ID 순서를 그대로 살리기 위해 Map → pageIds 순으로 재조합
+      Map<Long, Message> messageMap = messages.stream()
+          .collect(Collectors.toMap(Message::getMessageId, Function.identity()));
+
+      List<Message> orderedMessages = pageIds.stream()
+          .map(messageMap::get)
+          .filter(Objects::nonNull)
+          .toList();
+
+      // 🔹 더 이상 정렬 필요 없음 (pageIds는 이미 keyset 정렬 기반)
+      // messages.sort(...); 제거
+
+
+      // 4) 부모 ID 수집 (중복 제거를 Set으로)
+      Span parentIdSpan = tracer.nextSpan()
+          .name("chat.collectParentIds")
+          .start();
+
+      List<Long> parentIds;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(parentIdSpan)) {
+        Set<Long> parentIdSet = orderedMessages.stream()
+            .map(Message::getParent)
+            .filter(Objects::nonNull)
+            .map(Message::getMessageId)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        parentIds = new ArrayList<>(parentIdSet);
+      } finally {
+        parentIdSpan.end();
+      }
+
+      // 5) 부모 메시지 batch 로딩
+      Map<Long, Message> parentMap = Collections.emptyMap();
+      if (!parentIds.isEmpty()) {
+        Span parentSpan = tracer.nextSpan()
+            .name("chat.loadParentMessages")
+            .tag("parent.count", String.valueOf(parentIds.size()))
+            .start();
+
+        try (Tracer.SpanInScope ignored2 = tracer.withSpan(parentSpan)) {
+          List<Message> parentMessages = messageRepository.findAllByMessageIds(parentIds);
+          parentMap = parentMessages.stream()
+              .collect(Collectors.toMap(Message::getMessageId, Function.identity()));
+        } finally {
+          parentSpan.end();
+        }
+      }
+
+      // 6) 브랜드 관리자 ID 조회
+      Span mgrSpan = tracer.nextSpan()
+          .name("chat.loadBrandManagers")
+          .start();
+
+      Set<Long> managerUserIds;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(mgrSpan)) {
+        Long brandId = chatRoom.getBrand().getBrandId();
+        List<Long> managerIds = brandMemberRepository.findActiveUserIdsByBrandId(brandId);
+        managerUserIds = new HashSet<>(managerIds);
+      } finally {
+        mgrSpan.end();
+      }
+
+      // 7) 메시지/부모 ID 합치기 (첨부 조회용) - Set으로 distinct
+      Span idCollectSpan = tracer.nextSpan()
+          .name("chat.collectAttachmentIds")
+          .start();
+
+      List<Long> allIds;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(idCollectSpan)) {
+
+        Set<Long> allIdSet = new LinkedHashSet<>();
+        for (Message msg : orderedMessages) {
+          allIdSet.add(msg.getMessageId());
+        }
+        allIdSet.addAll(parentIds);
+
+        allIds = new ArrayList<>(allIdSet);
+      } finally {
+        idCollectSpan.end();
+      }
+
+      // 8) 첨부 조회
+      Span attSpan = tracer.nextSpan()
+          .name("chat.loadAttachments")
+          .tag("message.count", String.valueOf(allIds.size()))
+          .start();
+
+      Map<Long, List<AttachmentResponse>> attachmentMap;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(attSpan)) {
+        attachmentMap = attachmentRepository.findAllByMessageIdIn(allIds).stream()
+            .collect(Collectors.groupingBy(
+                ma -> ma.getMessage().getMessageId(),
+                Collectors.mapping(AttachmentResponse::of, Collectors.toList())
+            ));
+      } finally {
+        attSpan.end();
+      }
+
+      // 9) 최종 Bundle 구성
+      Span bundleSpan = tracer.nextSpan()
+          .name("chat.buildMessagesBundle")
+          .start();
+
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(bundleSpan)) {
+        return new MessagesBundle(
+            orderedMessages,
+            hasNext,
+            managerUserIds,
+            attachmentMap,
+            parentMap
+        );
+      } finally {
+        bundleSpan.end();
+      }
+
+    } finally {
+      span.end();
+    }
   }
 
-  private AttachmentResponse toAttachmentDto(MessageAttachment a) {
-    return AttachmentResponse.builder()
-        .attachmentId(a.getAttachmentId())
-        .attachmentUrl(a.getAttachmentUrl())
-        .mimeType(a.getMimeType())
-        .sizeBytes(a.getSizeBytes())
-        .build();
+  @Override
+  public Slice<MessageResponse> getChatMessages(Long chatId, MessageCursor cursor, int size) {
+    getChatRoomOrThrow(chatId);
+
+    Span span = tracer.nextSpan()
+        .name("chat.getChatMessages")
+        .tag("chat.id", String.valueOf(chatId))
+        .start();
+
+    try (SpanInScope ignored = tracer.withSpan(span)) {
+
+      // DB + 배치 로딩
+      MessagesBundle bundle = loadMessages(chatId, cursor, size);
+
+      if (bundle.messages().isEmpty()) {
+        return new SliceImpl<>(List.of(), PageRequest.of(0, size), false);
+      }
+
+      // DTO 매핑 구간 span
+      Span dtoSpan = tracer.nextSpan().name("chat.mapMessagesToDto").start();
+      List<MessageResponse> dtoList;
+      try (SpanInScope ignored2 = tracer.withSpan(dtoSpan)) {
+
+        List<Message> messages = bundle.messages();
+        Set<Long> managerUserIds = bundle.managerUserIds();
+        Map<Long, List<AttachmentResponse>> attachmentMap = bundle.attachmentMap();
+        Map<Long, Message> parentMap = bundle.parentMap();
+
+        dtoList = messages.stream()
+            .map(msg -> {
+
+              // parent 엔티티를 parentMap에서 가져옴
+              Message parent = null;
+              if (msg.getParent() != null) {
+                Long parentId = msg.getParent().getMessageId();
+                parent = parentMap.get(parentId);
+              }
+
+              // 현재 메시지 첨부
+              List<AttachmentResponse> currentAttachments =
+                  attachmentMap.getOrDefault(msg.getMessageId(), Collections.emptyList());
+
+              // ParentMessageResponse 생성
+              ParentMessageResponse parentDto = null;
+              if (parent != null) {
+
+                List<AttachmentResponse> parentAttachments =
+                    attachmentMap.getOrDefault(parent.getMessageId(), Collections.emptyList());
+
+                var parentCp = parent.getChatPart();
+                Long parentUserId = (parentCp != null && parentCp.getUser() != null)
+                    ? parentCp.getUser().getId()
+                    : null;
+                String parentUserName = (parentCp != null && parentCp.getUser() != null)
+                    ? parentCp.getUser().getUserName()
+                    : "SYSTEM";
+
+                parentDto = ParentMessageResponse.builder()
+                    .messageId(parent.getMessageId())
+                    .userId(parentUserId)
+                    .userName(parentUserName)
+                    .content(parent.getContent())
+                    .createdAt(parent.getCreatedAt())
+                    .attachments(parentAttachments)
+                    .build();
+              }
+
+              // sender
+              var cp = msg.getChatPart();
+              Long senderUserId = (cp != null && cp.getUser() != null)
+                  ? cp.getUser().getId()
+                  : null;
+              String senderName = (cp != null && cp.getUser() != null)
+                  ? cp.getUser().getUserName()
+                  : "SYSTEM";
+
+              boolean isManager = senderUserId != null && managerUserIds.contains(senderUserId);
+
+              return MessageResponse.builder()
+                  .messageId(msg.getMessageId())
+                  .chatId(msg.getChatId())
+                  .chatPartId(cp != null ? cp.getChatPartId() : null)
+                  .userId(senderUserId)
+                  .userName(senderName)
+                  .content(msg.getContent())
+                  .attachments(currentAttachments)
+                  .createdAt(msg.getCreatedAt())
+                  .parent(parentDto)
+                  .isManager(isManager)
+                  .build();
+            })
+            .toList();
+
+      } finally {
+        dtoSpan.end();
+      }
+
+      return new SliceImpl<>(dtoList, PageRequest.of(0, size), bundle.hasNext());
+
+    } finally {
+      span.end();
+    }
   }
+
 
   /**
    * 채팅방 정보 조회
    */
   @Override
+  @Transactional(readOnly = true)
   public ChatRoomInfoResponse getChatRoomInfoByChatId(Long chatId, Long userId) {
 
     //채팅룸 찾기
@@ -275,11 +476,7 @@ public class ChatServiceImpl implements ChatService {
     validateNotAlreadyParticipant(chatId, userId);
 
     // 3) 참여자 생성
-    ChatPart chatPart = ChatPart.builder()
-        .chatRoom(chatRoom)
-        .user(user)
-        .role(ChatPartRole.USER)
-        .build();
+    ChatPart chatPart = ChatPart.create(chatRoom, user);
 
     chatPart = chatPartRepository.save(chatPart);
 
@@ -287,7 +484,7 @@ public class ChatServiceImpl implements ChatService {
         chatId, userId, chatPart.getChatPartId());
 
     // 4) DTO 변환
-    return toResponse(chatPart);
+    return ChatPartResponse.of(chatPart);
   }
 
   /**
@@ -310,9 +507,6 @@ public class ChatServiceImpl implements ChatService {
         chatId, userId, chatPart.getChatPartId());
   }
 
-
-  /** -- helper method -- */
-
   /**
    * 채팅방 찾기 (없으면 오류)
    */
@@ -323,6 +517,8 @@ public class ChatServiceImpl implements ChatService {
           return new BusinessException(ErrorCode.CHAT_NOT_FOUND);
         });
   }
+
+  /** -- helper method -- */
 
   /**
    * 참여정보 찾기 (없으면 오류)
@@ -351,21 +547,6 @@ public class ChatServiceImpl implements ChatService {
       log.warn("[chatId={}][userId={}] 이미 채팅방에 참여 중인 유저입니다.", chatId, userId);
       throw new BusinessException(ErrorCode.CHAT_PARTICIPANT_ALREADY_EXISTS);
     }
-  }
-
-  // TODO: DTO 변환 분리 필요
-
-  /**
-   * ChatPartResponse DTO 변환 메서드
-   */
-  private ChatPartResponse toResponse(ChatPart chatPart) {
-    return ChatPartResponse.builder()
-        .chatPartId(chatPart.getChatPartId())
-        .userId(chatPart.getUser().getId())
-        .chatId(chatPart.getChatRoom().getChatId())
-        .userName(chatPart.getUser().getUserName())
-        .createdAt(chatPart.getCreatedAt())
-        .build();
   }
 
   //메시지와 파일이 모두 없는지 여부 확인
@@ -422,12 +603,7 @@ public class ChatServiceImpl implements ChatService {
         // === 실제 경로 생성 ===
         String storedUrl = fileStore.storeMessageFile(chatId, messageId, file);
 
-        MessageAttachment att = MessageAttachment.builder()
-            .attachmentUrl(storedUrl)
-            .message(message)
-            .mimeType(file.getContentType())
-            .sizeBytes(file.getSize())
-            .build();
+        MessageAttachment att = MessageAttachment.create(message, file, storedUrl);
 
         result.add(attachmentRepository.save(att));
 
@@ -444,4 +620,6 @@ public class ChatServiceImpl implements ChatService {
     notificationEventPublisher.publishChatNotificationCreatedEvent(dto);
     log.info("이벤트 발행 완료. messageId={}", dto.getMessageId());
   }
+
+
 }

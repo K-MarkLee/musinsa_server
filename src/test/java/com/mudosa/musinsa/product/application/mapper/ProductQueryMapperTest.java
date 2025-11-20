@@ -44,7 +44,10 @@ class ProductQueryMapperTest {
                     .isAvailable(true)
                     .build();
 
-            Image thumb = Image.create("http://img/1.jpg", true);
+            Image thumb = Image.builder()
+                    .imageUrl("http://img/1.jpg")
+                    .isThumbnail(true)
+                    .build();
             p.addImage(thumb);
             setId(p, "productId", 10L);
             setId(thumb, "imageId", 11L);
@@ -88,7 +91,10 @@ class ProductQueryMapperTest {
                     .isAvailable(true)
                     .build();
 
-            Image img = Image.create("http://img/2.jpg", false);
+            Image img = Image.builder()
+                    .imageUrl("http://example.com/image2.jpg")
+                    .isThumbnail(false)
+                    .build();
             p.addImage(img);
             setId(p, "productId", 30L);
             setId(img, "imageId", 31L);

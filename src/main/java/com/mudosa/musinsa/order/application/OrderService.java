@@ -123,7 +123,7 @@ public class OrderService {
 
         productOptions.forEach(po->{
             Integer quantityToDeduct = quantityMap.get(po.getProductOptionId());
-            po.deductStock(quantityToDeduct);
+            po.decreaseStock(quantityToDeduct);
         });
 
         //주문 상태 변경

@@ -13,7 +13,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Slf4j
-public class CouponQueryService {
+public class CouponListService {
 
     private final MemberCouponRepository memberCouponRepository;
 

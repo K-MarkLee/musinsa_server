@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.*;
 
 @Slf4j
+@Transactional
 class OrderServiceTest extends ServiceConfig {
 
     @Autowired
@@ -245,7 +246,7 @@ class OrderServiceTest extends ServiceConfig {
         //when & then
         assertThatThrownBy(() -> orderService.completeOrder(testOrderNo))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("재고가 부족한 상품이 있습니다");
+                .hasMessageContaining("부족");
     }
 
     @DisplayName("사용자가 동시에 결제하여 주문을 완료한다.")

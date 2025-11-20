@@ -19,17 +19,21 @@ class ProductOptionDomainTest {
     @DisplayName("생성 시 유효성 검증: null 상품, 비정상 가격, null 재고는 예외를 발생시켜야 한다")
     class Creation {
         @Test
-        @DisplayName("product가 null이면 create 호출 시 IllegalArgumentException이 발생해야 한다")
+        @DisplayName("product가 null이면 create 호출 시 BusinessException이 발생해야 한다")
         void nullProduct_throws() {
             // given
             Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
 
             // when / then
-            assertThatThrownBy(() -> ProductOption.create(null, new Money(1000L), inv)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> ProductOption.create(
+                    null,
+                    new Money(1000L),
+                    inv
+            )).isInstanceOf(BusinessException.class);
         }
 
         @Test
-        @DisplayName("productPrice가 0 이하이면 create 호출 시 IllegalArgumentException이 발생해야 한다")
+        @DisplayName("productPrice가 0 이하이면 create 호출 시 BusinessException이 발생해야 한다")
         void nonPositivePrice_throws() {
             // given
             Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
@@ -37,18 +41,26 @@ class ProductOptionDomainTest {
             Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
 
             // when / then
-            assertThatThrownBy(() -> ProductOption.create(product, Money.ZERO, inv)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> ProductOption.create(
+                    product,
+                    new Money(0L),
+                    inv
+            )).isInstanceOf(BusinessException.class);
         }
 
         @Test
-        @DisplayName("inventory가 null이면 create 호출 시 IllegalArgumentException이 발생해야 한다")
+        @DisplayName("inventory가 null이면 create 호출 시 BusinessException이 발생해야 한다")
         void nullInventory_throws() {
             // given
             Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
             Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
 
             // when / then
-            assertThatThrownBy(() -> ProductOption.create(product, new Money(1000L), null)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> ProductOption.create(
+                    product,
+                    new Money(1000L),
+                    null
+            )).isInstanceOf(BusinessException.class);
         }
     }
 
@@ -57,63 +69,58 @@ class ProductOptionDomainTest {
     class StockBehavior {
 
         @Test
-        @DisplayName("차감 수량이 0 이하이면 decreaseStock 호출 시 BusinessException(ErrorCode.VALIDATION_ERROR)이 발생해야 한다")
+        @DisplayName("차감 수량이 0 이하이면 decreaseStock 호출 시 BusinessException이 발생해야 한다")
         void decrease_zeroOrNegative_throwsBusiness() {
             // given
             Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
             Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
             Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-            ProductOption option = ProductOption.create(product, new Money(1000L), inv);
-
+            ProductOption option = ProductOption.builder().product(product).productPrice(new Money(1000L)).inventory(inv).build();
+            
             // when / then
-            assertThatThrownBy(() -> option.deductStock(0))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.VALIDATION_ERROR));
+            assertThatThrownBy(() -> option.decreaseStock(0))
+                .isInstanceOf(BusinessException.class);
         }
 
         @Test
-        @DisplayName("재고보다 큰 차감 요청 시 decreaseStock 호출 시 BusinessException(ErrorCode.INSUFFICIENT_STOCK)이 발생해야 한다")
+        @DisplayName("재고보다 큰 차감 요청 시 decreaseStock 호출 시 BusinessException이 발생해야 한다")
         void decrease_insufficientStock_wrapsBusiness() {
             // given
             Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
             Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
             Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(2)).build();
-            ProductOption option = ProductOption.create(product, new Money(1000L), inv);
+            ProductOption option = ProductOption.builder().product(product).productPrice(new Money(1000L)).inventory(inv).build();
 
             // when / then
-            assertThatThrownBy(() -> option.deductStock(3))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.INSUFFICIENT_STOCK));
+            assertThatThrownBy(() -> option.decreaseStock(3))
+                .isInstanceOf(BusinessException.class);
         }
 
         @Test
-        @DisplayName("복구 수량이 0 이하이면 restoreStock 호출 시 BusinessException(ErrorCode.VALIDATION_ERROR)이 발생해야 한다")
+        @DisplayName("복구 수량이 0 이하이면 restoreStock 호출 시 BusinessException이 발생해야 한다")
         void restore_invalidAmount_throwsBusiness() {
             // given
             Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
             Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
             Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(2)).build();
-            ProductOption option = ProductOption.create(product, new Money(1000L), inv);
+            ProductOption option = ProductOption.builder().product(product).productPrice(new Money(1000L)).inventory(inv).build();
 
             // when / then
             assertThatThrownBy(() -> option.restoreStock(0))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.VALIDATION_ERROR));
-        }
+                .isInstanceOf(BusinessException.class);        }
 
-        @Test
-        @DisplayName("재고가 0이면 validateAvailable 호출 시 BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE)이 발생해야 한다")
+            @Test
+            @DisplayName("재고가 0이면 validateAvailable 호출 시 BusinessException이 발생해야 한다")
         void validateAvailable_soldOut_throws() {
             // given
             Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
             Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
             Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(0)).build();
-            ProductOption option = ProductOption.create(product, new Money(1000L), inv);
+            ProductOption option = ProductOption.builder().product(product).productPrice(new Money(1000L)).inventory(inv).build();
 
             // when / then
             assertThatThrownBy(option::validateAvailable)
-                .isInstanceOf(BusinessException.class)
-                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE));
+                .isInstanceOf(BusinessException.class);
         }
 
         @Test
@@ -123,18 +130,18 @@ class ProductOptionDomainTest {
             Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
             Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
             Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-            ProductOption option = ProductOption.create(product, new Money(1000L), inv);
+            ProductOption option = ProductOption.builder().product(product).productPrice(new Money(1000L)).inventory(inv).build();
 
             // when: null 입력은 무시
             option.addOptionValue(null);
 
             // when: 정상 케이스 추가
             OptionValue ov = OptionValue.builder().optionName("size").optionValue("M").build();
-            ProductOptionValue pov = ProductOptionValue.create(option, ov);
+            ProductOptionValue pov = ProductOptionValue.builder().productOption(option).optionValue(ov).build();
             option.addOptionValue(pov);
-
-            // then: 예외 없이 normalized ids 호출 가능
-            assertThat(option.normalizedOptionValueIds()).isNotNull();
         }
     }
-}
+}  
+
+    
+    

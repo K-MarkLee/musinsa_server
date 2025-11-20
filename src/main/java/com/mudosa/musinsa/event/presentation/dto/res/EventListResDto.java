@@ -34,7 +34,6 @@ public class EventListResDto {
 
     private Boolean isPublic;
     private Integer limitPerUser;
-    private Event.LimitScope limitScope;
 
     private LocalDateTime startedAt;  //이벤트 시작 시간
     private LocalDateTime endedAt;  //이벤트 종료 시간
@@ -62,7 +61,6 @@ public class EventListResDto {
                 .eventType(event.getEventType())
                 .isPublic(event.getIsPublic())
                 .limitPerUser(event.getLimitPerUser())
-                .limitScope(event.getLimitScope())
                 .startedAt(event.getStartedAt())
                 .endedAt(event.getEndedAt())
                 .thumbnailUrl(thumbnailUrl)

@@ -54,10 +54,42 @@ public class Product extends BaseEntity {
     // 역정규화: "상의/티셔츠"
     @Column(name = "category_path", nullable = false, length = 100)
     private String categoryPath;
+
+    // 외부 노출 생성 메서드 + 필수 값 검증
+    public static Product create(Brand brand,
+                                 String productName,
+                                 String productInfo,
+                                 ProductGenderType productGenderType,
+                                 String brandName,
+                                 String categoryPath,
+                                 Boolean isAvailable,
+                                 java.util.List<Image> images,
+                                 java.util.List<ProductOption> productOptions) {
+        if (brand == null) {
+            throw new BusinessException(ErrorCode.PRODUCT_BRAND_REQUIRED);
+        }
+        if (productName == null || productName.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.PRODUCT_NAME_REQUIRED);
+        }
+        if (productInfo == null || productInfo.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.PRODUCT_INFO_REQUIRED);
+        }
+        if (productGenderType == null) {
+            throw new BusinessException(ErrorCode.PRODUCT_GENDER_TYPE_REQUIRED);
+        }
+        if (brandName == null || brandName.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.PRODUCT_BRAND_NAME_REQUIRED);
+        }
+        if (categoryPath == null || categoryPath.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.PRODUCT_CATEGORY_PATH_REQUIRED);
+        }
+
+        return new Product(brand, productName, productInfo, productGenderType, brandName, categoryPath,
+                isAvailable, images, productOptions);
+    }
  
-    // 필수 값 검증 후 상품과 연관 컬렉션을 초기화하는 빌더 생성자이다.
     @Builder
-    public Product(Brand brand, String productName, String productInfo,
+    private Product(Brand brand, String productName, String productInfo,
                    ProductGenderType productGenderType, String brandName, String categoryPath, Boolean isAvailable,
                    java.util.List<Image> images,
                    java.util.List<ProductOption> productOptions) {
@@ -103,7 +135,7 @@ public class Product extends BaseEntity {
 
         if (productName != null) {
             if (productName.trim().isEmpty()) {
-                throw new BusinessException(ErrorCode.PRODUCT_INFO_REQUIRED, "상품명은 비어 있을 수 없습니다.");
+                throw new BusinessException(ErrorCode.PRODUCT_NAME_REQUIRED);
             }
             if (!productName.equals(this.productName)) {
                 this.productName = productName;
@@ -113,7 +145,7 @@ public class Product extends BaseEntity {
 
         if (productInfo != null) {
             if (productInfo.trim().isEmpty()) {
-                throw new BusinessException(ErrorCode.PRODUCT_INFO_REQUIRED, "상품 정보는 비어 있을 수 없습니다.");
+                throw new BusinessException(ErrorCode.PRODUCT_INFO_REQUIRED);
             }
             if (!productInfo.equals(this.productInfo)) {
                 this.productInfo = productInfo;
