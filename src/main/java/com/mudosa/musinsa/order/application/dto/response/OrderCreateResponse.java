@@ -1,8 +1,6 @@
-package com.mudosa.musinsa.order.application.dto;
+package com.mudosa.musinsa.order.application.dto.response;
 
 import lombok.*;
-
-import java.util.List;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

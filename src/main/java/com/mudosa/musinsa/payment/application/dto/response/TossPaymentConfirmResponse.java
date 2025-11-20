@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.payment.application.dto;
+package com.mudosa.musinsa.payment.application.dto.response;
 
 import java.time.LocalDateTime;
 

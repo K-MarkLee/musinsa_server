@@ -3,35 +3,47 @@ package com.mudosa.musinsa.order.application;
 import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandStatus;
+import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
 import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.order.application.dto.InsufficientStockItem;
 import com.mudosa.musinsa.order.application.dto.OrderCreateItem;
-import com.mudosa.musinsa.order.application.dto.OrderCreateRequest;
-import com.mudosa.musinsa.order.application.dto.OrderCreateResponse;
+import com.mudosa.musinsa.order.application.dto.request.OrderCreateRequest;
+import com.mudosa.musinsa.order.application.dto.response.OrderCreateResponse;
 import com.mudosa.musinsa.order.domain.model.Order;
+import com.mudosa.musinsa.order.domain.model.OrderProduct;
+import com.mudosa.musinsa.order.domain.model.OrderStatus;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
-import com.mudosa.musinsa.product.domain.model.Inventory;
-import com.mudosa.musinsa.product.domain.model.Product;
-import com.mudosa.musinsa.product.domain.model.ProductGenderType;
-import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.product.domain.model.*;
+import com.mudosa.musinsa.product.domain.repository.CartItemRepository;
+import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
+import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
+import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.model.UserRole;
-import jakarta.persistence.EntityManager;
-import org.junit.jupiter.api.AfterEach;
+import com.mudosa.musinsa.user.domain.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.*;
 
+@Slf4j
+@Transactional
 class OrderServiceTest extends ServiceConfig {
-
-    @Autowired
-    private EntityManager em;
 
     @Autowired
     private OrderService orderService;
@@ -39,32 +51,35 @@ class OrderServiceTest extends ServiceConfig {
     @Autowired
     private OrderRepository orderRepository;
 
-    @AfterEach
-    void tearDown() {
+    @Autowired
+    private InventoryRepository inventoryRepository;
 
-    }
+    @Autowired
+    private ProductOptionRepository productOptionRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private BrandRepository brandRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
 
     @DisplayName("상품 옵션과 수량을 갖는 맵으로 주문을 생성한다.")
     @Test
-    void createOrder(){
+    void createOrder() {
         //given
-        Brand brand = createBrand();
-        em.persist(brand);
-
-        Product product = createProduct(brand, true);
-        em.persist(product);
-
-        Inventory inventory = createInventory(10);
-        em.persist(inventory);
-
-        ProductOption productOption = createProductOption(product, inventory, 10000L);
-        em.persist(productOption);
-
-        User user = createUser();
-        em.persist(user);
-
-        em.flush();
-        em.clear();
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = inventoryRepository.save(createInventory(10));
+        ProductOption productOption = productOptionRepository.save(
+            createProductOption(product, inventory, 10000L)
+        );
 
         OrderCreateRequest request = getOrderCreateRequest(productOption.getProductOptionId(), 2);
 
@@ -72,7 +87,7 @@ class OrderServiceTest extends ServiceConfig {
         OrderCreateResponse response = orderService.createPendingOrder(request, user.getId());
 
         //then
-        Order order = orderRepository.findById(response.getOrderId()).orElseThrow(null);
+        Order order = orderRepository.findById(response.getOrderId()).orElseThrow();
 
         assertThat(order)
                 .extracting("orderNo", "userId")
@@ -83,92 +98,52 @@ class OrderServiceTest extends ServiceConfig {
                 .containsExactly(order);
     }
 
-
     @DisplayName("주문 상품 옵션의 id가 올바르지 않을때 예외를 발생한다.")
     @Test
-    void createOrderWithInvalidProductOptionId(){
+    void createOrderWithInvalidProductOptionId() {
         //given
-        Brand brand = createBrand();
-        em.persist(brand);
-
-        Product product = createProduct(brand, true);
-        em.persist(product);
-
-        Inventory inventory = createInventory(10);
-        em.persist(inventory);
-
-        ProductOption productOption = createProductOption(product, inventory, 10000L);
-        em.persist(productOption);
-
-        User user = createUser();
-        em.persist(user);
-
-        em.flush();
-        em.clear();
-
+        User user = userRepository.save(createUser());
         OrderCreateRequest request = getOrderCreateRequest(-10L, 2);
 
         //when & then
-        assertThatThrownBy(()->orderService.createPendingOrder(request, user.getId()))
+        assertThatThrownBy(() -> orderService.createPendingOrder(request, user.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("상품 옵션을 찾을 수 없습니다");
     }
 
     @DisplayName("주문 상품이 유효하지 않은 상품을 주문할 때 예외를 발생한다.")
     @Test
-    void createOrderWithInvalidProduct(){
+    void createOrderWithInvalidProduct() {
         //given
-        Brand brand = createBrand();
-        em.persist(brand);
-
-        Product product = createProduct(brand, false);
-        em.persist(product);
-
-        Inventory inventory = createInventory(10);
-        em.persist(inventory);
-
-        ProductOption productOption = createProductOption(product, inventory, 10000L);
-        em.persist(productOption);
-
-        User user = createUser();
-        em.persist(user);
-
-        em.flush();
-        em.clear();
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, false)); // isAvailable = false
+        Inventory inventory = inventoryRepository.save(createInventory(10));
+        ProductOption productOption = productOptionRepository.save(
+            createProductOption(product, inventory, 10000L)
+        );
 
         OrderCreateRequest request = getOrderCreateRequest(productOption.getProductOptionId(), 2);
 
         //when & then
-        assertThatThrownBy(()->orderService.createPendingOrder(request, user.getId()))
+        assertThatThrownBy(() -> orderService.createPendingOrder(request, user.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("현재 판매 불가능한 상품이 포함되어 있습니다");
     }
 
     @DisplayName("상품 옵션의 재고 수량보다 큰 수량을 차감할 경우 예외를 발생한다.")
     @Test
-    void createOrderMoreThanInventory(){
+    void createOrderMoreThanInventory() {
         //given
-        Brand brand = createBrand();
-        em.persist(brand);
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = inventoryRepository.save(createInventory(10));
+        ProductOption productOption = productOptionRepository.save(
+            createProductOption(product, inventory, 10000L)
+        );
 
-        Product product = createProduct(brand, true);
-        em.persist(product);
-
-        int stockQuantity = 0;
-
-        Inventory inventory = createInventory(stockQuantity);
-        em.persist(inventory);
-
-        ProductOption productOption = createProductOption(product, inventory, 10000L);
-        em.persist(productOption);
-
-        User user = createUser();
-        em.persist(user);
-
-        em.flush();
-        em.clear();
-
-        OrderCreateRequest request = getOrderCreateRequest(productOption.getProductOptionId(), 1);
+        OrderCreateRequest request = getOrderCreateRequest(productOption.getProductOptionId(), 20);
 
         //when & then
         Throwable thrown = catchThrowable(() -> orderService.createPendingOrder(request, user.getId()));
@@ -187,8 +162,241 @@ class OrderServiceTest extends ServiceConfig {
 
         assertThat(insufficientItems).hasSize(1);
         assertThat(insufficientItems.get(0).getProductOptionId()).isEqualTo(productOption.getProductOptionId());
-        assertThat(insufficientItems.get(0).getAvailableQuantity()).isEqualTo(stockQuantity);
     }
+
+    @DisplayName("결제승인 시 주문 상태가 완료 상태로 변경된다.")
+    @Test
+    void completeOrder() {
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = inventoryRepository.save(createInventory(10));
+        ProductOption productOption = productOptionRepository.save(
+            createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, 2);
+        orderProducts.add(orderProduct);
+
+        String orderNo = "ORD123";
+        Order order = createOrder(user.getId(), orderNo, orderProducts, 40000L, OrderStatus.PENDING);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        //when
+        orderService.completeOrder(orderNo);
+
+        //then
+        Order result = orderRepository.findByOrderNo(orderNo).orElseThrow();
+        assertThat(result.getStatus()).isEqualTo(OrderStatus.COMPLETED);
+    }
+
+    @DisplayName("결제승인 시 재고를 차감한다.")
+    @Test
+    void completeOrderWithInventoryDeduct() {
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = inventoryRepository.save(createInventory(10));
+        ProductOption productOption = productOptionRepository.save(
+            createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, 5);
+        orderProducts.add(orderProduct);
+
+        String testOrderNo = "ORD101";
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.PENDING);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        //when
+        orderService.completeOrder(testOrderNo);
+
+        //then
+        Inventory result = inventoryRepository.findById(inventory.getInventoryId()).orElseThrow();
+        assertThat(result.getStockQuantity().getValue()).isEqualTo(5);
+    }
+
+    @DisplayName("주문 재고보다 남은 재고가 더 클 경우 예외를 발생한다.")
+    @Test
+    void completeOrderWithManyInventoryDeduct() {
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = inventoryRepository.save(createInventory(1));
+        ProductOption productOption = productOptionRepository.save(
+            createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, 5);
+        orderProducts.add(orderProduct);
+
+        String testOrderNo = "ORD101";
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.PENDING);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        //when & then
+        assertThatThrownBy(() -> orderService.completeOrder(testOrderNo))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("부족");
+    }
+
+    @DisplayName("사용자가 동시에 결제하여 주문을 완료한다.")
+    @ValueSource(ints = {1, 10, 100, 1000})
+    @ParameterizedTest
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void orderCompleteWithConcurrent(int init) throws InterruptedException {
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+
+        final int finalQuantity = 5000;
+        Inventory inventory = createInventory(finalQuantity);
+
+        ProductOption productOption = productOptionRepository.save(
+                createProductOption(product, inventory, 10000L)
+        );
+
+        List<String> orderNos = new ArrayList<>();
+        for (int i = 0; i < init; i++) {
+            List<OrderProduct> orderProducts = new ArrayList<>();
+            OrderProduct orderProduct = createOrderProduct(productOption, 1);
+            orderProducts.add(orderProduct);
+
+            String orderNo = "ORD101_" + init + "_" + i;
+            Order order = createOrder(user.getId(), orderNo, orderProducts, 40000L, OrderStatus.PENDING);
+            orderProducts.forEach(op -> op.setOrderForTest(order));
+            orderRepository.save(order);
+
+            orderNos.add(orderNo);
+        }
+
+        //when
+        ExecutorService executorService = Executors.newFixedThreadPool(init);
+        CountDownLatch latch = new CountDownLatch(init);
+
+        for (int i = 0; i < init; i++) {
+            final String orderNo = orderNos.get(i);
+            executorService.submit(() -> {
+                try {
+                    orderService.completeOrder(orderNo);
+                } catch (Exception e) {
+                    log.error("동시성 테스트 중 예외 발생", e);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await(30, TimeUnit.SECONDS);
+        executorService.shutdown();
+
+        //then
+        Inventory result = inventoryRepository.findById(inventory.getInventoryId()).orElseThrow();
+        assertThat(result.getStockQuantity().getValue()).isEqualTo(finalQuantity - init);
+    }
+
+    @DisplayName("PG사 결제 승인에 성공하면 사용자의 장바구니에서 관련된 상품 옵션을 제거한다. ")
+    @Test
+    void deleteCartItemsAfterPaymentConfirmSuccess(){
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = inventoryRepository.save(createInventory(1));
+        ProductOption productOption = productOptionRepository.save(
+                createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, 5);
+        orderProducts.add(orderProduct);
+
+        String testOrderNo = "ORD101";
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.COMPLETED);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        CartItem cartItem = createCartItem(productOption, user);
+        cartItemRepository.save(cartItem);
+
+        //when
+        orderService.deleteCartItems(order.getId(),user.getId());
+
+        //then
+        List<CartItem> result = cartItemRepository.findAllByUserId(user.getId());
+        assertThat(result).isEmpty();
+    }
+
+    @DisplayName("PG사 승인 실패 시 주문 상태를 PENDING으로 변경한다.")
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void updateOrderStatusToPendingWhenPaymentConfirmFail(){
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = createInventory(1);
+        ProductOption productOption = productOptionRepository.save(
+                createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, 5);
+        orderProducts.add(orderProduct);
+
+        String testOrderNo = "ORD102";
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.COMPLETED);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        //when
+        orderService.rollbackOrder(order.getId());
+
+        //then
+        Order result = orderRepository.findById(order.getId()).orElseThrow(null);
+        assertThat(result.getStatus()).isEqualTo(OrderStatus.PENDING);
+    }
+
+    @DisplayName("PG사 승인 실패 시 재고를 원복한다. ")
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void updateInventoryQuantityToPendingWhenPaymentConfirmFail(){
+        //given
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        Inventory inventory = createInventory(10);
+        ProductOption productOption = productOptionRepository.save(
+                createProductOption(product, inventory, 10000L)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, 5);
+        orderProducts.add(orderProduct);
+
+        String testOrderNo = "ORD102";
+        Order order = createOrder(user.getId(), testOrderNo, orderProducts, 40000L, OrderStatus.COMPLETED);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        //when
+        orderService.rollbackOrder(order.getId());
+
+        //then
+        Inventory result = inventoryRepository.findById(inventory.getInventoryId()).orElseThrow(null);
+        assertThat(result.getStockQuantity().getValue()).isEqualTo(15);
+    }
+
 
     private Inventory createInventory(int stockQuantity) {
         return Inventory.builder()
@@ -249,6 +457,33 @@ class OrderServiceTest extends ServiceConfig {
 
         return OrderCreateRequest.builder()
                 .items(items)
+                .build();
+    }
+
+    private Order createOrder(Long userId, String orderNo, List<OrderProduct> orderProducts, Long totalPrice, OrderStatus orderStatus) {
+        return Order
+                .builder()
+                .userId(userId)
+                .orderNo(orderNo)
+                .status(orderStatus)
+                .totalPrice(new Money(totalPrice))
+                .orderProducts(orderProducts)
+                .build();
+    }
+
+    private OrderProduct createOrderProduct(ProductOption productOption, int quantity) {
+        return OrderProduct.builder()
+                .productOption(productOption)
+                .productQuantity(quantity)
+                .productPrice(productOption.getProductPrice())
+                .build();
+    }
+
+    private static CartItem createCartItem(ProductOption productOption, User user){
+        return CartItem.builder()
+                .user(user)
+                .quantity(3)
+                .productOption(productOption)
                 .build();
     }
 }

@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 
 @Entity
@@ -28,24 +29,22 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class Order extends BaseEntity {
-    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_id")
     private Long id;
 
     private Long userId;
-    
+
     private Long couponId;
 
-    //TODO: order가 order_product를 바라보는 상황이 있을까?
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderProduct> orderProducts = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
-    @Column(name="order_status")
+    @Column(name = "order_status")
     private OrderStatus status;
-    
+
     private String orderNo;
 
     @Embedded
@@ -54,13 +53,13 @@ public class Order extends BaseEntity {
 
     @Embedded
     @AttributeOverride(name = "amount", column = @Column(name = "total_discount"))
-    private Money totalDiscount = Money.of(BigDecimal.ZERO);
+    private Money totalDiscount = Money.ZERO;
 
     @CreatedDate
     private LocalDateTime registeredAt;
 
     private Boolean isSettleable = false;
-    
+
     private LocalDateTime settledAt;
 
     @Builder
@@ -74,7 +73,7 @@ public class Order extends BaseEntity {
         this.registeredAt = registeredAt;
         this.isSettleable = isSettleable;
         this.settledAt = settledAt;
-        this.orderProducts = orderProducts;
+        this.orderProducts = orderProducts != null ? orderProducts : new ArrayList<>();
     }
 
     public static Order create(
@@ -82,7 +81,8 @@ public class Order extends BaseEntity {
             Long couponId,
             Map<ProductOption, Integer> orderProductsWithQuantity
     ) {
-        if(orderProductsWithQuantity == null){
+
+        if (orderProductsWithQuantity == null) {
             throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND, "상품 목록이 없는 주문은 생성할 수 없습니다");
         }
 
@@ -96,21 +96,20 @@ public class Order extends BaseEntity {
                 .build();
 
         //총 가격 초기 세팅
-        Money calculatedTotalPrice = Money.of(0L);
+        Money calculatedTotalPrice = Money.ZERO;
 
-        for(Map.Entry<ProductOption, Integer> entry: orderProductsWithQuantity.entrySet()){
+        for (Map.Entry<ProductOption, Integer> entry : orderProductsWithQuantity.entrySet()) {
             ProductOption productOption = entry.getKey();
             Integer quantity = entry.getValue();
-            if(quantity < 1) throw new BusinessException(ErrorCode.ORDER_CREATE_FAIL, "상품은 1개 이상 주문 가능합니다");
 
             //OrderProduct 생성
             OrderProduct orderProduct = OrderProduct.create(order, productOption, quantity);
             order.orderProducts.add(orderProduct);
 
             //총 가격 계산
-            Money productPrice = productOption.getProductPrice();
-            Money itemTotalPrice = productPrice.multiply(quantity);
-            calculatedTotalPrice = calculatedTotalPrice.add(itemTotalPrice);
+            calculatedTotalPrice = calculatedTotalPrice.add(
+                    orderProduct.calculateItemPrice()
+            );
         }
 
         order.totalPrice = calculatedTotalPrice;
@@ -118,100 +117,28 @@ public class Order extends BaseEntity {
     }
 
 
-    private static String createOrderNumber(){
-        // 주문번호 형식: ORD + timestamp(13자리) + random(3자리)
-        long timestamp = System.currentTimeMillis();
-        int random = (int)(Math.random() * 1000);
-        return String.format("ORD%d%03d", timestamp, random);
+    private static String createOrderNumber() {
+        return "ORD" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
     }
 
-    /* 주문 상태 확인 */
-    public void validatePending() {
-        if (!this.status.isPending()) {
-            throw new BusinessException(
-                    ErrorCode.INVALID_ORDER_STATUS,
-                    String.format("주문 상태가 PENDING이 아닙니다. 현재: %s", this.status)
-            );
-        }
-    }
-
-    /* 주문 상품 검증 */
-    public void validateOrderProducts() {
-        if (this.orderProducts.isEmpty()) {
-            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND);
-        }
-
-        // 각 주문 상품의 상품 옵션 검증
-        for (OrderProduct orderProduct : this.orderProducts) {
-            orderProduct.validateProductOption();
-        }
-    }
-
-    /* 주문 완료 처리 */
     public void complete() {
-        this.status = this.status.transitionTo(OrderStatus.COMPLETED);
+        this.status = this.status.complete();
         this.isSettleable = true;
     }
 
-    /* 주문 롤백 처리 */
-    public void rollback() {
-        if (this.status.isCompleted()) {
-            this.status = OrderStatus.PENDING;
-            this.isSettleable = false;
-        }
+    public void cancel() {
+        this.status = this.status.cancel();
     }
 
-    /* 재고 차감 */
-    public void decreaseStock() {
-        for (OrderProduct orderProduct : this.orderProducts) {
-            orderProduct.decreaseStock();
-        }
+    public void refund() {
+        this.status = this.status.refund();
+        this.isSettleable = false;
     }
 
-    /* 쿠폰 사용 여부 확인 */
-    public boolean hasCoupon() {
-        return this.couponId != null;
-    }
-
-    /* 주문에 쿠폰 적용 */
-    public void addCoupon(Long couponId){
-        this.couponId = couponId;
-    }
-
-    /* 재고 복구 */
-    public void restoreStock() {
-        for (OrderProduct orderProduct : this.orderProducts) {
-            orderProduct.restoreStock();
-        }
-    }
-
-    /* 할인 적용 */
-    public void applyDiscount(BigDecimal discount) {
-    }
-
-
-    /* 재고 확인 */
-    public StockValidationResult validateStock() {
-        if (this.orderProducts.isEmpty()) {
-            throw new BusinessException(ErrorCode.ORDER_ITEM_NOT_FOUND, "주문 상품이 없습니다");
-        }
-        
-        List<InsufficientStockItem> insufficientItems = new ArrayList<>();
-        
-        for (OrderProduct orderProduct : this.orderProducts) {
-            if (!orderProduct.hasEnoughStock()) {
-                insufficientItems.add(new InsufficientStockItem(
-                    orderProduct.getProductOption().getProductOptionId(),
-                    orderProduct.getProductQuantity(),
-                    orderProduct.getAvailableStock()
-                ));
-            }
-        }
-        
-        if (!insufficientItems.isEmpty()) {
-            return StockValidationResult.invalid(insufficientItems);
-        }
-        
-        return StockValidationResult.valid();
+    public void rollbackStatus() {
+        this.status = this.status.rollbackToPending();
+        this.isSettleable = false;
     }
 }
+
+

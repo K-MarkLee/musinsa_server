@@ -1,25 +1,25 @@
 package com.mudosa.musinsa.payment.application.service;
 
-import com.mudosa.musinsa.payment.application.dto.PaymentConfirmRequest;
-import com.mudosa.musinsa.payment.application.dto.PaymentConfirmResponse;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentConfirmRequest;
 import com.mudosa.musinsa.payment.application.dto.PaymentResponseDto;
+import com.mudosa.musinsa.payment.domain.model.PgProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Slf4j
 @Service
-@Profile("test")  // ← 테스트 환경에서만 활성화
 @RequiredArgsConstructor
 public class KakaoFakePaymentStrategy implements PaymentStrategy {
 
-	private static final String PROVIDER_NAME = "KAKAO";
-
+	private static final PgProvider PROVIDER_NAME = PgProvider.KAKAO;
 
 	@Override
-	public String getProviderName() {
-		return PROVIDER_NAME;
+	public boolean supports(PaymentContext context) {
+		return false;
 	}
 
 	@Override
@@ -28,8 +28,7 @@ public class KakaoFakePaymentStrategy implements PaymentStrategy {
 
 		// Fake 응답 반환 (실제 API 호출 없음)
 		return PaymentResponseDto.builder()
-				.status("DONE")
-				.pgProvider(PROVIDER_NAME)
+				.pgProvider(PROVIDER_NAME.name())
 				.build();
 	}
 }

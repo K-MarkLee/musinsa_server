@@ -83,6 +83,26 @@ class OrderTest {
         assertThat(order.getTotalPrice().getAmount().compareTo(BigDecimal.valueOf(20000))).isZero();
     }
 
+    @DisplayName("PG사 결제 승인 실패 시 주문 상태를 PENDING으로 복구한다")
+    @Test
+    void rollbackStatus(){
+        //given
+        Brand brand = createBrand();
+        Product product = createProduct(brand);
+        Inventory inventory = createInventory(10);
+        ProductOption productOption = createProductOption(product, inventory, 10000L);
+        Map<ProductOption, Integer> orderProductsWithQuantity = Map.of(productOption, 2);
+        Order order = Order.create(1L, 1L, orderProductsWithQuantity);
+
+        //when
+        order.rollbackStatus();
+
+        //then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+        assertThat(order.getIsSettleable()).isFalse();
+    }
+
+
     private Inventory createInventory(int stockQuantity) {
         return Inventory.builder()
                 .stockQuantity(new StockQuantity(stockQuantity))
@@ -120,8 +140,4 @@ class OrderTest {
                 .inventory(inventory)
                 .build();
     }
-
-
-
-
 }

@@ -13,7 +13,7 @@ import java.util.Optional;
 
 // 상품 옵션을 개별적으로 조회하고 관리하는 리포지토리이다.
 @Repository
-public interface ProductOptionRepository extends JpaRepository<ProductOption, Long> {
+public interface ProductOptionRepository extends JpaRepository<ProductOption, Long>,  ProductOptionRepositoryCustom {
 
     @Query("SELECT DISTINCT po FROM ProductOption po " +
            "JOIN FETCH po.inventory " +

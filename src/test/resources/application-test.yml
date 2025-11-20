@@ -37,4 +37,7 @@ logging:
     org:
       hibernate:
         sql: debug
-        type: trace
+        type.descriptor.sql.BasicBinder: TRACE
+        orm.jdbc.internal.LogicalConnectionImpl: DEBUG
+      springframework.orm.jpa: DEBUG
+      springframework.transaction: DEBUG

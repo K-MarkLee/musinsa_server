@@ -1,5 +1,6 @@
-package com.mudosa.musinsa.order.application.dto;
+package com.mudosa.musinsa.order.application.dto.response;
 
+import com.mudosa.musinsa.order.application.dto.OrderDetailItem;
 import com.mudosa.musinsa.payment.domain.model.PaymentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

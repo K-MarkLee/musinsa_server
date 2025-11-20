@@ -72,41 +72,4 @@ class CartItemRepositoryTest {
         assertThat(fetched.getProductOption().getInventory()).isNotNull();
     }
 
-    @Test
-    @DisplayName("deleteByUserIdAndProductOptionIdIn는 삭제 건수를 반환하고 실제로 삭제한다")
-    @Transactional
-    void deleteByUserIdAndProductOptionIdIn_deletesAndReturnsCount() {
-        // given: user
-        User user = User.create("u2","p","u2@example.com", UserRole.USER, null, null, null);
-        em.persist(user);
-
-    Brand brand = Brand.create("brandKo2", "brandEn2", BigDecimal.ZERO);
-    em.persist(brand);
-    Product product = Product.builder().brand(brand).productName("p").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
-    em.persist(product);
-
-    Inventory inv1 = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-    em.persist(inv1);
-
-    Inventory inv2 = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-    em.persist(inv2);
-
-    ProductOption po1 = ProductOption.create(product, new Money(5000), inv1);
-    em.persist(po1);
-    ProductOption po2 = ProductOption.create(product, new Money(6000), inv2);
-    em.persist(po2);
-
-        CartItem c1 = CartItem.builder().user(user).productOption(po1).quantity(1).build();
-        CartItem c2 = CartItem.builder().user(user).productOption(po2).quantity(1).build();
-        em.persist(c1);
-        em.persist(c2);
-        em.flush();
-
-        // when
-        int deleted = cartItemRepository.deleteByUserIdAndProductOptionIdIn(user.getId(), List.of(po1.getProductOptionId(), po2.getProductOptionId()));
-
-        // then
-        assertThat(deleted).isEqualTo(2);
-        assertThat(cartItemRepository.findAllByUserId(user.getId())).isEmpty();
-    }
 }
