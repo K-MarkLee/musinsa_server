@@ -60,6 +60,7 @@ public class EventService {
 
     // 이벤트 객체를 DTO 로 변환한다.
     // ✅ N+1 문제 해결: 이미 Fetch Join으로 로드된 데이터를 사용 (추가 쿼리 없음)
+
     private EventListResDto mapEventToDto(Event event, LocalDateTime currentTime) {
         EventStatus status = EventStatus.calculateStatus(event, currentTime);
 
