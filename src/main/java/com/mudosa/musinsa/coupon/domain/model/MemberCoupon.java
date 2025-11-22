@@ -47,7 +47,8 @@ public class MemberCoupon extends BaseEntity {
         memberCoupon.userId = userId;
         memberCoupon.coupon = coupon;
         memberCoupon.couponStatus = CouponStatus.AVAILABLE;
-        memberCoupon.expiredAt = LocalDateTime.now();
+        // ✅ 쿠폰 종료일 + 30일을 만료일로 설정 (버그 수정)
+        memberCoupon.expiredAt = coupon.getEndDate().plusDays(30);
         return memberCoupon;
     }
 

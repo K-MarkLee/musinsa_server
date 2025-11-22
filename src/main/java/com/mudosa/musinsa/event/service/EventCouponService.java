@@ -48,7 +48,7 @@ public class EventCouponService {
         try (EventEntryService.EventEntryToken ignored = eventEntryService.acquireSlot(eventId, userId)){
 
             // 2. 이벤트 옵션 조회 ( 비관적 락 )
-            EventOption eventOption = eventOptionRepository.findByEventIdAndIdForUpdate(eventId,productOptionId)
+            EventOption eventOption = eventOptionRepository.findByEventIdWithDetails(eventId)
                     // 레포에 생성 필요 -1
                     .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_NOT_FOUND));
 
