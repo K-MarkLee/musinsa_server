@@ -96,8 +96,6 @@ public class EventCouponService {
             }
 
 
-            decreaseEventStock(eventOption); // 기존 재고 차감 호출 (event => inventory)
-
             return EventCouponIssueResult.from(issuanceResult);
         }
     }
@@ -120,21 +118,6 @@ public class EventCouponService {
         }
     }
 
-    // 기존 상품옵션 단위 재고 차감
-    private void decreaseEventStock(EventOption eventOption) {
-        try{
-            eventOption.decreaseStock(1);
-        }catch (IllegalStateException exception){
-            throw new BusinessException(ErrorCode.EVENT_STOCK_EMPTY, exception.getMessage());
-        }
-    }
-
-//    // 재고가 있는 이벤트 옵션인지 => 필요할까 ? 어짜피 쿠폰 발급인데
-//    private void ensureEventStockAvailable(EventOption eventOption) {
-//        if(eventOption.getEventStock() == null || eventOption.getEventStock() <= 0) {
-//            throw new BusinessException(ErrorCode.EVENT_STOCK_EMPTY);
-//        }
-//    }
 
     // 이벤트에(쿠폰) 매핑된 상품 ID
     private Long resolveProductId(EventOption eventOption) {
