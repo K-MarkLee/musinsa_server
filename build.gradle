@@ -96,54 +96,26 @@ jacoco {
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
-    ignoreFailures = true  // 테스트 실패해도 Jacoco 리포트 생성
 }
-
-def jacocoIncludes = [
-    //'com/mudosa/musinsa/event/**',
-    'com/mudosa/musinsa/coupon/**'
-]
-def jacocoExcludes = ['**/Q*.*'] // QueryDSL Q 클래스 전부 제외
-
 
 jacocoTestReport {
     reports {
         xml.required = false
         csv.required = false
-        html.outputLocation = layout.buildDirectory.dir('jacoco')
+        html.outputLocation = layout.buildDirectory.dir('jacocoHTML')
     }
-
-    dependsOn test
+    // dependsOn : 이 작업에 지정된 종속성을 추가
+    dependsOn test // jacocoTestReport 에 test라는 종속성을 추가
     finalizedBy 'jacocoTestCoverageVerification'
-
-    classDirectories.setFrom(
-            files(classDirectories.files.collect { dir ->
-                fileTree(
-                        dir: dir,
-                        include: jacocoIncludes,
-                        exclude: jacocoExcludes
-                )
-            })
-    )
 }
 
-
 jacocoTestCoverageVerification {
-
-    classDirectories.setFrom(
-            files(classDirectories.files.collect { dir ->
-                fileTree(
-                        dir: dir,
-                        include: jacocoIncludes,
-                        exclude: jacocoExcludes
-                )
-            })
-    )
-
     violationRules {
+
         rule {
-            enabled = false  // 커버리지 검증 비활성화 (리포트만 생성)
-            element = 'CLASS' // 클래스 단위 기준
+            enabled = true
+            //코드 버커리지 체크 기준
+            element = 'CLASS'
 
             limit {
                 counter = 'METHOD'
