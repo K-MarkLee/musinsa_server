@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.product.application.mapper;
 
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
+import com.mudosa.musinsa.product.application.dto.ProductManagerResponse;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
@@ -13,6 +14,7 @@ import java.util.stream.Collectors;
  * 상품 도메인 객체를 응답 DTO로 역정규화하는 매핑 유틸리티.
  * 여러 테이블의 데이터를 하나의 응답으로 조합하고 복잡한 비즈니스 로직을 포함한다.
  */
+// TODO: querydsl 도입 후 제거 검토
 public final class ProductCommandMapper {
 
     public static ProductDetailResponse toProductDetail(Product product) {
@@ -71,6 +73,41 @@ public final class ProductCommandMapper {
             .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
             .optionName(optionValue != null ? optionValue.getOptionName() : null)
             .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+            .build();
+    }
+
+    public static ProductManagerResponse toManagerResponse(Product product) {
+        List<ProductManagerResponse.ImageInfo> imageInfos = product.getImages().stream()
+            .map(image -> ProductManagerResponse.ImageInfo.builder()
+                .imageId(image.getImageId())
+                .imageUrl(image.getImageUrl())
+                .isThumbnail(image.getIsThumbnail())
+                .build())
+            .collect(Collectors.toList());
+
+        List<ProductManagerResponse.OptionInfo> optionInfos = product.getProductOptions().stream()
+            .map(option -> ProductManagerResponse.OptionInfo.builder()
+                .optionId(option.getProductOptionId())
+                .price(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
+                .stockQuantity(option.getInventory().getStockQuantity().getValue())
+                .optionValues(option.getProductOptionValues().stream()
+                    .map(pov -> pov.getOptionValue().getOptionValue())
+                    .collect(Collectors.toList()))
+                .build())
+            .collect(Collectors.toList());
+
+        return ProductManagerResponse.builder()
+            .productId(product.getProductId())
+            .productName(product.getProductName())
+            .productInfo(product.getProductInfo())
+            .isAvailable(product.getIsAvailable())
+            .brandName(product.getBrandName())
+            .categoryPath(product.getCategoryPath())
+            .productGenderType(product.getProductGenderType())
+            .createdAt(product.getCreatedAt())
+            .updatedAt(product.getUpdatedAt())
+            .images(imageInfos)
+            .options(optionInfos)
             .build();
     }
 }

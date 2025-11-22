@@ -43,23 +43,23 @@ public class ProductOption extends BaseEntity {
     @OneToMany(mappedBy = "productOption", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ProductOptionValue> productOptionValues = new ArrayList<>();
 
-    // 옵션 생성 시 필수 값 검증 후 연관 엔티티를 초기화한다.
+    // 외부 노출 생성 메서드 + 필수 값 검증
     public static ProductOption create(Product product, Money productPrice, Inventory inventory) {
+        if (product == null) {
+            throw new BusinessException(ErrorCode.PRODUCT_REQUIRED);
+        }
+        if (productPrice == null || productPrice.isLessThanOrEqual(Money.ZERO)) {
+            throw new BusinessException(ErrorCode.PRODUCT_PRICE_INVALID);
+        }
+        if (inventory == null) {
+            throw new BusinessException(ErrorCode.INVENTORY_NOT_FOUND);
+        }
+
         return new ProductOption(product, productPrice, inventory);
     }
 
     @Builder
-    ProductOption(Product product, Money productPrice, Inventory inventory) {
-        if (product == null) {
-            throw new IllegalArgumentException("상품은 옵션에 필수입니다.");
-        }
-        if (productPrice == null || productPrice.isLessThanOrEqual(Money.ZERO)) {
-            throw new IllegalArgumentException("상품 가격은 0원보다 커야 합니다.");
-        }
-        if (inventory == null) {
-            throw new IllegalArgumentException("재고 정보는 옵션에 필수입니다.");
-        }
-
+    private ProductOption(Product product, Money productPrice, Inventory inventory) {
         this.product = product;
         this.productPrice = productPrice;
         this.inventory = inventory;
@@ -80,29 +80,22 @@ public class ProductOption extends BaseEntity {
         this.productOptionValues.add(optionValue);
     }
 
-    // 상품과의 연관을 제거해 고아 제거가 정상 동작하도록 한다.
-    void detachFromProduct() {
-        this.product = null;
-        this.productOptionValues.forEach(ProductOptionValue::refreshIdentifiers);
-    }
-
     // 주문 과정에서 옵션 재고를 차감한다.
     public void decreaseStock(int quantity) {
         if (quantity <= 0) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "차감 수량은 1 이상이어야 합니다.");
+            throw new BusinessException(ErrorCode.INVALID_INVENTORY_UPDATE_VALUE);
         }
-
         try {
             this.inventory.decrease(quantity);
         } catch (IllegalStateException ex) {
-            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK, ex.getMessage());
+            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK);
         }
     }
 
     // 주문 취소 등으로 옵션 재고를 복구한다.
     public void restoreStock(int quantity) {
         if (quantity <= 0) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "복구 수량은 1 이상이어야 합니다.");
+            throw new BusinessException(ErrorCode.RECOVER_VALUE_INVALID, "복구 수량은 1 이상이어야 합니다.");
         }
 
         this.inventory.increase(quantity);
@@ -116,20 +109,12 @@ public class ProductOption extends BaseEntity {
         }
     }
 
-    List<Long> normalizedOptionValueIds() {
-        return this.productOptionValues.stream()
-            .map(ProductOptionValue::getOptionValue)
-            .filter(Objects::nonNull)
-            .map(OptionValue::getOptionValueId)
-            .filter(Objects::nonNull)
-            .sorted(Comparator.naturalOrder())
-            .toList();
-    }
-
+    // 현재 재고 수량을 반환한다.
     public Integer getStockQuantity() {
         return this.getInventory().getStockQuantity().getValue();
     }
 
+    // 해당 재고가 요청 수량을 충족하는지 확인한다.
     public boolean hasEnoughStock(Integer quantity) {
         return this.getStockQuantity() >= quantity;
     }

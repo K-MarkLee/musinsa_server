@@ -66,8 +66,6 @@ public class Message {
 
   public boolean isSameRoom(Long chatId) {
     ChatPart cp = this.getChatPart();
-    return cp != null
-        && cp.getChatRoom() != null
-        && cp.getChatRoom().getChatId().equals(chatId);
+    return cp.getChatRoom().getChatId().equals(chatId);
   }
 }

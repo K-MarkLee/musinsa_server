@@ -19,7 +19,7 @@ public class Money {
 
     private BigDecimal amount;
 
-    public static Money ZERO = new Money(0);
+    public static final Money ZERO = new Money(0);
 
     public Money(BigDecimal amount) {
         validateAmount(amount);

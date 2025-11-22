@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public enum ErrorCode {
 
+  INVALID_PARAMETER("00001","파라미터가 유효하지 않습니다",HttpStatus.BAD_REQUEST ),
+
   // auth
   VALIDATION_ERROR("10001", "입력 값 검증 오류입니다.", HttpStatus.BAD_REQUEST),
   INTERNAL_SERVER_ERROR("10002", "내부 서버 오류입니다.", HttpStatus.INTERNAL_SERVER_ERROR),
@@ -28,14 +30,17 @@ public enum ErrorCode {
   ALREADY_REGISTERED_EMAIL("20003", "이미 가입한 이메일입니다.", HttpStatus.CONFLICT),
 
   //payment
-  PAYMENT_APPROVAL_FAILED("30001", "결제 승인에 실패했습니다", HttpStatus.BAD_REQUEST),
+  PAYMENT_CREATE_FAILED("30001", "결제 생성에 실패했습니다", HttpStatus.BAD_REQUEST),
+  PAYMENT_APPROVAL_FAILED("30011", "결제 승인에 실패했습니다", HttpStatus.BAD_REQUEST),
   PAYMENT_PG_NOT_FOUND("30002", "존재하지 않는 PG사 입니다", HttpStatus.BAD_REQUEST),
   PAYMENT_NOT_FOUND("30003", "존재하지 않는 결제입니다", HttpStatus.NOT_FOUND),
   PAYMENT_ALREADY_APPROVED("30004", "이미 승인된 결제입니다", HttpStatus.CONFLICT),
   PAYMENT_AMOUNT_MISMATCH("30005", "결제 금액이 일치하지 않습니다", HttpStatus.BAD_REQUEST),
   INVALID_PAYMENT_STATUS("30006", "결제 상태가 유효하지 않습니다", HttpStatus.BAD_REQUEST),
   INVALID_PG_TRANSACTION_ID("30007", "결제 PG 트랜잭션 ID가 유효하지 않습니다", HttpStatus.BAD_REQUEST),
-  INVALID_PAYMENT_METHOD("30008", "결제수단이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
+  INVALID_PAYMENT_METHOD("30008", "결제수단이 유효하지 않습니다", HttpStatus.BAD_REQUEST),PAYMENT_STRATEGY_NOT_FOUND("30009","결제전략을 찾을 수 없습니다",HttpStatus.BAD_REQUEST ),
+  PAYMENT_TIMEOUT("30010","결제 처리 시간 초과", HttpStatus.BAD_REQUEST),
+  PAYMENT_SYSTEM_ERROR("30012","결제는 승인되었으나 후속 처리 중 오류가 발생했습니다.",HttpStatus.CONFLICT),
 
   //order
   ORDER_NOT_FOUND("40001", "존재하지 않는 주문입니다", HttpStatus.NOT_FOUND),
@@ -76,6 +81,9 @@ public enum ErrorCode {
   BRAND_NOT_FOUND("70001", "브랜드를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
   BRAND_NOT_MATCHED("70002", "브랜드 정보가 일치하지 않습니다", HttpStatus.BAD_REQUEST),
   NOT_BRAND_PRODUCT("70003", "해당 브랜드의 상품이 아닙니다", HttpStatus.BAD_REQUEST),
+  NOT_BRAND_MEMBER("70004", "해당 브랜드의 멤버가 아닙니다", HttpStatus.FORBIDDEN),
+  BRAND_ID_REQUIRED("70005", "브랜드 아이디는 필수입니다.", HttpStatus.BAD_REQUEST),
+
 
   //product
   PRODUCT_OPTION_NOT_AVAILABLE("80001", "상품 옵션이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
@@ -85,6 +93,12 @@ public enum ErrorCode {
   PRODUCT_OPTION_REQUIRED("80005", "상품 옵션은 필수입니다.", HttpStatus.BAD_REQUEST),
   CATEGORY_NOT_FOUND("80006", "카테고리를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
   PRODUCT_NOT_FOUND("80007", "상품을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+  PRODUCT_NAME_REQUIRED("80008", "상품 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_BRAND_REQUIRED("80009", "상품 브랜드는 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_GENDER_TYPE_REQUIRED("80010", "상품 성별 타입은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_BRAND_NAME_REQUIRED("80011", "역정규화 브랜드 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_CATEGORY_PATH_REQUIRED("80012", "역정규화 카테고리 경로는 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_REQUIRED("80013", "상품은 필수입니다.", HttpStatus.BAD_REQUEST),
 
   //chat
   MESSAGE_OR_FILE_REQUIRED("110001", "메시지 또는 파일 중 하나는 반드시 포함되어야 합니다.", HttpStatus.BAD_REQUEST),
@@ -98,14 +112,46 @@ public enum ErrorCode {
 
   //inventory
   INVENTORY_NOT_AVAILABLE("90001", "재고가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+  INVENTORY_STOCK_QUANTITY_REQUIRED("90002", "재고 수량은 필수입니다.", HttpStatus.BAD_REQUEST),
+  INVENTORY_INSUFFICIENT_STOCK("90003", "재고가 부족합니다.", HttpStatus.BAD_REQUEST),
+  INVALID_INVENTORY_UPDATE_VALUE("90004", "재고 변경 값은 0이 될 수 없습니다.", HttpStatus.BAD_REQUEST),
 
   //image
-  IMAGE_REQUIRED("100001", "이미지 또는 썸네일은 필수입니다.", HttpStatus.BAD_REQUEST),
-  THUMBNAIL_ONLY_ONE("100002", "썸네일 이미지는 반드시 하나여야 합니다.", HttpStatus.BAD_REQUEST),
+  IMAGE_REQUIRED("100001", "이미지는 필수입니다.", HttpStatus.BAD_REQUEST),
+  THUMBNAIL_REQUIRED("10002","썸네일은 필수입니다.", HttpStatus.BAD_REQUEST),
+  THUMBNAIL_ONLY_ONE("100003", "썸네일 이미지는 반드시 하나여야 합니다.", HttpStatus.BAD_REQUEST),
 
   //settlement
-  SETTLEMENT_NOT_FOUND("A0001", "정산 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND);
+  SETTLEMENT_NOT_FOUND("A0001", "정산 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
 
+  // cartitem
+  CART_ITEM_USER_REQUIRED("B0001", "사용자는 필수입니다.", HttpStatus.BAD_REQUEST),
+  CART_ITEM_PRODUCT_OPTION_REQUIRED("B0002", "상품 옵션은 필수입니다.", HttpStatus.BAD_REQUEST),
+  CART_ITEM_QUANTITY_INVALID("B0003", "수량은 1개 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
+
+  //category
+  CATEGORY_NAME_REQUIRED("C0001", "카테고리 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
+
+
+  // Option
+  OPTION_NAME_REQUIRED("D0001", "옵션명은 필수입니다.", HttpStatus.BAD_REQUEST),
+  OPTION_VALUE_REQUIRED("D0002", "옵션 값은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_PRICE_INVALID("D0003", "상품 옵션 가격이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+  OPTION_VALUE_ID_REQUIRED("D0004", "옵션 값 식별자는 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_ID_REQUIRED("D0005", "상품 옵션 식별자는 필수입니다.", HttpStatus.BAD_REQUEST),
+  RECOVER_VALUE_INVALID("D0006", "복구 값이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_PRICE_REQUIRED("D0007", "상품 옵션 가격은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_STOCK_QUANTITY_REQUIRED("D0008", "상품 옵션 재고 수량은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_VALUE_ID_REQUIRED("D0009", "상품 옵션 값 식별자는 최소 1개 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
+  INVALID_PRODUCT_OPTION_VALUE_IDS("D0010", "상품 옵션 값 식별자가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+
+  // user
+  USER_ID_REQUIRED("E0001", "사용자 ID는 필수입니다.", HttpStatus.BAD_REQUEST),
+
+  //stock
+  STOCK_QUANTITY_INVALID("F0001", "재고 수량이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
+  
+  
 
   private final String code;
   private final String message;

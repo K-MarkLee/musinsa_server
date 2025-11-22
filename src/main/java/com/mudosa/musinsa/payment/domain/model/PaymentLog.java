@@ -3,6 +3,7 @@ package com.mudosa.musinsa.payment.domain.model;
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -28,24 +29,25 @@ public class PaymentLog extends BaseEntity {
     
     private String eventMessage;
 
-    /* 결제 로그 생성 */
-    public static PaymentLog create(
-            Payment payment,
-            PaymentEventType eventType,
-            String eventMessage,
-            Long userId) {
-
-        PaymentLog log = new PaymentLog();
-        log.payment = payment; //Payment 어그리게이트 처리할 수 있도록 꼭 설정해줘야함.
-        log.eventStatus = eventType;
-        log.eventMessage = eventMessage;
-        log.userId = userId;
-        return log;
+    @Builder
+    public PaymentLog(Payment payment, Long userId, PaymentEventType eventStatus, String eventMessage) {
+        this.payment = payment;
+        this.userId = userId;
+        this.eventStatus = eventStatus;
+        this.eventMessage = eventMessage;
     }
 
-
-    void assignPayment(Payment payment) {
-        this.payment = payment;
+    public static PaymentLog create(
+            Payment payment,
+            PaymentEventType eventStatus,
+            String eventMessage,
+            Long userId) {
+        return PaymentLog.builder()
+                .eventStatus(eventStatus)
+                .payment(payment)
+                .eventMessage(eventMessage)
+                .userId(userId)
+                .build();
     }
 
 

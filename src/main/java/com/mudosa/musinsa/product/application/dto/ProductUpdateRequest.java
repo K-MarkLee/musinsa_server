@@ -2,6 +2,7 @@ package com.mudosa.musinsa.product.application.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -38,10 +39,12 @@ public class ProductUpdateRequest {
     public static class ImageUpdateRequest {
         @NotBlank(message = "이미지 URL은 필수입니다.")
         private String imageUrl;
+
+        @NotNull(message = "대표 이미지 설정은 필수입니다.")
         private Boolean isThumbnail;
     }
 
-    @AssertTrue(message = "상품 이미지를 수정할 경우 썸네일 1개를 포함해야 합니다.")
+    @AssertTrue(message = "상품 이미지는 썸네일 1개가 필수입니다.")
     public boolean isValidThumbnailConfiguration() {
         if (images == null || images.isEmpty()) {
             return true;

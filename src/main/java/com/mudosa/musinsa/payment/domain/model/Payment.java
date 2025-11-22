@@ -5,21 +5,19 @@ import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-
 @Entity
 @Table(name = "payment")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Slf4j
 public class Payment extends BaseEntity{
     
     @Id
@@ -30,108 +28,145 @@ public class Payment extends BaseEntity{
     private Long orderId;
 
     @Enumerated(EnumType.STRING)
+    @Column(name="payment_status")
     private PaymentStatus status;
 
     private String currency = "KRW";
 
-    private String method;  // "카드", "계좌이체", "간편결제" 등
+    private String method;
     
     private BigDecimal amount;
-    
-    private String pgProvider;
+
+    @Enumerated(EnumType.STRING)
+    private PgProvider pgProvider;
     
     private String pgTransactionId;
     
     private LocalDateTime approvedAt;
-    
     private LocalDateTime cancelledAt;
     
     @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PaymentLog> paymentLogs = new ArrayList<>();
 
+    @Builder
+    private Payment(Long orderId, PaymentStatus status, String currency, String method, BigDecimal amount, PgProvider pgProvider, String pgTransactionId, LocalDateTime approvedAt, LocalDateTime cancelledAt, List<PaymentLog> paymentLogs) {
+        this.orderId = orderId;
+        this.status = status;
+        this.currency = currency != null ? currency : "KRW";
+        this.method = method;
+        this.amount = amount;
+        this.pgProvider = pgProvider;
+        this.pgTransactionId = pgTransactionId;
+        this.approvedAt = approvedAt;
+        this.cancelledAt = cancelledAt;
+        this.paymentLogs = (paymentLogs != null ? paymentLogs : new ArrayList<>());
+    }
+
     public static Payment create(
             Long orderId,
             BigDecimal amount,
-            String pgProvider,
+            PgProvider pgProvider,
             Long userId) {
 
-        // 검증
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+        //검증
+        validateRequiredParameters(orderId, amount, pgProvider, userId);
+
+        // 금액은 0보다 커야 함
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(
+                    ErrorCode.PAYMENT_CREATE_FAILED,
+                    "결제 금액은 0보다 커야 합니다"
+            );
         }
 
-        Payment payment = new Payment();
-        payment.orderId = orderId;
-        payment.amount = amount;
-        payment.pgProvider = pgProvider;
-        payment.status = PaymentStatus.PENDING;
-        payment.currency = "KRW";
+        //결제 생성
+        Payment payment = Payment.builder()
+                .status(PaymentStatus.PENDING)
+                .orderId(orderId)
+                .pgProvider(pgProvider)
+                .amount(amount)
+                .build();
 
-        // 로그 추가
-        payment.addLog(PaymentEventType.CREATED, "결제 생성", userId);
+        //결제 로그 추가
+        PaymentLog paymentLog = PaymentLog.create(payment, PaymentEventType.CREATED,null, userId);
+        payment.paymentLogs.add(paymentLog);
 
         return payment;
     }
 
-
-    public void validatePending() {
-        log.info(this.status.name());
-        if (!this.status.isPending()) {
-            throw new BusinessException(
-                    ErrorCode.INVALID_PAYMENT_STATUS,
-                    String.format("결제 상태가 PENDING이 아닙니다. 현재: %s", this.status)
-            );
-        }
-    }
-
-    public void validateAmount(BigDecimal requestAmount) {
-        if (this.amount.compareTo(requestAmount) != 0) {
-            throw new BusinessException(
-                    ErrorCode.PAYMENT_AMOUNT_MISMATCH,
-                    String.format("결제 금액 불일치. 요청: %s, 실제: %s", requestAmount, this.amount)
-            );
-        }
-    }
-
-    private void addLog(PaymentEventType eventType, String message, Long userId) {
-        PaymentLog log = PaymentLog.create(this, eventType, message, userId);
-        this.paymentLogs.add(log);
-    }
-
-    /* 결제 승인 요청 */
-    public void requestApproval(Long userId) {
-        validatePending();
-        addLog(PaymentEventType.APPROVAL_REQUESTED, "결제 승인 요청", userId);
-    }
-
-    /* 결제 승인 */
     public void approve(String pgTransactionId, Long userId, LocalDateTime approvedAt, String method) {
+
+        //검증
         if (pgTransactionId == null || pgTransactionId.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_PG_TRANSACTION_ID);
         }
 
-        this.status = this.status.transitionTo(PaymentStatus.APPROVED);
+        validateUserId(userId);
+
+        this.status = this.status.approve();
         this.pgTransactionId = pgTransactionId;
         this.approvedAt = approvedAt;
         this.method = method;
 
-        addLog(
-                PaymentEventType.APPROVED,
-                String.format("결제 승인 완료 - PG TID: %s", pgTransactionId),
-                userId
-        );
+        addLog(PaymentEventType.APPROVED, null, userId);
     }
 
-
-    /* 결제 실패 */
     public void fail(String errorMessage, Long userId) {
-        this.status = this.status.transitionTo(PaymentStatus.FAILED);
+        validateUserId(userId);
+        this.status = this.status.fail();
 
-        addLog(
-                PaymentEventType.FAILED,
-                String.format("결제 실패: %s", errorMessage),
-                userId
-        );
+        addLog(PaymentEventType.FAILED, errorMessage, userId);
+    }
+
+    public void cancel(Long userId, String cancelReason){
+        validateUserId(userId);
+        this.status = this.status.cancel();
+        addLog(PaymentEventType.CANCELLED, cancelReason, userId);
+    }
+
+    public void addLog(PaymentEventType eventType, String message, Long userId) {
+        validateUserId(userId);
+        PaymentLog log = PaymentLog.create(this, eventType, message, userId);
+        this.paymentLogs.add(log);
+    }
+
+    private void validateUserId(Long userId) {
+        if (userId == null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_PARAMETER,
+                    "사용자 ID는 필수입니다"
+            );
+        }
+    }
+
+    private static void validateRequiredParameters(Long orderId, BigDecimal amount, PgProvider pgProvider, Long userId) {
+        if (orderId == null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_PARAMETER,
+                    "주문 ID는 필수입니다"
+            );
+        }
+
+        if (amount == null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_PARAMETER,
+                    "결제 금액은 필수입니다"
+            );
+        }
+
+        if (pgProvider == null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_PARAMETER,
+                    "PG사는 필수입니다"
+            );
+        }
+
+        if (userId == null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_PARAMETER,
+                    "사용자 ID는 필수입니다"
+            );
+        }
     }
 
 }

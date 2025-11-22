@@ -1,6 +1,9 @@
 package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
+
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -24,29 +27,21 @@ public class OptionValue extends BaseEntity {
     
     @Column(name = "option_value", nullable = false, length = 50)
     private String optionValue;
-    
-    // 옵션 값을 생성하며 필수 요소를 검증한다.
-    @Builder
-    public OptionValue(String optionName, String optionValue) {
-        // 필수 파라미터를 확인해 무결성을 보장한다.
-        if (optionName == null) {
-            throw new IllegalArgumentException("옵션명은 필수입니다.");
+
+    // 외부 노출 생성 메서드 + 필수 값 검증
+    public static OptionValue create(String optionName, String optionValue) {
+        if (optionName == null || optionName.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.OPTION_NAME_REQUIRED);
         }
         if (optionValue == null || optionValue.trim().isEmpty()) {
-            throw new IllegalArgumentException("옵션 값은 필수입니다.");
+            throw new BusinessException(ErrorCode.OPTION_VALUE_REQUIRED);
         }
-        
+        return new OptionValue(optionName, optionValue);
+    }
+    
+    @Builder
+    private OptionValue(String optionName, String optionValue) {
         this.optionName = optionName;
         this.optionValue = optionValue;
-    }
-    
-    // 현재 옵션 값이 비어 있지 않은지 확인한다.
-    public boolean isValid() {
-        return this.optionValue != null && !this.optionValue.trim().isEmpty();
-    }
-    
-    // 지정된 옵션명과 연관되어 있는지 확인한다.
-    public boolean belongsTo(String optionName) {
-        return this.optionName != null && this.optionName.equals(optionName);
     }
 }

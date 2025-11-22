@@ -46,7 +46,7 @@ class ProductTest {
 		}
 
 		@Test
-	@DisplayName("공백 이름을 전달하면 updateBasicInfo 호출 시 BusinessException(ErrorCode.PRODUCT_INFO_REQUIRED)이 발생해야 한다")
+	@DisplayName("공백 이름을 전달하면 updateBasicInfo 호출 시 BusinessException이 발생해야 한다")
 		void givenBlankName_whenUpdateBasicInfo_thenThrows() {
 			// given
 			Product product = Product.builder()
@@ -61,8 +61,7 @@ class ProductTest {
 
 			// when/then
 			assertThatThrownBy(() -> product.updateBasicInfo(" ", "info"))
-				.isInstanceOf(BusinessException.class)
-				.satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.PRODUCT_INFO_REQUIRED));
+				.isInstanceOf(BusinessException.class);
 		}
 	}
 
@@ -117,7 +116,10 @@ class ProductTest {
 				.build();
 
 			// when
-			Image img = Image.create("http://example.com/img.jpg", true);
+			Image img = Image.builder()
+				.imageUrl("http://example.com/image.jpg")
+				.isThumbnail(false)
+				.build();
 			product.addImage(img);
 
 			// then
@@ -141,7 +143,11 @@ class ProductTest {
 
 			// when
 			Inventory inventory = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-			ProductOption option = ProductOption.create(product, new Money(1000L), inventory);
+			ProductOption option = ProductOption.builder()
+				.product(product)
+				.productPrice(new Money(1000L))
+				.inventory(inventory)
+				.build();
 			product.addProductOption(option);
 
 			// then

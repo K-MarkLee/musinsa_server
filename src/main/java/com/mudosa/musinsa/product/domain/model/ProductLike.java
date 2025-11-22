@@ -1,6 +1,9 @@
 package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
+
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -25,18 +28,20 @@ public class ProductLike extends BaseEntity {
     
     @Column(name = "user_id", nullable = false)
     private Long userId;
-    
-    // 좋아요 엔티티를 생성하면서 필수 값을 검증한다.
-    @Builder
-    public ProductLike(Product product, Long userId) {
-        // 필수 파라미터를 확인해 무결성을 보장한다.
+
+    // 외부 노출 생성 메서드 + 필수 값 검증
+    public static ProductLike create(Product product, Long userId) {
         if (product == null) {
-            throw new IllegalArgumentException("상품은 필수입니다.");
+            throw new BusinessException(ErrorCode.PRODUCT_REQUIRED);
         }
         if (userId == null) {
-            throw new IllegalArgumentException("사용자 ID는 필수입니다.");
+            throw new BusinessException(ErrorCode.USER_ID_REQUIRED);
         }
-        
+        return new ProductLike(product, userId);
+    }
+    
+    @Builder
+    private ProductLike(Product product, Long userId) {
         this.product = product;
         this.userId = userId;
     }

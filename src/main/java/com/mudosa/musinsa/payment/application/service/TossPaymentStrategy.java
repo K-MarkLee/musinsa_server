@@ -1,22 +1,29 @@
 package com.mudosa.musinsa.payment.application.service;
 
+import com.mudosa.musinsa.common.client.ClientRequest;
+import com.mudosa.musinsa.common.client.ClientResponse;
+import com.mudosa.musinsa.common.client.ExternalApiClient;
+import com.mudosa.musinsa.common.client.HttpHeadersBuilder;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.payment.application.dto.PaymentConfirmRequest;
+import com.mudosa.musinsa.exception.ExternalApiException;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentConfirmRequest;
 import com.mudosa.musinsa.payment.application.dto.PaymentResponseDto;
-import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmRequest;
-import com.mudosa.musinsa.payment.application.dto.TossPaymentConfirmResponse;
+import com.mudosa.musinsa.payment.application.dto.request.TossPaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.response.TossPaymentConfirmResponse;
+import com.mudosa.musinsa.payment.domain.model.PgProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-
+import java.math.BigDecimal;
 
 @Slf4j
 @Service
@@ -26,88 +33,100 @@ public class TossPaymentStrategy implements PaymentStrategy {
 	private static final String TOSS_PAYMENTS_CONFIRM_URL =
 			"https://api.tosspayments.com/v1/payments/confirm";
 
-	private final RestTemplate restTemplate;
-
-	//TODO: provider에 대한 정보를 이름만 추상메서드로 정의한게 과연 맞을까?
-	private static final String PROVIDER_NAME = "TOSS";
+	private static final PgProvider PROVIDER_NAME = PgProvider.TOSS;
 
 	@Value("${tosspayments.secret-key}")
 	private String tossPaymentsSecretKey;
 
+	private final ExternalApiClient apiClient;
+	private final HttpHeadersBuilder headersBuilder;
+
+	@Lazy
+	@Autowired
+	private TossPaymentStrategy self;
+
 	@Override
-	public String getProviderName() {
-		return PROVIDER_NAME;
+	public boolean supports(PaymentContext context) {
+		return context.getPgProvider() == PROVIDER_NAME
+				&& context.getAmount().compareTo(BigDecimal.valueOf(100_000)) <= 0
+				&& context.getPaymentType() == PaymentType.NORMAL;
 	}
 
 	public PaymentResponseDto confirmPayment(PaymentConfirmRequest request) {
 		TossPaymentConfirmRequest tossRequest = request.toTossRequest();
 
-		TossPaymentConfirmResponse tossResponse = callTossApi(tossRequest);
+		TossPaymentConfirmResponse tossResponse = self.callTossApi(tossRequest);
 
-		return PaymentResponseDto.builder()
-				.paymentKey(tossResponse.getPaymentKey())
-				.orderNo(tossResponse.getOrderId())
-				.status(tossResponse.getStatus())
-				.method(tossResponse.getMethod())
-				.totalAmount(tossResponse.getTotalAmount())
-				.pgProvider("TOSS")
-				.approvedAt(tossResponse.getApprovedAt())
-				.build();
+		return PaymentResponseDto.from(tossResponse);
 	}
 
-	private TossPaymentConfirmResponse callTossApi(TossPaymentConfirmRequest request) {
-		try {
-			String encodedAuth = createBasicAuthHeader(tossPaymentsSecretKey);
+	@Retryable(
+			retryFor = ExternalApiException.class,
+			noRetryFor = BusinessException.class,
+			maxAttempts = 3,
+			backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 10000)
+	)
+	public TossPaymentConfirmResponse callTossApi(TossPaymentConfirmRequest request) {
+		//헤더 생성
+		HttpHeaders headers = headersBuilder.basicAuth(tossPaymentsSecretKey);
 
-            //TODO: 외부 API 호출에 대해서 클래스나 유틸로 따로 분리하고, 필요한 데이터만 받게끔
-            //설정 클래스도 있어야함
-			HttpHeaders headers = new HttpHeaders();
-			headers.setContentType(MediaType.APPLICATION_JSON);
-			headers.set(HttpHeaders.AUTHORIZATION, "Basic " + encodedAuth);
+		//API 요청 구성
+		ClientRequest<TossPaymentConfirmRequest> apiRequest =
+				ClientRequest.<TossPaymentConfirmRequest>post(
+								TOSS_PAYMENTS_CONFIRM_URL,
+								TossPaymentConfirmResponse.class
+						)
+						.body(request)
+						.headers(headers)
+						.build();
 
-			HttpEntity<TossPaymentConfirmRequest> entity = new HttpEntity<>(request, headers);
+		try{
+			//API 호출
+			ClientResponse<TossPaymentConfirmResponse> response =
+					apiClient.execute(apiRequest);
 
-			log.info(
-					"[TossPayments] 결제 승인 요청 - orderId: {}, paymentKey: {}, amount: {}",
-					request.getOrderId(),
-					request.getPaymentKey(),
-					request.getAmount());
-
-			ResponseEntity<TossPaymentConfirmResponse> response =
-					restTemplate.exchange(
-							TOSS_PAYMENTS_CONFIRM_URL,
-							HttpMethod.POST,
-							entity,
-							TossPaymentConfirmResponse.class);
-
-			TossPaymentConfirmResponse responseBody = response.getBody();
-
-			if (responseBody == null) {
-				log.error("[TossPayments] 결제 승인 응답이 null입니다");
+			//응답 검증
+			if (response.getBody() == null) {
 				throw new BusinessException(ErrorCode.PAYMENT_APPROVAL_FAILED);
 			}
 
-			log.info(
-					"[TossPayments] 결제 승인 성공 - orderId: {}, status: {}, method: {}",
-					responseBody.getOrderId(),
-					responseBody.getStatus());
+			return response.getBody();
 
-			return responseBody;
+		}catch (ExternalApiException e) {
+			if (e.getHttpStatus() == HttpStatus.REQUEST_TIMEOUT) {
+				log.error("[Toss] 타임아웃 발생 - orderNo: {}", request.getOrderId());
+				throw new BusinessException(
+						ErrorCode.PAYMENT_TIMEOUT,
+						"결제 처리 시간이 초과되었습니다"
+				);
+			}
 
-		} catch (HttpClientErrorException e) {
-			log.error(
-					"[TossPayments] 결제 승인 실패 - status: {}, body: {}",
-					e.getStatusCode(),
-					e.getResponseBodyAsString());
-			throw new BusinessException(ErrorCode.PAYMENT_APPROVAL_FAILED, e.getMessage());
-		} catch (Exception e) {
-			log.error("[TossPayments] 결제 승인 중 예외 발생", e);
-			throw new BusinessException(ErrorCode.PAYMENT_APPROVAL_FAILED, e.getMessage());
+			throw e;
 		}
 	}
 
-	private String createBasicAuthHeader(String secretKey) {
-		String auth = secretKey + ":";
-		return Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+	@Recover
+	public TossPaymentConfirmResponse recover(
+			ExternalApiException e,
+			TossPaymentConfirmRequest request
+	) {
+		log.error("[Toss] 모든 재시도 실패 - orderNo: {}, error: {}",
+				request.getOrderId(),
+				e.getMessage());
+		throw new BusinessException(
+				ErrorCode.PAYMENT_APPROVAL_FAILED,
+				e.getMessage()
+		);
+	}
+
+	@Recover
+	public TossPaymentConfirmResponse recover(
+			BusinessException e,
+			TossPaymentConfirmRequest request
+	) {
+		log.error("[Toss] 응답 검증 실패 - orderNo: {}, error: {}",
+				request.getOrderId(),
+				e.getMessage());
+		throw e;
 	}
 }

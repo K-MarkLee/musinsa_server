@@ -1138,7 +1138,7 @@ class ChatServiceImplTest extends ServiceConfig {
 
       int size = 20;
 
-      MessageCursor cursor = new MessageCursor(null, null);
+      MessageCursor cursor = null;
 
       // when
       Slice<MessageResponse> chatMessages = chatService.getChatMessages(chatRoom1.getChatId(), cursor, size);
@@ -1153,13 +1153,129 @@ class ChatServiceImplTest extends ServiceConfig {
       assertThat(chatMessages.isLast()).isTrue();
     }
 
+    @DisplayName("cursor가 존재하면 cursor 기준으로 이후 페이지를 조회한다")
+    @Test
+    void getChatMessages_WithCursor_ReturnsNextPage() {
+      // given
+      Brand brand = saveBrand("브랜드", "Brand");
+      ChatRoom chatRoom = saveChatRoom(brand);
+      User user = saveUser("user");
+      ChatPart chatPart = saveChatPartOfUser(chatRoom, user);
+
+      // 메시지 30개 생성 (createdAt 오름차순으로 저장 → 조회는 최신순)
+      LocalDateTime base = LocalDateTime.of(2025, 1, 1, 0, 0);
+      int totalCount = 30;
+      for (int i = 1; i <= totalCount; i++) {
+        saveMessage(chatPart, "message-" + i, base.plusSeconds(i));
+      }
+
+      int size = 10;
+
+      // 첫 페이지 조회 (cursor 없음)
+      MessageCursor firstCursor = null;
+      Slice<MessageResponse> firstPage =
+          chatService.getChatMessages(chatRoom.getChatId(), firstCursor, size);
+
+      assertThat(firstPage.getContent()).hasSize(size);
+      assertThat(firstPage.hasNext()).isTrue();
+
+      // 첫 페이지의 "마지막 메시지"를 커서로 사용 (이전 페이지의 끝지점)
+      MessageResponse lastOfFirstPage = firstPage.getContent().get(size - 1);
+      MessageCursor nextCursor = new MessageCursor(
+          lastOfFirstPage.getCreatedAt(),
+          lastOfFirstPage.getMessageId()
+      );
+
+      // when
+      Slice<MessageResponse> secondPage =
+          chatService.getChatMessages(chatRoom.getChatId(), nextCursor, size);
+
+      // then
+      assertThat(secondPage).isNotNull();
+      assertThat(secondPage.getContent()).hasSize(size);
+
+      // 첫 페이지와 두 번째 페이지의 메시지 ID가 겹치지 않아야 함
+      List<Long> firstIds = firstPage.getContent().stream()
+          .map(MessageResponse::getMessageId)
+          .toList();
+      List<Long> secondIds = secondPage.getContent().stream()
+          .map(MessageResponse::getMessageId)
+          .toList();
+
+      assertThat(secondIds)
+          .doesNotContainAnyElementsOf(firstIds);
+
+      // 정렬이 최신순(내림차순)인지 간단히 검증
+      assertThat(secondIds)
+          .isSortedAccordingTo(Comparator.reverseOrder());
+    }
+
+    @DisplayName("cursor가 있지만 messageId가 없으면 첫 페이지를 조회한다")
+    @Test
+    void getChatMessages_CursorWithoutMessageId_TreatedAsFirstPage() {
+      // given
+      Brand brand = saveBrand("브랜드", "Brand");
+      ChatRoom chatRoom = saveChatRoom(brand);
+      User user = saveUser("user");
+      ChatPart chatPart = saveChatPartOfUser(chatRoom, user);
+
+      LocalDateTime base = LocalDateTime.of(2025, 1, 1, 0, 0);
+      int totalCount = 15;
+      for (int i = 1; i <= totalCount; i++) {
+        saveMessage(chatPart, "message-" + i, base.plusSeconds(i));
+      }
+
+      int size = 10;
+
+      // 기준이 되는 "정상 첫 페이지" (cursor == null)
+      Slice<MessageResponse> firstPageWithoutCursor =
+          chatService.getChatMessages(chatRoom.getChatId(), null, size);
+
+      assertThat(firstPageWithoutCursor.getContent()).hasSize(size);
+
+      // createdAt은 아무거나 사용해도 되지만, 여기서는 첫 번째 메시지의 createdAt을 사용
+      MessageResponse firstMessage = firstPageWithoutCursor.getContent().get(0);
+
+      // messageId가 null 인 cursor 생성
+      MessageCursor cursorWithoutMessageId = new MessageCursor(
+          firstMessage.getCreatedAt(),
+          null
+      );
+
+      // when
+      Slice<MessageResponse> firstPageWithInvalidCursor =
+          chatService.getChatMessages(chatRoom.getChatId(), cursorWithoutMessageId, size);
+
+      // then
+      assertThat(firstPageWithInvalidCursor).isNotNull();
+      assertThat(firstPageWithInvalidCursor.getContent()).hasSize(size);
+
+      // "messageId 없는 cursor"로 조회한 결과가
+      // cursor == null 로 조회한 첫 페이지와 동일해야 한다는 기대(= 첫 페이지 취급)
+      var idsWithoutCursor = firstPageWithoutCursor.getContent().stream()
+          .map(MessageResponse::getMessageId)
+          .toList();
+
+      var idsWithInvalidCursor = firstPageWithInvalidCursor.getContent().stream()
+          .map(MessageResponse::getMessageId)
+          .toList();
+
+      assertThat(idsWithInvalidCursor)
+          .containsExactlyElementsOf(idsWithoutCursor);
+
+      // hasNext 플래그도 동일해야 함
+      assertThat(firstPageWithInvalidCursor.hasNext())
+          .isEqualTo(firstPageWithoutCursor.hasNext());
+    }
+
+
     @DisplayName("특정 채팅방이 존재하지 않으면 오류를 반환한다")
     @Test
     void getChatMessages_noChatRoom() {
       // given
       int size = 20;
 
-      MessageCursor cursor = new MessageCursor(null, null);
+      MessageCursor cursor = null;
 
       // when & then
       assertThatThrownBy(() -> chatService.getChatMessages(99999L, cursor, size))
@@ -1167,6 +1283,8 @@ class ChatServiceImplTest extends ServiceConfig {
           .extracting("errorCode")
           .isEqualTo(ErrorCode.CHAT_NOT_FOUND);
     }
+
+
   }
 
   /**

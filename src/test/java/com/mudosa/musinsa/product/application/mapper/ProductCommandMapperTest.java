@@ -41,7 +41,10 @@ class ProductCommandMapperTest {
                     .isAvailable(true)
                     .build();
 
-            Image img = Image.create("http://img/3.jpg", true);
+            Image img = Image.builder()
+                    .imageUrl("http://example.com/image1.jpg")
+                    .isThumbnail(true)
+                    .build();
             p.addImage(img);
             setId(p, "productId", 60L);
             setId(img, "imageId", 61L);

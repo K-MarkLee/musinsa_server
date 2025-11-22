@@ -22,6 +22,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("EventCouponService 테스트")
+@Transactional
 class EventCouponServiceTest extends ServiceConfig {
 
     @Autowired
@@ -96,7 +98,7 @@ class EventCouponServiceTest extends ServiceConfig {
         // ProductOption 생성
         Money price = new Money(new BigDecimal("100000"));
         StockQuantity stockQuantity = new StockQuantity(50);
-        Inventory inventory = new Inventory(stockQuantity);
+        Inventory inventory = Inventory.create(stockQuantity);
 
         ProductOption productOption = ProductOption.create(
                 product,
@@ -195,7 +197,7 @@ class EventCouponServiceTest extends ServiceConfig {
         // ProductOption 생성
         Money price = new Money(new BigDecimal("100000"));
         StockQuantity stockQuantity = new StockQuantity(50);
-        Inventory inventory = new Inventory(stockQuantity);
+        Inventory inventory = Inventory.create(stockQuantity);
 
         ProductOption productOption = ProductOption.create(
                 product,
@@ -313,7 +315,7 @@ class EventCouponServiceTest extends ServiceConfig {
         // ProductOption 생성
         Money price = new Money(new BigDecimal("100000"));
         StockQuantity stockQuantity = new StockQuantity(50);
-        Inventory inventory = new Inventory(stockQuantity);
+        Inventory inventory = Inventory.create(stockQuantity);
 
         ProductOption productOption = ProductOption.create(
                 product,
@@ -408,7 +410,7 @@ class EventCouponServiceTest extends ServiceConfig {
         // ProductOption 생성
         Money price = new Money(new BigDecimal("100000"));
         StockQuantity stockQuantity = new StockQuantity(50);
-        Inventory inventory = new Inventory(stockQuantity);
+        Inventory inventory = Inventory.create(stockQuantity);
 
         ProductOption productOption = ProductOption.create(
                 product,
