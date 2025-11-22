@@ -32,19 +32,77 @@ public class EventStatusService {
      *
      * cron 표현식: "초 분 시 일 월 요일"
      * "0 * * * * *" = 매분 0초에 실행
+     *
+     * 모든 이벤트의 started_at, ended_at을 현재 시간과 비교하여
+     * DRAFT/PLANNED → OPEN → ENDED 방향으로만 상태를 업데이트합니다.
+     * (되돌림 없음: 이미 진행된 이벤트는 되돌리지 않음)
      */
     @Scheduled(cron = "0 * * * * *")  // 매분 실행
     @Transactional
     public void updateEventStatuses() {
         LocalDateTime now = LocalDateTime.now();
 
-        log.debug("이벤트 상태 자동 업데이트 시작 - {}", now);
+        log.info("이벤트 상태 자동 동기화 시작 - {}", now);
 
-        int openedCount = updatePlannedToOpen(now);
-        int endedCount = updateOpenToEnded(now);
+        // CANCELLED, PAUSED 제외한 모든 이벤트 조회 (수동 관리 상태 제외)
+        List<Event> events = eventRepository.findAll().stream()
+                .filter(event -> event.getStatus() != EventStatus.CANCELLED
+                        && event.getStatus() != EventStatus.PAUSED)
+                .toList();
 
-        if (openedCount > 0 || endedCount > 0) {
-            log.info("이벤트 상태 업데이트 완료 - OPEN: {}건, ENDED: {}건", openedCount, endedCount);
+        int updatedCount = 0;
+        int toOpenCount = 0;
+        int toEndedCount = 0;
+
+        for (Event event : events) {
+            EventStatus currentStatus = event.getStatus();
+            EventStatus calculatedStatus = EventStatus.calculateStatus(event, now);
+
+            // 단방향 진행만 허용: DRAFT/PLANNED → OPEN → ENDED
+            // 되돌림은 하지 않음 (예: OPEN → PLANNED, ENDED → OPEN 불가)
+            if (currentStatus != calculatedStatus) {
+                switch (calculatedStatus) {
+                    case PLANNED -> {
+                        // PLANNED로 되돌리지 않음 (이미 OPEN이나 ENDED면 유지)
+                        log.debug("이벤트 상태 유지 (되돌리지 않음): {} - eventId: {}, title: {}",
+                                currentStatus, event.getId(), event.getTitle());
+                    }
+                    case OPEN -> {
+                        // DRAFT 또는 PLANNED → OPEN
+                        if (currentStatus == EventStatus.DRAFT || currentStatus == EventStatus.PLANNED) {
+                            event.open();
+                            toOpenCount++;
+                            updatedCount++;
+                            log.info("이벤트 상태 변경: {} → OPEN - eventId: {}, title: {}, startedAt: {}, endedAt: {}",
+                                    currentStatus, event.getId(), event.getTitle(), event.getStartedAt(), event.getEndedAt());
+                        }
+                    }
+                    case ENDED -> {
+                        // OPEN → ENDED (DRAFT/PLANNED에서 바로 ENDED로는 가지 않음)
+                        if (currentStatus == EventStatus.OPEN) {
+                            event.end();
+                            toEndedCount++;
+                            updatedCount++;
+                            log.info("이벤트 상태 변경: {} → ENDED - eventId: {}, title: {}, endedAt: {}",
+                                    currentStatus, event.getId(), event.getTitle(), event.getEndedAt());
+                        } else if (currentStatus == EventStatus.DRAFT || currentStatus == EventStatus.PLANNED) {
+                            // DRAFT/PLANNED 상태에서 종료일이 지난 경우 ENDED로 직접 전환
+                            event.end();
+                            toEndedCount++;
+                            updatedCount++;
+                            log.info("이벤트 상태 변경: {} → ENDED (시작하지 않고 종료) - eventId: {}, title: {}",
+                                    currentStatus, event.getId(), event.getTitle());
+                        }
+                    }
+                }
+            }
+        }
+
+        if (updatedCount > 0) {
+            log.info("이벤트 상태 자동 동기화 완료 - OPEN: {}건, ENDED: {}건, 전체: {}건 / 검사: {}건",
+                    toOpenCount, toEndedCount, updatedCount, events.size());
+        } else {
+            log.debug("이벤트 상태 변경 없음 - 검사: {}건", events.size());
         }
     }
 

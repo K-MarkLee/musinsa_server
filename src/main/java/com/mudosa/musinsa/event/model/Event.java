@@ -5,6 +5,8 @@ import com.mudosa.musinsa.coupon.domain.model.Coupon;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Check;
@@ -24,6 +26,8 @@ import java.util.List;
 @Check(constraints = "ended_at > started_at")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class Event extends BaseEntity {
 
     @Id
@@ -69,6 +73,7 @@ public class Event extends BaseEntity {
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EventOption> eventOptions = new ArrayList<>();
 
+    @org.hibernate.annotations.BatchSize(size = 100)
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EventImage> eventImages = new ArrayList<>();
 
