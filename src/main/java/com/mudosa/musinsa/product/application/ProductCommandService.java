@@ -359,34 +359,34 @@ public class ProductCommandService {
 	// 옵션 값 ID 목록으로부터 옵션 조합을 해석한다.
 	private OptionCombination resolveCombination(List<Long> optionValueIds, Map<Long, OptionValue> optionValueMap) {
 		if (optionValueIds == null || optionValueIds.size() != OptionCombination.REQUIRED_OPTION_COUNT) {
-			throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "상품 옵션은 사이즈와 색상 두 값으로 구성되어야 합니다.");
+			throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
 		}
 		Long sizeId = null;
 		Long colorId = null;
 		for (Long optionValueId : optionValueIds) {
 			OptionValue optionValue = optionValueMap.get(optionValueId);
 			if (optionValue == null) {
-				throw new BusinessException(ErrorCode.INVALID_PRODUCT_OPTION_VALUE_IDS, "존재하지 않는 옵션 값이 포함되어 있습니다.");
+				throw new BusinessException(ErrorCode.INVALID_PRODUCT_OPTION_VALUE);
 			}
 			String optionName = normalizeOptionName(optionValue.getOptionName());
 			if (OptionCombination.SIZE_OPTION_NAME.equals(optionName)) {
 				if (sizeId != null) {
-					throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "옵션에는 서로 다른 사이즈 값이 1개만 포함되어야 합니다.");
+					throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
 				}
 				sizeId = optionValue.getOptionValueId();
 				continue;
 			}
 			if (OptionCombination.COLOR_OPTION_NAME.equals(optionName)) {
 				if (colorId != null) {
-					throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "옵션에는 서로 다른 색상 값이 1개만 포함되어야 합니다.");
+					throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE);
 				}
 				colorId = optionValue.getOptionValueId();
 				continue;
 			}
-			throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "옵션은 사이즈와 색상 값으로만 구성될 수 있습니다.");
+			throw new BusinessException(ErrorCode.INVALID_PRODUCT_OPTION_VALUE);
 		}
 		if (sizeId == null || colorId == null) {
-			throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "옵션에는 사이즈와 색상이 각각 1개씩 포함되어야 합니다.");
+			throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
 		}
 		return new OptionCombination(sizeId, colorId);
 	}
