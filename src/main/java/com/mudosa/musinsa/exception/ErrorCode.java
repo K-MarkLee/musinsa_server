@@ -115,6 +115,7 @@ public enum ErrorCode {
   IMAGE_REQUIRED("100001", "이미지는 필수입니다.", HttpStatus.BAD_REQUEST),
   THUMBNAIL_REQUIRED("10002","썸네일은 필수입니다.", HttpStatus.BAD_REQUEST),
   THUMBNAIL_ONLY_ONE("100003", "썸네일 이미지는 반드시 하나여야 합니다.", HttpStatus.BAD_REQUEST),
+  URL_REQUIRED("100004", "이미지 URL은 필수입니다.", HttpStatus.BAD_REQUEST),
 
   //settlement
   SETTLEMENT_NOT_FOUND("A0001", "정산 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),

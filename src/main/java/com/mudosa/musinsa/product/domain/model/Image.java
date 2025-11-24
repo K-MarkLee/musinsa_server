@@ -34,7 +34,7 @@ public class Image extends BaseEntity {
     // 외부 노출 생성 메서드 + 필수 값 검증
     public static Image create(Product product,String imageUrl, boolean isThumbnail) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
-            throw new BusinessException(ErrorCode.IMAGE_REQUIRED);
+            throw new BusinessException(ErrorCode.URL_REQUIRED);
         }
         return new Image(product, imageUrl, isThumbnail);
     }
