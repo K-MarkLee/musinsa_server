@@ -7,17 +7,19 @@ import com.mudosa.musinsa.order.application.dto.*;
 import com.mudosa.musinsa.order.application.dto.request.OrderCreateRequest;
 import com.mudosa.musinsa.order.application.dto.response.OrderCreateResponse;
 import com.mudosa.musinsa.order.application.dto.response.OrderDetailResponse;
+import com.mudosa.musinsa.order.application.dto.response.OrderInfo;
 import com.mudosa.musinsa.order.application.dto.response.OrderListResponse;
 import com.mudosa.musinsa.order.domain.model.Order;
 import com.mudosa.musinsa.order.domain.model.OrderProduct;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
+import com.mudosa.musinsa.payment.domain.model.Payment;
+import com.mudosa.musinsa.payment.domain.repository.PaymentRepository;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.repository.CartItemRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class OrderService {
     private final ProductOptionRepository productOptionRepository;
     private final UserRepository userRepository;
     private final MemberCouponRepository memberCouponRepository;
+    private final PaymentRepository paymentRepository;
 
     @Transactional
     public OrderCreateResponse createPendingOrder(OrderCreateRequest request, Long userId) {
@@ -58,6 +61,7 @@ public class OrderService {
         return OrderCreateResponse.of(savedOrder.getId(), savedOrder.getOrderNo());
     }
 
+    @Transactional(readOnly = true)
     public PendingOrderResponse fetchPendingOrder(String orderNo) {
         // 주문 조회
         Order order = orderRepository.findByOrderNo(orderNo)
@@ -68,43 +72,20 @@ public class OrderService {
         UserInfoDto userInfo = userRepository.findDtoById(userId);
 
         // 상품 목록 조회
-        List<PendingOrderItem> orderProductsInfo = orderRepository.findOrderItems(orderNo);
-
-        // 쿠폰 목록 조회
-        List<OrderMemberCoupon> memberCoupons = memberCouponRepository.findOrderMemberCouponsByUserId(userId);
+        List<OrderItem> orderProductsInfo = orderRepository.findOrderItems(orderNo);
 
         return new PendingOrderResponse(
                 orderNo,
                 order.getTotalPrice().getAmount(),
                 order.getTotalDiscount().getAmount(),
                 orderProductsInfo,
-                memberCoupons,
                 userInfo.userName(),
                 userInfo.currentAddress(),
                 userInfo.contactNumber()
         );
     }
 
-    public OrderDetailResponse fetchOrderDetail(String orderNo) {
-        //주문 조회
-
-        //사용자 정보 조회
-
-        //상품 목록 조회
-
-        //결제 정보 조회
-        return null;
-    }
-
-    public OrderListResponse fetchOrderList(Long userId, Pageable pageable) {
-        return null;
-    }
-
-    public void cancelOrder(String orderNo) {
-
-    }
-
-    @Transactional(readOnly = false)
+    @Transactional
     public Long completeOrder(String orderNo) {
         //주문 조회
         Order order = orderRepository.findByOrderNo(orderNo)
@@ -121,10 +102,27 @@ public class OrderService {
 
         List<ProductOption> productOptions = productOptionRepository.findByProductOptionIdInWithPessimisticLock(optionIds);
 
-        productOptions.forEach(po->{
+        List<InsufficientStockItem> insufficientItems = new ArrayList<>();
+
+        productOptions.forEach(po -> {
             Integer quantityToDeduct = quantityMap.get(po.getProductOptionId());
-            po.decreaseStock(quantityToDeduct);
+            if (!po.hasEnoughStock(quantityToDeduct)) {
+                insufficientItems.add(new InsufficientStockItem(
+                        po.getProductOptionId(),
+                        quantityToDeduct,
+                        po.getStockQuantity()
+                ));
+            } else {
+                po.decreaseStock(quantityToDeduct);
+            }
         });
+
+        if (!insufficientItems.isEmpty()) {
+            throw new BusinessException(
+                    ErrorCode.INSUFFICIENT_STOCK,
+                    insufficientItems
+            );
+        }
 
         //주문 상태 변경
         order.complete();
@@ -149,7 +147,7 @@ public class OrderService {
         );
     }
 
-    @Transactional(readOnly = false)
+    @Transactional
     public void rollbackOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
@@ -214,5 +212,130 @@ public class OrderService {
                         option -> option,
                         option -> quantityMap.get(option.getProductOptionId())
                 ));
+    }
+
+    @Transactional
+    public void cancelPendingOrder(String orderNo) {
+        Order order = orderRepository.findByOrderNo(orderNo)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        if(!order.isCancable()){
+            throw new BusinessException(ErrorCode.CANNOT_CANCEL_ORDER, "취소할 수 없는 상태입니다.");
+        }
+
+        orderRepository.delete(order);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderListResponse fetchOrderList(Long userId) {
+
+        List<OrderFlatDto> flatList = orderRepository.findFlatOrderListWithDetails(userId);
+
+        Map<String, List<OrderFlatDto>> groupedByOrderNo = flatList.stream()
+                .collect(Collectors.groupingBy(OrderFlatDto::getOrderNo));
+
+        List<OrderInfo> resultList = groupedByOrderNo.entrySet().stream()
+                .map(entry -> {
+                    String orderNo = entry.getKey();
+                    List<OrderFlatDto> orderItemsFlat = entry.getValue();
+
+                    List<OrderItem> items = orderItemsFlat.stream()
+                            .map(flatDto -> new OrderItem(
+                                    flatDto.getProductOptionId(),
+                                    flatDto.getBrandName(),
+                                    flatDto.getProductName(),
+                                    flatDto.getItemAmount(),
+                                    flatDto.getQuantity(),
+                                    flatDto.getImageUrl(),
+                                    flatDto.getSize(),
+                                    flatDto.getColor()
+                            ))
+                            .collect(Collectors.toList());
+
+                    OrderFlatDto firstFlatDto = orderItemsFlat.get(0);
+
+                    return new OrderInfo(
+                            orderNo,
+                            firstFlatDto.getOrderStatus(),
+                            firstFlatDto.getRegisteredAt(),
+                            firstFlatDto.getTotalPrice(),
+                            items
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return new OrderListResponse(resultList);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDetailResponse fetchOrderDetail(String orderNo) {
+        // 주문 조회
+        Order order = orderRepository.findByOrderNo(orderNo)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        if(!order.canFetchDetail()){
+            throw new BusinessException(ErrorCode.INVALID_ORDER_STATUS_TRANSITION);
+        }
+
+        // 사용자 정보 조회
+        Long userId = order.getUserId();
+        UserInfoDto userInfo = userRepository.findDtoById(userId);
+
+        // 상품 목록 조회
+        List<OrderItem> orderProductsInfo = orderRepository.findOrderItems(orderNo);
+
+        //결제 정보 조회
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElseThrow(()->new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        return OrderDetailResponse.builder()
+                .orderNo(order.getOrderNo())
+                .orderStatus(order.getStatus())
+                .totalProductAmount(order.getTotalPrice().getAmount())
+                .discountAmount(order.getTotalDiscount().getAmount())
+                .orderedAt(order.getRegisteredAt())
+                .userName(userInfo.userName())
+                .userAddress(userInfo.currentAddress())
+                .userContactNumber(userInfo.contactNumber())
+                .orderItems(orderProductsInfo)
+                .paymentFinalAmount(payment.getAmount())
+                .paymentMethod(payment.getMethod())
+                .pgProvider(payment.getPgProvider())
+                .approvedAt(payment.getApprovedAt())
+                .paymentStatus(payment.getStatus())
+                .cancelledAt(payment.getCancelledAt())
+                .paymentTransactionId(payment.getPgTransactionId())
+                .build();
+    }
+
+    public void cancelOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        for (OrderProduct orderProduct : order.getOrderProducts()) {
+            ProductOption productOption = productOptionRepository.findById(
+                    orderProduct.getProductOption().getProductOptionId()
+            ).orElseThrow();
+
+            productOption.restoreStock(orderProduct.getProductQuantity());
+        }
+
+        order.cancel();
+        orderRepository.save(order);
+    }
+
+    public void rollbackOrderCancel(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        for (OrderProduct orderProduct : order.getOrderProducts()) {
+            ProductOption productOption = productOptionRepository.findById(
+                    orderProduct.getProductOption().getProductOptionId()
+            ).orElseThrow();
+
+            productOption.decreaseStock(orderProduct.getProductQuantity());
+        }
+
+        order.rollbackToCompleted();
+        orderRepository.save(order);
     }
 }

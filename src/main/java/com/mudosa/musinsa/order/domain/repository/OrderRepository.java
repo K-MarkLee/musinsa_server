@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.order.domain.repository;
 
-import com.mudosa.musinsa.order.application.dto.PendingOrderItem;
 import com.mudosa.musinsa.order.domain.model.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -34,4 +33,6 @@ public interface OrderRepository extends JpaRepository<Order, Long>, OrderReposi
         WHERE o.id = :orderId
     """)
     Optional<Order> findByIdWithProductsAndBrand(Long orderId);
+
+    List<Order> findAllByUserId(Long userId);
 }

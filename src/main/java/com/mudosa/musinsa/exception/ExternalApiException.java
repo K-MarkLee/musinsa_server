@@ -1,11 +1,11 @@
 package com.mudosa.musinsa.exception;
 
 import lombok.Getter;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 
 @Getter
 public class ExternalApiException extends RuntimeException {
-    private final HttpStatus httpStatus;
+    private final HttpStatusCode httpStatus;
     private final String responseBody;
 
     public ExternalApiException(String message, Throwable cause) {
@@ -16,12 +16,12 @@ public class ExternalApiException extends RuntimeException {
 
     public ExternalApiException(
             String message,
-            HttpStatus httpStatus,
+            HttpStatusCode httpStatusCode,
             String responseBody,
             Throwable cause
     ) {
         super(message, cause);
-        this.httpStatus = httpStatus;
+        this.httpStatus = httpStatusCode;
         this.responseBody = responseBody;
     }
 }

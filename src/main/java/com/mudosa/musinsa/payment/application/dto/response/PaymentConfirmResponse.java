@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 
 
 @Getter
-@Builder
 @NoArgsConstructor
 public class PaymentConfirmResponse {
     private String orderNo;

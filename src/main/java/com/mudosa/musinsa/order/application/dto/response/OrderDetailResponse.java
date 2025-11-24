@@ -1,7 +1,10 @@
 package com.mudosa.musinsa.order.application.dto.response;
 
 import com.mudosa.musinsa.order.application.dto.OrderDetailItem;
+import com.mudosa.musinsa.order.application.dto.OrderItem;
+import com.mudosa.musinsa.order.domain.model.OrderStatus;
 import com.mudosa.musinsa.payment.domain.model.PaymentStatus;
+import com.mudosa.musinsa.payment.domain.model.PgProvider;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,12 +17,11 @@ import java.util.List;
 
 @Getter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
 public class OrderDetailResponse {
     //주문 정보
     private String orderNo;
-    private String orderStatus;
+    private OrderStatus orderStatus;
     private BigDecimal totalProductAmount;
     private BigDecimal discountAmount;
     private LocalDateTime orderedAt;
@@ -30,12 +32,14 @@ public class OrderDetailResponse {
     private String userContactNumber;
 
     //상품 정보
-    private List<OrderDetailItem> orderProducts;
+    private List<OrderItem> orderItems;
 
     //결제 정보
+    private String paymentTransactionId;
     private BigDecimal paymentFinalAmount;
     private String paymentMethod;
-    private String pgProvider;
+    private PgProvider pgProvider;
     private LocalDateTime approvedAt;
     private PaymentStatus paymentStatus;
+    private LocalDateTime cancelledAt;
 }
