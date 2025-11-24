@@ -22,13 +22,26 @@ class ImageTest {
         String imageUrl = "http://example.com/image.jpg";
 
         // when
-        Image image = Image.builder()
-                .imageUrl(imageUrl)
-                .isThumbnail(false)
-                .build();
+        Image image = Image.create(null, imageUrl, false);
 
         // then
         assertThat(image.getImageUrl()).isEqualTo(imageUrl);
+    }
+
+    @Test
+    @DisplayName("이미지가 정상적으로 생성된다.")
+    void createImageWithProduct() {
+        // given
+        Product product = Product.builder().build();
+        String imageUrl = "http://example.com/image.jpg";
+
+        // when
+        Image image = Image.create(product, imageUrl, true);
+
+        // then
+        assertThat(image.getProduct()).isEqualTo(product);
+        assertThat(image.getImageUrl()).isEqualTo(imageUrl);
+        assertThat(image.getIsThumbnail()).isTrue();
     }
 
     @ParameterizedTest
@@ -49,9 +62,9 @@ class ImageTest {
         // given
         Product product = Product.builder().build();
         Image image = Image.builder()
-            .imageUrl("http://example.com/image.jpg")
-            .isThumbnail(false)
-            .build();
+                .imageUrl("http://example.com/image.jpg")
+                .isThumbnail(false)
+                .build();
 
         // when
         image.setProduct(product);
