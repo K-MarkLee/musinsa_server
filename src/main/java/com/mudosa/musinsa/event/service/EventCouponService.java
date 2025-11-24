@@ -41,14 +41,13 @@ public class EventCouponService {
     // 이벤트 쿠폰 발급 => 쿠폰 발급 버튼을 눌렀을 때 실행
     @Transactional
     public EventCouponIssueResult issueCoupon(Long eventId,
-                                              Long productOptionId,
                                               Long userId ){
 
         // 1. 동시성 제어 : 같은 유저의 중복 요청 방지
         try (EventEntryService.EventEntryToken ignored = eventEntryService.acquireSlot(eventId, userId)){
 
-            // 2. 이벤트 옵션 조회 ( 비관적 락 )
-            EventOption eventOption = eventOptionRepository.findByEventIdAndIdForUpdate(eventId,productOptionId)
+            // 2. 이벤트 옵션 조회 락 불필요(읽기 전용) , 이벤트와 1:1 매핑
+            EventOption eventOption = eventOptionRepository.findByEventIdWithDetails(eventId)
                     // 레포에 생성 필요 -1
                     .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_NOT_FOUND));
 
@@ -61,12 +60,9 @@ public class EventCouponService {
             Coupon coupon = Optional.ofNullable(event.getCoupon())
                     .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_COUPON_NOT_ASSIGNED));
 
-
-
+            Long couponId = coupon.getId();
 
             //  5. 멱등성 체크 : 이미 발급된 쿠폰이 있는지 먼저 조회 , 있으면 그대로 재사용
-
-            Long couponId = coupon.getId();
 
             Optional<CouponIssuanceService.CouponIssuanceResult> existing = couponIssuanceService
                     .findIssuedCoupon(userId, couponId);
@@ -78,25 +74,27 @@ public class EventCouponService {
             // 사용자별 제한 확인
             validateUserLimit(event, coupon, userId);
 
-//            // 재고 확인
-//            ensureEventStockAvailable(eventOption);
-
             // 상품 ID 확인
             Long productId = resolveProductId(eventOption);
 
-            // 6. 실제 쿠폰 발급 ! => 쿠폰 도메인
+            // 6. 실제 쿠폰 발급 ! => 쿠폰 도메인 책임
+            /*
+             *✅ CouponIssuanceService 내부에서 Coupon에 PESSIMISTIC_WRITE 락을 걸어
+             *issuedQuantity 증가를 원자적으로 처리
+            */
             CouponIssuanceService.CouponIssuanceResult issuanceResult = couponIssuanceService
                     .issueCoupon(userId, couponId, productId);
 
 
-            // 10. 중복 발급 감지
+            // 10. 중복 발급 감지 ( 재진입 케이스 )
             if(issuanceResult.duplicate()){
                 log.info("중복 발급 감지 - eventId: {}, userId: {}", eventId, userId);
                 return EventCouponIssueResult.from(issuanceResult);
             }
 
-
-            decreaseEventStock(eventOption); // 기존 재고 차감 호출 (event => inventory)
+            // 발급 성공 로그
+            log.info("쿠폰 발급 성공 - eventId: {}, userId: {}, couponId: {}",
+                    eventId, userId, couponId);
 
             return EventCouponIssueResult.from(issuanceResult);
         }
@@ -120,23 +118,8 @@ public class EventCouponService {
         }
     }
 
-    // 기존 상품옵션 단위 재고 차감
-    private void decreaseEventStock(EventOption eventOption) {
-        try{
-            eventOption.decreaseStock(1);
-        }catch (IllegalStateException exception){
-            throw new BusinessException(ErrorCode.EVENT_STOCK_EMPTY, exception.getMessage());
-        }
-    }
 
-//    // 재고가 있는 이벤트 옵션인지 => 필요할까 ? 어짜피 쿠폰 발급인데
-//    private void ensureEventStockAvailable(EventOption eventOption) {
-//        if(eventOption.getEventStock() == null || eventOption.getEventStock() <= 0) {
-//            throw new BusinessException(ErrorCode.EVENT_STOCK_EMPTY);
-//        }
-//    }
-
-    // 이벤트에(쿠폰) 매핑된 상품 ID
+    // 이벤트에(쿠폰) 매핑된 상품 ID 조회
     private Long resolveProductId(EventOption eventOption) {
         ProductOption productOption = eventOption.getProductOption();
         if(productOption == null || productOption.getProduct() == null) {

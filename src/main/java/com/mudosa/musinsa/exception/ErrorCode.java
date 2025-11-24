@@ -124,6 +124,7 @@ public enum ErrorCode {
   IMAGE_REQUIRED("100001", "이미지는 필수입니다.", HttpStatus.BAD_REQUEST),
   THUMBNAIL_REQUIRED("10002","썸네일은 필수입니다.", HttpStatus.BAD_REQUEST),
   THUMBNAIL_ONLY_ONE("100003", "썸네일 이미지는 반드시 하나여야 합니다.", HttpStatus.BAD_REQUEST),
+  URL_REQUIRED("100004", "이미지 URL은 필수입니다.", HttpStatus.BAD_REQUEST),
 
   //settlement
   SETTLEMENT_NOT_FOUND("A0001", "정산 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
@@ -148,7 +149,10 @@ public enum ErrorCode {
   PRODUCT_STOCK_QUANTITY_REQUIRED("D0008", "상품 옵션 재고 수량은 필수입니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_OPTION_VALUE_ID_REQUIRED("D0009", "상품 옵션 값 식별자는 최소 1개 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
   INVALID_PRODUCT_OPTION_VALUE_IDS("D0010", "상품 옵션 값 식별자가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
-
+  PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE("D0011", "상품 옵션은 각 색상과 사이즈의 값이 필요합니다.", HttpStatus.BAD_REQUEST),
+  INVALID_PRODUCT_OPTION_VALUE("D0012", "상품 옵션 값이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+  REQUIRED_TWO_DIFFERENT_OPTION_NAMES("D0013", "서로 다른 두 가지 옵션명이 필요합니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE("D0014", "상품 옵션은 각 색상과 사이즈의 값이 1개여야 합니다.", HttpStatus.BAD_REQUEST),
   // user
   USER_ID_REQUIRED("E0001", "사용자 ID는 필수입니다.", HttpStatus.BAD_REQUEST),
 

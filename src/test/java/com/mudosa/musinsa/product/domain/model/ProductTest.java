@@ -1,158 +1,289 @@
 package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
+import com.mudosa.musinsa.brand.domain.model.BrandStatus;
 import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DisplayName("Product 애그리거트는 기본 정보 수정, 가용성 전환, 연관관계 설정을 지원해야 한다")
+@DisplayName("Product 도메인 모델의 테스트")
 class ProductTest {
 
-	@Nested
-	@DisplayName("기본 정보 수정")
-	class UpdateInfo {
+	private Brand brand;
+	private Image image;
+	private Inventory inventory;
+	private ProductOption option;
 
-		@Test
-	@DisplayName("서로 다른 이름과 정보를 전달하면 updateBasicInfo 호출 시 값이 변경되고 true를 반환해야 한다")
-		void givenDifferentValues_whenUpdateBasicInfo_thenChanged() {
-			// given
-			Brand brand = Brand.create("테스트", "TEST", BigDecimal.ZERO);
-			Product product = Product.builder()
-				.brand(brand)
-				.productName("old")
-				.productInfo("old info")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("테스트")
-				.categoryPath("상의>티셔츠")
-				.isAvailable(true)
-				.build();
+	@BeforeEach
+	void setUp() {
+		brand = Brand.builder()
+			.nameKo("테스트 브랜드")
+			.nameEn("TEST")
+			.status(BrandStatus.ACTIVE)
+			.commissionRate(BigDecimal.ZERO)
+			.build();
 
-			// when
-			boolean changed = product.updateBasicInfo("new", "new info");
+		image = Image.builder()
+			.imageUrl("http://example.com/image.jpg")
+			.isThumbnail(false)
+			.build();
 
-			// then
-			assertThat(changed).isTrue();
-			assertThat(product.getProductName()).isEqualTo("new");
-			assertThat(product.getProductInfo()).isEqualTo("new info");
-		}
+		inventory = Inventory.builder()
+			.stockQuantity(new StockQuantity(10))
+			.build();
 
-		@Test
-	@DisplayName("공백 이름을 전달하면 updateBasicInfo 호출 시 BusinessException이 발생해야 한다")
-		void givenBlankName_whenUpdateBasicInfo_thenThrows() {
-			// given
-			Product product = Product.builder()
-				.brand(Brand.create("b", "b", BigDecimal.ZERO))
-				.productName("name")
-				.productInfo("info")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("b")
-				.categoryPath("c")
-				.isAvailable(true)
-				.build();
-
-			// when/then
-			assertThatThrownBy(() -> product.updateBasicInfo(" ", "info"))
-				.isInstanceOf(BusinessException.class);
-		}
+		option = ProductOption.builder()
+			.productPrice(new Money(10000L))
+			.inventory(inventory)
+			.build();
+			
 	}
 
-	@Nested
-	@DisplayName("판매 가능 상태 변경")
-	class Availability {
+	@Test
+	@DisplayName("필수 값들을 넣고 상품을 생성하면 정상적으로 생성된다.")
+	void createProduct() {
+		// given
+		List<Image> images = List.of(image);
+		List<ProductOption> options = List.of(option);
+		String categoryPath = "상의>티셔츠";
 
-		@Test
-	@DisplayName("isAvailable가 true일 때 changeAvailability(false) 호출 시 false로 변경되어야 하고, 다시 true로 변경되어야 한다")
-		void givenInitialAvailable_whenChangeAvailability_thenToggles() {
-			// given
-			Product product = Product.builder()
-				.brand(Brand.create("b", "b", BigDecimal.ZERO))
-				.productName("n")
-				.productInfo("i")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("b")
-				.categoryPath("c")
-				.isAvailable(true)
-				.build();
+		// when
+		Product product = Product.create(
+			brand,
+			"상품명",
+			"상품 정보",
+			ProductGenderType.ALL,
+			brand.getNameKo(),
+			categoryPath,
+			true,
+			images,
+			options
+		);
 
-			// when
-			product.changeAvailability(false);
-
-			// then
-			assertThat(product.getIsAvailable()).isFalse();
-
-			// when
-			product.changeAvailability(true);
-
-			// then
-			assertThat(product.getIsAvailable()).isTrue();
-		}
+		// then
+		assertThat(product.getProductName()).isEqualTo("상품명");
+		assertThat(product.getProductInfo()).isEqualTo("상품 정보");
+		assertThat(product.getProductGenderType()).isEqualTo(ProductGenderType.ALL);
 	}
 
-	@Nested
-	@DisplayName("연관관계 관리")
-	class Associations {
+	@ParameterizedTest
+	@MethodSource("requiredFieldsNull")
+	@DisplayName("상품의 필수 정보가 비어 있으면 BusinessException이 발생한다.")
+	void createProductWithNullOrBlank(String productName,
+									  String productInfo,
+									  ProductGenderType genderType,
+									  ErrorCode expectedCode) {
+		// given
+		List<Image> images = List.of(image);
+		List<ProductOption> options = List.of(option);
+		String categoryPath = "상의>티셔츠";
 
-		@Test
-	@DisplayName("이미지를 생성하여 addImage 호출 시 Image의 product 참조가 설정되어야 한다")
-		void givenImage_whenAddImage_thenProductReferenceSet() {
-			// given
-			Product product = Product.builder()
-				.brand(Brand.create("b", "b", BigDecimal.ZERO))
-				.productName("n")
-				.productInfo("i")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("b")
-				.categoryPath("c")
-				.isAvailable(true)
-				.build();
-
-			// when
-			Image img = Image.builder()
-				.imageUrl("http://example.com/image.jpg")
-				.isThumbnail(false)
-				.build();
-			product.addImage(img);
-
-			// then
-			assertThat(product.getImages()).contains(img);
-			assertThat(img.getProduct()).isEqualTo(product);
-		}
-
-		@Test
-	@DisplayName("옵션과 재고 정보를 제공하면 addProductOption 호출 시 Product에 옵션이 추가되고 양방향 연관이 설정되어야 한다")
-		void givenOption_whenAddProductOption_thenAssociated() {
-			// given
-			Product product = Product.builder()
-				.brand(Brand.create("b", "b", BigDecimal.ZERO))
-				.productName("n")
-				.productInfo("i")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("b")
-				.categoryPath("c")
-				.isAvailable(true)
-				.build();
-
-			// when
-			Inventory inventory = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-			ProductOption option = ProductOption.builder()
-				.product(product)
-				.productPrice(new Money(1000L))
-				.inventory(inventory)
-				.build();
-			product.addProductOption(option);
-
-			// then
-			assertThat(product.getProductOptions()).contains(option);
-			assertThat(option.getProduct()).isEqualTo(product);
-		}
+		// when // then
+		assertThatThrownBy(() -> Product.create(
+			brand,
+			productName,
+			productInfo,
+			genderType,
+			brand.getNameKo(),
+			categoryPath,
+			true,
+			images,
+			options
+		))
+			.isInstanceOf(BusinessException.class)
+			.extracting(e -> ((BusinessException) e).getErrorCode())
+			.isEqualTo(expectedCode);
 	}
+
+	private static Stream<Arguments> requiredFieldsNull() {
+		return Stream.of(
+			Arguments.of(null, "정보", ProductGenderType.ALL, ErrorCode.PRODUCT_NAME_REQUIRED),
+			Arguments.of("이름", null, ProductGenderType.ALL, ErrorCode.PRODUCT_INFO_REQUIRED),
+			Arguments.of("이름", "정보", null, ErrorCode.PRODUCT_GENDER_TYPE_REQUIRED)
+		);
+	}
+
+	@ParameterizedTest
+	@MethodSource("requiredFieldsEmpty")
+	@DisplayName("상품의 필수 정보에 빈 문자열을 넣으면 BusinessException이 발생한다.")
+	void createProductWithEmptyValue(String productName,
+									 String productInfo,
+									 ErrorCode expectedCode) {
+		// given
+		List<Image> images = List.of(image);
+		List<ProductOption> options = List.of(option);
+		String categoryPath = "상의>티셔츠";
+
+		// when // then
+		assertThatThrownBy(() -> Product.create(
+			brand,
+			productName,
+			productInfo,
+			ProductGenderType.ALL,
+			brand.getNameKo(),
+			categoryPath,
+			true,
+			images,
+			options
+		))
+			.isInstanceOf(BusinessException.class)
+			.extracting(e -> ((BusinessException) e).getErrorCode())
+			.isEqualTo(expectedCode);
+	}
+
+	private static Stream<Arguments> requiredFieldsEmpty() {
+		return Stream.of(
+			Arguments.of("", "정보", ErrorCode.PRODUCT_NAME_REQUIRED),
+			Arguments.of(" ", "정보", ErrorCode.PRODUCT_NAME_REQUIRED),
+			Arguments.of("이름", "", ErrorCode.PRODUCT_INFO_REQUIRED),
+			Arguments.of("이름", " ", ErrorCode.PRODUCT_INFO_REQUIRED)
+		);
+	}
+
+	@Test
+	@DisplayName("상품에 이미지를 추가하면 연관관계가 설정된다.")
+	void addImage() {
+		// given
+		Product product = Product.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.brandName(brand.getNameKo())
+			.categoryPath("상의>티셔츠")
+			.build();
+
+		// when
+		product.addImage(image);
+
+		// then
+		assertThat(product.getImages()).contains(image);
+	}
+
+	@Test
+	@DisplayName("상품에 상품 옵션을 추가하면 연관관계가 설정된다.")
+	void addProductOption() {
+		// given
+		Product product = Product.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.brandName(brand.getNameKo())
+			.categoryPath("상의>티셔츠")
+			.build();
+
+		// when
+		product.addProductOption(option);
+
+		// then
+		assertThat(product.getProductOptions()).contains(option);
+	}
+
+	@ParameterizedTest
+	@CsvSource({"false, false", "true, true"})
+	@DisplayName("상품의 판매 가능 여부를 변경할 수 있다.")
+	void changeAvailability(boolean isAvailable, boolean expectedAvailability) {
+		// given
+		Product product = Product.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.brandName(brand.getNameKo())
+			.categoryPath("상의>티셔츠")
+			.isAvailable(isAvailable)
+			.build();
+
+		// when
+		product.changeAvailability(expectedAvailability);
+
+		// then
+		assertThat(product.getIsAvailable()).isEqualTo(expectedAvailability);
+	}
+
+	@Test
+	@DisplayName("상품의 수정가능한 정보의 값을 수정한다.")
+	void updateProduct() {
+		// given
+		Product product = Product.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.brandName(brand.getNameKo())
+			.categoryPath("상의>티셔츠")
+			.build();
+
+		// when
+		product.updateBasicInfo("변경된 상품명", "변경된 상품 정보");
+
+		// then
+		assertThat(product.getProductName()).isEqualTo("변경된 상품명");
+		assertThat(product.getProductInfo()).isEqualTo("변경된 상품 정보");
+	}
+
+	@Test
+	@DisplayName("상품의 수정가능한 정보에 null 값을 넣고 수정하면 false를 반환한다.")
+	void updateProductWithNullValue() {
+		// given
+		Product product = Product.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.brandName(brand.getNameKo())
+			.categoryPath("상의>티셔츠")
+			.build();
+
+		// when 
+		boolean changed = product.updateBasicInfo(null, null);
+
+		// then
+		assertThat(changed).isFalse();
+		assertThat(product.getProductName()).isEqualTo("상품명");
+		assertThat(product.getProductInfo()).isEqualTo("상품 정보");
+
+	}
+
+	@ParameterizedTest
+	@MethodSource("UpdateValuesEmpty")
+	@DisplayName("상품의 수정가능한 정보에 빈값을 넣고 수정하면 BusinessException이 발생한다.")
+	void updateProductWithEmptyValue(String productName,
+									 String productInfo,
+									 ErrorCode expectedCode) {
+		// given
+		Product product = Product.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.brandName(brand.getNameKo())
+			.categoryPath("상의>티셔츠")
+			.build();
+
+		// when // then
+		assertThatThrownBy(() -> product.updateBasicInfo(productName, productInfo))
+			.isInstanceOf(BusinessException.class)
+			.extracting(e -> ((BusinessException) e).getErrorCode())
+			.isEqualTo(expectedCode);
+	}
+
+	private static Stream<Arguments> UpdateValuesEmpty() {
+		return Stream.of(
+			Arguments.of(" ", "상품 정보", ErrorCode.PRODUCT_NAME_REQUIRED),
+			Arguments.of("상품명", " ", ErrorCode.PRODUCT_INFO_REQUIRED)
+		);
+	}
+
 }

@@ -18,7 +18,7 @@ import java.util.Optional;
 
 
 @Service
-@RequiredArgsConstructor // ✅ final 필드 주입용 생성자 자동 생성
+@RequiredArgsConstructor
 @Transactional
 @Slf4j
 public class CouponIssuanceService {
@@ -55,14 +55,6 @@ public class CouponIssuanceService {
         // 2. 발급 가능 상태 검증 (활성화, 기간, 재고 확인)
         LocalDateTime now = LocalDateTime.now();
         coupon.validateIssuable(now);
-
-//        // 상품 적용 가능 여부 검증
-//        if(!couponProductService.isApplicableToProduct(couponId,productId)){
-//            throw new BusinessException(
-//                    ErrorCode.EVENT_PRODUCT_MISMATCH
-//                    , "쿠폰이 해당 상품에 적용되지 않습니다"
-//            );
-//        }
 
 
         return memberCouponRepository.findByUserIdAndCouponId(userId, couponId)

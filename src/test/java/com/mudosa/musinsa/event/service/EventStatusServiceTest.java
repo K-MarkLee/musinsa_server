@@ -9,345 +9,562 @@ import com.mudosa.musinsa.event.model.EventStatus;
 import com.mudosa.musinsa.event.repository.EventRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
-@DisplayName("EventStatusService 테스트")
-@Transactional
-class EventStatusServiceTest extends ServiceConfig {
+@DisplayName("EventStatusService 통합 테스트")
+class EventStatusServiceTest {
 
-    @Autowired
-    private EventStatusService eventStatusService;
+    // ========================================
+    // 단위 테스트 (Mockito 사용)
+    // ========================================
+    @Nested
+    @ExtendWith(MockitoExtension.class)
+    @DisplayName("단위 테스트 - Mock을 사용한 비즈니스 로직 검증")
+    class UnitTest {
 
-    @Autowired
-    private EventRepository eventRepository;
+        @Mock
+        private EventRepository eventRepository;
 
-    @Autowired
-    private CouponRepository couponRepository;
+        @InjectMocks
+        private EventStatusService eventStatusService;
 
-    @Autowired
-    private EntityManager entityManager;
+        @Test
+        @DisplayName("PLANNED 상태의 이벤트가 시작 시간이 되면 OPEN으로 변경된다")
+        void updatePlannedToOpen_Success() {
+            // Given
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime startedAt = now.minusMinutes(10);
+            LocalDateTime endedAt = now.plusHours(1);
 
-    @Test
-    @DisplayName("[해피케이스] 이벤트 상태 자동 업데이트 - PLANNED에서 OPEN으로 변경된다")
-    void updateEventStatuses_PlannedToOpen_Success() {
-        // given
-        LocalDateTime pastTime = LocalDateTime.now().minusHours(1);
-        LocalDateTime futureTime = LocalDateTime.now().plusDays(7);
+            Event plannedEvent = Event.builder()
+                    .id(1L)
+                    .title("테스트 이벤트")
+                    .status(EventStatus.PLANNED)
+                    .isPublic(true)
+                    .startedAt(startedAt)
+                    .endedAt(endedAt)
+                    .build();
 
-        Event event = Event.create(
-                "자동 시작 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                pastTime,  // 시작 시간이 이미 지남
-                futureTime,
-                null
-        );
-        // PLANNED 상태로 수동 설정
-        event.open();  // 먼저 OPEN으로
-        event.cancel(); // CANCELLED로
-        Event savedEvent = eventRepository.save(event);
+            when(eventRepository.findAllByStatusAndStartedAtBefore(
+                    eq(EventStatus.PLANNED), any(LocalDateTime.class)))
+                    .thenReturn(List.of(plannedEvent));
 
-        // PLANNED 상태가 필요하므로 새로 생성
-        Event plannedEvent = Event.create(
-                "PLANNED 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                pastTime,
-                futureTime,
-                null
-        );
-        eventRepository.save(plannedEvent);
+            // When
+            eventStatusService.updateEventStatuses();
 
-        entityManager.flush();
-        entityManager.clear();
+            // Then
+            verify(eventRepository, times(1))
+                    .findAllByStatusAndStartedAtBefore(eq(EventStatus.PLANNED), any(LocalDateTime.class));
+            verify(eventRepository, times(1)).save(plannedEvent);
+            assertThat(plannedEvent.getStatus()).isEqualTo(EventStatus.OPEN);
+        }
 
-        // when
-        eventStatusService.updateEventStatuses();
+        @Test
+        @DisplayName("OPEN 상태의 이벤트가 종료 시간이 지나면 ENDED로 변경된다")
+        void updateOpenToEnded_Success() {
+            // Given
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime startedAt = now.minusHours(2);
+            LocalDateTime endedAt = now.minusMinutes(10);
 
-        entityManager.flush();
-        entityManager.clear();
+            Event openEvent = Event.builder()
+                    .id(1L)
+                    .title("종료 예정 이벤트")
+                    .status(EventStatus.OPEN)
+                    .isPublic(true)
+                    .startedAt(startedAt)
+                    .endedAt(endedAt)
+                    .build();
 
-        // then
-        Event updatedEvent = eventRepository.findById(plannedEvent.getId()).orElseThrow();
-        // PLANNED 상태는 직접 설정할 수 없으므로,
-        // EventStatus.calculateStatus로 계산된 상태와 비교
-        assertThat(updatedEvent).isNotNull();
+            when(eventRepository.findAllByStatusAndEndedAtBefore(
+                    eq(EventStatus.OPEN), any(LocalDateTime.class)))
+                    .thenReturn(List.of(openEvent));
+
+            // When
+            eventStatusService.updateEventStatuses();
+
+            // Then
+            verify(eventRepository, times(1))
+                    .findAllByStatusAndEndedAtBefore(eq(EventStatus.OPEN), any(LocalDateTime.class));
+            verify(eventRepository, times(1)).save(openEvent);
+            assertThat(openEvent.getStatus()).isEqualTo(EventStatus.ENDED);
+        }
+
+        @Test
+        @DisplayName("공개되지 않은(isPublic=false) 이벤트는 자동으로 OPEN되지 않는다")
+        void updatePlannedToOpen_NotPublic() {
+            // Given
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime startedAt = now.minusMinutes(10);
+
+            Event privateEvent = Event.builder()
+                    .id(1L)
+                    .title("비공개 이벤트")
+                    .status(EventStatus.PLANNED)
+                    .isPublic(false)
+                    .startedAt(startedAt)
+                    .endedAt(now.plusHours(1))
+                    .build();
+
+            when(eventRepository.findAllByStatusAndStartedAtBefore(
+                    eq(EventStatus.PLANNED), any(LocalDateTime.class)))
+                    .thenReturn(List.of(privateEvent));
+
+            // When
+            eventStatusService.updateEventStatuses();
+
+            // Then
+            verify(eventRepository, never()).save(privateEvent);
+            assertThat(privateEvent.getStatus()).isEqualTo(EventStatus.PLANNED);
+        }
+
+        @Test
+        @DisplayName("여러 이벤트의 상태가 동시에 업데이트된다")
+        void updateMultipleEvents_Success() {
+            // Given
+            LocalDateTime now = LocalDateTime.now();
+
+            Event event1 = Event.builder()
+                    .id(1L)
+                    .title("이벤트 1")
+                    .status(EventStatus.PLANNED)
+                    .isPublic(true)
+                    .startedAt(now.minusMinutes(5))
+                    .endedAt(now.plusHours(1))
+                    .build();
+
+            Event event2 = Event.builder()
+                    .id(2L)
+                    .title("이벤트 2")
+                    .status(EventStatus.OPEN)
+                    .isPublic(true)
+                    .startedAt(now.minusHours(2))
+                    .endedAt(now.minusMinutes(5))
+                    .build();
+
+            when(eventRepository.findAllByStatusAndStartedAtBefore(
+                    eq(EventStatus.PLANNED), any(LocalDateTime.class)))
+                    .thenReturn(List.of(event1));
+
+            when(eventRepository.findAllByStatusAndEndedAtBefore(
+                    eq(EventStatus.OPEN), any(LocalDateTime.class)))
+                    .thenReturn(List.of(event2));
+
+            // When
+            eventStatusService.updateEventStatuses();
+
+            // Then
+            verify(eventRepository, times(2)).save(any(Event.class));
+            assertThat(event1.getStatus()).isEqualTo(EventStatus.OPEN);
+            assertThat(event2.getStatus()).isEqualTo(EventStatus.ENDED);
+        }
+
+        @Test
+        @DisplayName("수동으로 특정 이벤트의 상태를 업데이트할 수 있다")
+        void updateEventStatus_Manual_Success() {
+            // Given
+            Long eventId = 1L;
+            LocalDateTime now = LocalDateTime.now();
+
+            Event event = Event.builder()
+                    .id(eventId)
+                    .title("수동 업데이트 이벤트")
+                    .status(EventStatus.PLANNED)
+                    .isPublic(true)
+                    .startedAt(now.minusMinutes(10))
+                    .endedAt(now.plusHours(1))
+                    .build();
+
+            when(eventRepository.findById(eventId))
+                    .thenReturn(Optional.of(event));
+
+            // When
+            eventStatusService.updateEventStatus(eventId);
+
+            // Then
+            verify(eventRepository, times(1)).save(event);
+            assertThat(event.getStatus()).isEqualTo(EventStatus.OPEN);
+        }
+
+        @Test
+        @DisplayName("전체 이벤트 상태 동기화가 정상적으로 작동한다")
+        void syncAllEventStatuses_Success() {
+            // Given
+            LocalDateTime now = LocalDateTime.now();
+
+            Event event1 = Event.builder()
+                    .id(1L)
+                    .title("이벤트 1")
+                    .status(EventStatus.PLANNED)
+                    .isPublic(true)
+                    .startedAt(now.minusMinutes(10))
+                    .endedAt(now.plusHours(1))
+                    .build();
+
+            Event event2 = Event.builder()
+                    .id(2L)
+                    .title("이벤트 2")
+                    .status(EventStatus.OPEN)
+                    .isPublic(true)
+                    .startedAt(now.minusHours(2))
+                    .endedAt(now.minusMinutes(5))
+                    .build();
+
+            Event event3 = Event.builder()
+                    .id(3L)
+                    .title("취소된 이벤트")
+                    .status(EventStatus.CANCELLED)
+                    .isPublic(true)
+                    .startedAt(now.minusHours(1))
+                    .endedAt(now.plusHours(1))
+                    .build();
+
+            when(eventRepository.findAll())
+                    .thenReturn(Arrays.asList(event1, event2, event3));
+
+            // When
+            int updatedCount = eventStatusService.syncAllEventStatuses();
+
+            // Then
+            assertThat(updatedCount).isEqualTo(2); // event1, event2만 업데이트
+            assertThat(event1.getStatus()).isEqualTo(EventStatus.OPEN);
+            assertThat(event2.getStatus()).isEqualTo(EventStatus.ENDED);
+            assertThat(event3.getStatus()).isEqualTo(EventStatus.CANCELLED);
+            verify(eventRepository, times(2)).save(any(Event.class));
+        }
     }
 
-    @Test
-    @DisplayName("[해피케이스] 이벤트 상태 자동 업데이트 - OPEN에서 ENDED로 변경된다")
-    void updateEventStatuses_OpenToEnded_Success() {
-        // given
-        LocalDateTime pastStartTime = LocalDateTime.now().minusDays(7);
-        LocalDateTime pastEndTime = LocalDateTime.now().minusHours(1);
+    // ========================================
+    // 통합 테스트 (실제 DB 사용)
+    // ========================================
+    @Nested
+    @DisplayName("통합 테스트 - 실제 DB를 사용한 E2E 검증")
+    class IntegrationTest extends ServiceConfig {
 
-        Event event = Event.create(
-                "자동 종료 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                pastStartTime,
-                pastEndTime,  // 종료 시간이 이미 지남
-                null
-        );
-        event.open();  // OPEN 상태로 설정
-        Event savedEvent = eventRepository.save(event);
+        @Autowired
+        private EventStatusService eventStatusService;
 
-        entityManager.flush();
-        entityManager.clear();
+        @Autowired
+        private EventRepository eventRepository;
 
-        // when
-        eventStatusService.updateEventStatuses();
+        @Autowired
+        private CouponRepository couponRepository;
 
-        entityManager.flush();
-        entityManager.clear();
+        @Autowired
+        private EntityManager entityManager;
 
-        // then
-        Event updatedEvent = eventRepository.findById(savedEvent.getId()).orElseThrow();
-        assertThat(updatedEvent.getStatus()).isEqualTo(EventStatus.ENDED);
-    }
+        @Test
+        @DisplayName("이벤트 상태 자동 업데이트 - PLANNED에서 OPEN으로 변경된다")
+        void updateEventStatuses_PlannedToOpen_Success() {
+            // Given
+            LocalDateTime pastTime = LocalDateTime.now().minusHours(1);
+            LocalDateTime futureTime = LocalDateTime.now().plusDays(7);
 
-    @Test
-    @DisplayName("[해피케이스] 특정 이벤트 상태 수동 업데이트 - OPEN으로 변경된다")
-    void updateEventStatus_ToOpen_Success() {
-        // given
-        LocalDateTime pastTime = LocalDateTime.now().minusHours(1);
-        LocalDateTime futureTime = LocalDateTime.now().plusDays(7);
+            Event plannedEvent = Event.create(
+                    "PLANNED 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    true,
+                    pastTime,
+                    futureTime,
+                    null
+            );
+            eventRepository.save(plannedEvent);
 
-        Coupon coupon = Coupon.create(
-                "테스트 쿠폰",
-                DiscountType.AMOUNT,
-                new BigDecimal("10000"),
-                pastTime,
-                futureTime,
-                100
-        );
-        couponRepository.save(coupon);
+            entityManager.flush();
+            entityManager.clear();
 
-        Event event = Event.create(
-                "수동 업데이트 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                pastTime,
-                futureTime,
-                coupon
-        );
-        // DRAFT 상태로 유지
-        Event savedEvent = eventRepository.save(event);
+            // When
+            eventStatusService.updateEventStatuses();
 
-        entityManager.flush();
-        entityManager.clear();
+            entityManager.flush();
+            entityManager.clear();
 
-        // when
-        eventStatusService.updateEventStatus(savedEvent.getId());
+            // Then
+            Event updatedEvent = eventRepository.findById(plannedEvent.getId()).orElseThrow();
+            assertThat(updatedEvent).isNotNull();
+        }
 
-        entityManager.flush();
-        entityManager.clear();
+        @Test
+        @DisplayName("이벤트 상태 자동 업데이트 - OPEN에서 ENDED로 변경된다")
+        void updateEventStatuses_OpenToEnded_Success() {
+            // Given
+            LocalDateTime pastStartTime = LocalDateTime.now().minusDays(7);
+            LocalDateTime pastEndTime = LocalDateTime.now().minusHours(1);
 
-        // then
-        Event updatedEvent = eventRepository.findById(savedEvent.getId()).orElseThrow();
-        assertThat(updatedEvent.getStatus()).isEqualTo(EventStatus.OPEN);
-    }
+            Event event = Event.create(
+                    "자동 종료 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    true,
+                    pastStartTime,
+                    pastEndTime,
+                    null
+            );
+            event.open();
+            Event savedEvent = eventRepository.save(event);
 
-    @Test
-    @DisplayName("[해피케이스] 특정 이벤트 상태 수동 업데이트 - ENDED로 변경된다")
-    void updateEventStatus_ToEnded_Success() {
-        // given
-        LocalDateTime pastStartTime = LocalDateTime.now().minusDays(7);
-        LocalDateTime pastEndTime = LocalDateTime.now().minusHours(1);
+            entityManager.flush();
+            entityManager.clear();
 
-        Event event = Event.create(
-                "수동 종료 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                pastStartTime,
-                pastEndTime,
-                null
-        );
-        event.open();
-        Event savedEvent = eventRepository.save(event);
+            // When
+            eventStatusService.updateEventStatuses();
 
-        entityManager.flush();
-        entityManager.clear();
+            entityManager.flush();
+            entityManager.clear();
 
-        // when
-        eventStatusService.updateEventStatus(savedEvent.getId());
+            // Then
+            Event updatedEvent = eventRepository.findById(savedEvent.getId()).orElseThrow();
+            assertThat(updatedEvent.getStatus()).isEqualTo(EventStatus.ENDED);
+        }
 
-        entityManager.flush();
-        entityManager.clear();
+        @Test
+        @DisplayName("특정 이벤트 상태 수동 업데이트 - OPEN으로 변경된다")
+        void updateEventStatus_ToOpen_Success() {
+            // Given
+            LocalDateTime pastTime = LocalDateTime.now().minusHours(1);
+            LocalDateTime futureTime = LocalDateTime.now().plusDays(7);
 
-        // then
-        Event updatedEvent = eventRepository.findById(savedEvent.getId()).orElseThrow();
-        assertThat(updatedEvent.getStatus()).isEqualTo(EventStatus.ENDED);
-    }
+            Coupon coupon = Coupon.create(
+                    "테스트 쿠폰",
+                    DiscountType.AMOUNT,
+                    new BigDecimal("10000"),
+                    pastTime,
+                    futureTime,
+                    100
+            );
+            couponRepository.save(coupon);
 
-    @Test
-    @DisplayName("[해피케이스] 전체 이벤트 상태 동기화 - 여러 이벤트의 상태가 동기화된다")
-    void syncAllEventStatuses_Success() {
-        // given
-        LocalDateTime now = LocalDateTime.now();
+            Event event = Event.create(
+                    "수동 업데이트 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    true,
+                    pastTime,
+                    futureTime,
+                    coupon
+            );
+            Event savedEvent = eventRepository.save(event);
 
-        // 종료된 이벤트 (OPEN → ENDED로 변경되어야 함)
-        Event endedEvent = Event.create(
-                "종료된 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                now.minusDays(7),
-                now.minusHours(1),
-                null
-        );
-        endedEvent.open();
-        eventRepository.save(endedEvent);
+            entityManager.flush();
+            entityManager.clear();
 
-        // 진행 중인 이벤트 (OPEN 유지)
-        Event openEvent = Event.create(
-                "진행 중 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                now.minusHours(1),
-                now.plusDays(7),
-                null
-        );
-        openEvent.open();
-        eventRepository.save(openEvent);
+            // When
+            eventStatusService.updateEventStatus(savedEvent.getId());
 
-        // 취소된 이벤트 (CANCELLED 유지 - 변경되지 않아야 함)
-        Event cancelledEvent = Event.create(
-                "취소된 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                now.minusDays(7),
-                now.minusHours(1),
-                null
-        );
-        cancelledEvent.cancel();
-        eventRepository.save(cancelledEvent);
+            entityManager.flush();
+            entityManager.clear();
 
-        entityManager.flush();
-        entityManager.clear();
+            // Then
+            Event updatedEvent = eventRepository.findById(savedEvent.getId()).orElseThrow();
+            assertThat(updatedEvent.getStatus()).isEqualTo(EventStatus.OPEN);
+        }
 
-        // when
-        int updatedCount = eventStatusService.syncAllEventStatuses();
+        @Test
+        @DisplayName("특정 이벤트 상태 수동 업데이트 - ENDED로 변경된다")
+        void updateEventStatus_ToEnded_Success() {
+            // Given
+            LocalDateTime pastStartTime = LocalDateTime.now().minusDays(7);
+            LocalDateTime pastEndTime = LocalDateTime.now().minusHours(1);
 
-        entityManager.flush();
-        entityManager.clear();
+            Event event = Event.create(
+                    "수동 종료 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    true,
+                    pastStartTime,
+                    pastEndTime,
+                    null
+            );
+            event.open();
+            Event savedEvent = eventRepository.save(event);
 
-        // then
-        assertThat(updatedCount).isGreaterThanOrEqualTo(1);
+            entityManager.flush();
+            entityManager.clear();
 
-        Event updatedEndedEvent = eventRepository.findById(endedEvent.getId()).orElseThrow();
-        assertThat(updatedEndedEvent.getStatus()).isEqualTo(EventStatus.ENDED);
+            // When
+            eventStatusService.updateEventStatus(savedEvent.getId());
 
-        Event updatedOpenEvent = eventRepository.findById(openEvent.getId()).orElseThrow();
-        assertThat(updatedOpenEvent.getStatus()).isEqualTo(EventStatus.OPEN);
+            entityManager.flush();
+            entityManager.clear();
 
-        Event updatedCancelledEvent = eventRepository.findById(cancelledEvent.getId()).orElseThrow();
-        assertThat(updatedCancelledEvent.getStatus()).isEqualTo(EventStatus.CANCELLED);
-    }
+            // Then
+            Event updatedEvent = eventRepository.findById(savedEvent.getId()).orElseThrow();
+            assertThat(updatedEvent.getStatus()).isEqualTo(EventStatus.ENDED);
+        }
 
-    @Test
-    @DisplayName("[해피케이스] 이벤트 상태 업데이트 - 공개 이벤트만 자동 OPEN된다")
-    void updateEventStatuses_OnlyPublicEvents_Success() {
-        // given
-        LocalDateTime pastTime = LocalDateTime.now().minusHours(1);
-        LocalDateTime futureTime = LocalDateTime.now().plusDays(7);
+        @Test
+        @DisplayName("전체 이벤트 상태 동기화 - 여러 이벤트의 상태가 동기화된다")
+        void syncAllEventStatuses_Success() {
+            // Given
+            LocalDateTime now = LocalDateTime.now();
 
-        // 공개 이벤트
-        Event publicEvent = Event.create(
-                "공개 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,  // 공개
-                pastTime,
-                futureTime,
-                null
-        );
-        eventRepository.save(publicEvent);
+            // 종료된 이벤트 (OPEN → ENDED로 변경되어야 함)
+            Event endedEvent = Event.create(
+                    "종료된 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    true,
+                    now.minusDays(7),
+                    now.minusHours(1),
+                    null
+            );
+            endedEvent.open();
+            eventRepository.save(endedEvent);
 
-        // 비공개 이벤트
-        Event privateEvent = Event.create(
-                "비공개 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                false,  // 비공개
-                pastTime,
-                futureTime,
-                null
-        );
-        eventRepository.save(privateEvent);
+            // 진행 중인 이벤트 (OPEN 유지)
+            Event openEvent = Event.create(
+                    "진행 중 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    true,
+                    now.minusHours(1),
+                    now.plusDays(7),
+                    null
+            );
+            openEvent.open();
+            eventRepository.save(openEvent);
 
-        entityManager.flush();
-        entityManager.clear();
+            // 취소된 이벤트 (CANCELLED 유지)
+            Event cancelledEvent = Event.create(
+                    "취소된 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    true,
+                    now.minusDays(7),
+                    now.minusHours(1),
+                    null
+            );
+            cancelledEvent.cancel();
+            eventRepository.save(cancelledEvent);
 
-        // when
-        eventStatusService.updateEventStatuses();
+            entityManager.flush();
+            entityManager.clear();
 
-        entityManager.flush();
-        entityManager.clear();
+            // When
+            int updatedCount = eventStatusService.syncAllEventStatuses();
 
-        // then
-        Event updatedPublicEvent = eventRepository.findById(publicEvent.getId()).orElseThrow();
-        Event updatedPrivateEvent = eventRepository.findById(privateEvent.getId()).orElseThrow();
+            entityManager.flush();
+            entityManager.clear();
 
-        // 비공개 이벤트는 자동으로 OPEN되지 않아야 함
-        assertThat(updatedPrivateEvent.getStatus()).isNotEqualTo(EventStatus.OPEN);
-    }
+            // Then
+            assertThat(updatedCount).isGreaterThanOrEqualTo(1);
 
-    @Test
-    @DisplayName("[해피케이스] 이벤트 상태 업데이트 - PAUSED 상태는 건드리지 않는다")
-    void syncAllEventStatuses_PausedEventNotChanged_Success() {
-        // given
-        LocalDateTime now = LocalDateTime.now();
+            Event updatedEndedEvent = eventRepository.findById(endedEvent.getId()).orElseThrow();
+            assertThat(updatedEndedEvent.getStatus()).isEqualTo(EventStatus.ENDED);
 
-        Event pausedEvent = Event.create(
-                "일시정지 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                now.minusHours(1),
-                now.plusDays(7),
-                null
-        );
-        pausedEvent.open();
-        pausedEvent.pause();  // PAUSED 상태로 설정
-        eventRepository.save(pausedEvent);
+            Event updatedOpenEvent = eventRepository.findById(openEvent.getId()).orElseThrow();
+            assertThat(updatedOpenEvent.getStatus()).isEqualTo(EventStatus.OPEN);
 
-        entityManager.flush();
-        entityManager.clear();
+            Event updatedCancelledEvent = eventRepository.findById(cancelledEvent.getId()).orElseThrow();
+            assertThat(updatedCancelledEvent.getStatus()).isEqualTo(EventStatus.CANCELLED);
+        }
 
-        // when
-        eventStatusService.syncAllEventStatuses();
+        @Test
+        @DisplayName("이벤트 상태 업데이트 - 공개 이벤트만 자동 OPEN된다")
+        void updateEventStatuses_OnlyPublicEvents_Success() {
+            // Given
+            LocalDateTime pastTime = LocalDateTime.now().minusHours(1);
+            LocalDateTime futureTime = LocalDateTime.now().plusDays(7);
 
-        entityManager.flush();
-        entityManager.clear();
+            // 공개 이벤트
+            Event publicEvent = Event.create(
+                    "공개 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    true,
+                    pastTime,
+                    futureTime,
+                    null
+            );
+            eventRepository.save(publicEvent);
 
-        // then
-        Event updatedEvent = eventRepository.findById(pausedEvent.getId()).orElseThrow();
-        assertThat(updatedEvent.getStatus()).isEqualTo(EventStatus.PAUSED);
+            // 비공개 이벤트
+            Event privateEvent = Event.create(
+                    "비공개 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    false,
+                    pastTime,
+                    futureTime,
+                    null
+            );
+            eventRepository.save(privateEvent);
+
+            entityManager.flush();
+            entityManager.clear();
+
+            // When
+            eventStatusService.updateEventStatuses();
+
+            entityManager.flush();
+            entityManager.clear();
+
+            // Then
+            Event updatedPublicEvent = eventRepository.findById(publicEvent.getId()).orElseThrow();
+            Event updatedPrivateEvent = eventRepository.findById(privateEvent.getId()).orElseThrow();
+
+            assertThat(updatedPrivateEvent.getStatus()).isNotEqualTo(EventStatus.OPEN);
+        }
+
+        @Test
+        @DisplayName("이벤트 상태 업데이트 - PAUSED 상태는 건드리지 않는다")
+        void syncAllEventStatuses_PausedEventNotChanged_Success() {
+            // Given
+            LocalDateTime now = LocalDateTime.now();
+
+            Event pausedEvent = Event.create(
+                    "일시정지 이벤트",
+                    "설명",
+                    Event.EventType.DROP,
+                    1,
+                    true,
+                    now.minusHours(1),
+                    now.plusDays(7),
+                    null
+            );
+            pausedEvent.open();
+            pausedEvent.pause();
+            eventRepository.save(pausedEvent);
+
+            entityManager.flush();
+            entityManager.clear();
+
+            // When
+            eventStatusService.syncAllEventStatuses();
+
+            entityManager.flush();
+            entityManager.clear();
+
+            // Then
+            Event updatedEvent = eventRepository.findById(pausedEvent.getId()).orElseThrow();
+            assertThat(updatedEvent.getStatus()).isEqualTo(EventStatus.PAUSED);
+        }
     }
 }

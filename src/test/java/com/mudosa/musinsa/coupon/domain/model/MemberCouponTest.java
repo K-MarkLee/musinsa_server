@@ -60,7 +60,7 @@ class MemberCouponTest {
         boolean usuable = memberCoupon.isUsuable();
 
         // then
-        assertThat(usuable).isFalse(); // expiredAt이 현재 시간으로 설정되어 만료된 상태
+        assertThat(usuable).isTrue(); // ✅ 쿠폰 종료일 + 30일이므로 사용 가능
     }
 
     @Test
@@ -81,9 +81,8 @@ class MemberCouponTest {
         MemberCoupon memberCoupon = MemberCoupon.issue(userId, coupon);
 
         // when & then
-        // expiredAt이 현재 시간으로 설정되므로 예외 발생
-        assertThatThrownBy(() -> memberCoupon.validateUsable())
-                .isInstanceOf(BusinessException.class);
+        // ✅ 예외 발생하지 않고 정상적으로 통과
+        memberCoupon.validateUsable();
     }
 
     @Test
@@ -104,10 +103,13 @@ class MemberCouponTest {
         );
         MemberCoupon memberCoupon = MemberCoupon.issue(userId, coupon);
 
-        // when & then
-        // expiredAt이 현재 시간으로 설정되므로 예외 발생
-        assertThatThrownBy(() -> memberCoupon.use(orderId))
-                .isInstanceOf(BusinessException.class);
+        // when
+        memberCoupon.use(orderId);
+
+        // then
+        assertThat(memberCoupon.getCouponStatus()).isEqualTo(CouponStatus.USED);
+        assertThat(memberCoupon.getUsedOrderId()).isEqualTo(orderId);
+        assertThat(memberCoupon.getUsedAt()).isNotNull();
     }
 
     @Test
@@ -131,7 +133,7 @@ class MemberCouponTest {
         boolean expired = memberCoupon.isExpired();
 
         // then
-        assertThat(expired).isTrue(); // expiredAt이 현재 시간으로 설정됨
+        assertThat(expired).isFalse(); // ✅ 쿠폰 종료일 + 30일이므로 아직 만료되지 않음
     }
 
     @Test
