@@ -85,6 +85,7 @@ public class ProductOption extends BaseEntity {
         if (quantity <= 0) {
             throw new BusinessException(ErrorCode.INVALID_INVENTORY_UPDATE_VALUE);
         }
+
         try {
             this.inventory.decrease(quantity);
         } catch (IllegalStateException ex) {

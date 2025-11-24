@@ -49,20 +49,6 @@ class PaymentStatusTest {
     }
 
 
-    @Test
-    @DisplayName("PENDING → PENDING 재시도 시도 시 예외 발생")
-    void pending_RetryPending_ThrowsException() {
-        // given
-        PaymentStatus status = PaymentStatus.PENDING;
-
-        // when & then
-        assertThatThrownBy(() -> status.retryPending())
-            .isInstanceOf(BusinessException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_PAYMENT_STATUS)
-            .hasMessageContaining("결제 대기")
-            .hasMessageContaining("재시도");
-    }
-
 
     @Test
     @DisplayName("APPROVED → APPROVED 전이 시도 시 예외 발생")
@@ -155,7 +141,7 @@ class PaymentStatusTest {
         PaymentStatus status = PaymentStatus.FAILED;
 
         // when
-        PaymentStatus result = status.retryPending();
+        PaymentStatus result = status.rollback();
 
         // then
         assertThat(result).isEqualTo(PaymentStatus.PENDING);

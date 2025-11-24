@@ -9,7 +9,6 @@ import com.mudosa.musinsa.order.application.dto.response.OrderDetailResponse;
 import com.mudosa.musinsa.order.application.dto.response.OrderListResponse;
 import com.mudosa.musinsa.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.Pageable;
-
 
 @RequiredArgsConstructor
 @Slf4j
@@ -57,4 +54,42 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @Operation(
+            summary = "주문 취소",
+            description = "주문을 취소 합니다."
+    )
+    @PutMapping("/{orderNo}/cancel")
+    public ResponseEntity<ApiResponse<Void>> cancelOrder(
+            @PathVariable String orderNo
+    ){
+        orderService.cancelPendingOrder(orderNo);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @Operation(
+            summary = "주문 목록 조회",
+            description = "주문 목록을 조회합니다."
+    )
+    @GetMapping
+    public ResponseEntity<ApiResponse<OrderListResponse>> fetchOrderList(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ){
+        Long userId = userDetails.getUserId();
+        OrderListResponse response = orderService.fetchOrderList(userId);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(
+            summary = "주문 상세 조회",
+            description = "주문의 상세 내역을 조회합니다."
+    )
+    @GetMapping("/{orderNo}")
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> fetchOrderDetail(
+            @PathVariable String orderNo
+    ){
+        OrderDetailResponse response = orderService.fetchOrderDetail(orderNo);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 }

@@ -41,6 +41,9 @@ public enum ErrorCode {
   INVALID_PAYMENT_METHOD("30008", "결제수단이 유효하지 않습니다", HttpStatus.BAD_REQUEST),PAYMENT_STRATEGY_NOT_FOUND("30009","결제전략을 찾을 수 없습니다",HttpStatus.BAD_REQUEST ),
   PAYMENT_TIMEOUT("30010","결제 처리 시간 초과", HttpStatus.BAD_REQUEST),
   PAYMENT_SYSTEM_ERROR("30012","결제는 승인되었으나 후속 처리 중 오류가 발생했습니다.",HttpStatus.CONFLICT),
+  PAYMENT_FAILED_BEFORE_PG_CONFIRM("30013","PG사 결제 승인 전 오류가 발생했습니다", HttpStatus.BAD_REQUEST ),
+  PAYMENT_CANCEL_TIMEOUT("30014","PG사 결제 취소 타임아웃 오류가 발생했습니다.",HttpStatus.BAD_REQUEST ),
+  PAYMENT_CANCEL_FAILED("30015","PG사 결제 취소 오류가 발생했습니다",HttpStatus.BAD_REQUEST),
 
   //order
   ORDER_NOT_FOUND("40001", "존재하지 않는 주문입니다", HttpStatus.NOT_FOUND),
@@ -54,6 +57,7 @@ public enum ErrorCode {
   ORDER_INSUFFICIENT_STOCK("40009", "재고가 부족한 상품이 있습니다", HttpStatus.BAD_REQUEST),
   ORDER_CREATE_FAIL("40010","주문 생성에 실패했습니다", HttpStatus.BAD_REQUEST),
   INVALID_PRODUCT_ORDER("40011","현재 판매 불가능한 상품이 포함되어 있습니다",HttpStatus.BAD_REQUEST ),
+  CANNOT_CANCEL_ORDER("40012","취소할 수 없는 주문입니다",HttpStatus.BAD_REQUEST ),
 
   //inventory
   INVENTORY_NOT_FOUND("50001", "재고 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),

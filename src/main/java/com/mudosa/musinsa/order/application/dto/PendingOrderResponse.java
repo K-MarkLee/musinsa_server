@@ -7,8 +7,7 @@ public record PendingOrderResponse(
     String orderNo,
     BigDecimal totalPrice,
     BigDecimal totalDiscount,
-    List<PendingOrderItem> orderProducts,
-    List<OrderMemberCoupon> coupons,
+    List<OrderItem> orderProducts,
     String userName,
     String userAddress,
     String userContactNumber

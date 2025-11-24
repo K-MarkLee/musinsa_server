@@ -4,7 +4,10 @@ import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.OrderService;
 import com.mudosa.musinsa.payment.application.dto.*;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelRequest;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelResponseDto;
 import com.mudosa.musinsa.payment.application.dto.request.PaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.response.PaymentCancelResponse;
 import com.mudosa.musinsa.payment.application.dto.response.PaymentConfirmResponse;
 import com.mudosa.musinsa.payment.domain.model.Payment;
 import com.mudosa.musinsa.payment.domain.model.PaymentEventType;
@@ -59,7 +62,11 @@ public class PaymentService {
         }catch(BusinessException e){
             //결제 생성 전 오류 -> 롤백이 되기 때문에 보상할게 없음
             if(paymentId == null){
-                throw e;
+                if(e.getErrorCode() == ErrorCode.INSUFFICIENT_STOCK){
+                    throw e;
+                }
+
+                throw new BusinessException(ErrorCode.PAYMENT_FAILED_BEFORE_PG_CONFIRM, e.getMessage());
             }
 
             //PG사에 의한 오류 처리
@@ -77,16 +84,28 @@ public class PaymentService {
             }
 
             throw e;
-
         }
     }
 
-
     private boolean isPgRelatedError(ErrorCode errorCode) {
-        return errorCode == ErrorCode.PAYMENT_APPROVAL_FAILED
-                || errorCode == ErrorCode.PAYMENT_TIMEOUT;
+        return errorCode == PAYMENT_APPROVAL_FAILED
+                || errorCode == PAYMENT_TIMEOUT;
     }
 
+    public PaymentCancelResponse cancelPayment(PaymentCancelRequest request, Long userId, LocalDateTime cancelledAt) {
+        try{
+            //TX1: 결제 상태 변경, 주문 관련 원복
+            paymentConfirmService.cancelPayment(request.getPaymentTransactionId(), request.getCancelReason(), userId, cancelledAt);
 
+            //트랜젹션 아님: 외부 PG사 호출
+            PaymentCancelResponseDto pgResponse =
+                    paymentProcessor.processCancelPayment(request);
 
+            return new PaymentCancelResponse(pgResponse);
+        }catch (BusinessException e){
+            paymentConfirmService.failCancel(request.getPaymentTransactionId(), e.getMessage(), userId);
+            throw e;
+        }
+
+    }
 }

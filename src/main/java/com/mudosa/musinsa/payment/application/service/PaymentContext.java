@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.payment.application.service;
 
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelRequest;
 import com.mudosa.musinsa.payment.application.dto.request.PaymentConfirmRequest;
 import com.mudosa.musinsa.payment.domain.model.PgProvider;
 import lombok.Builder;
@@ -34,6 +35,12 @@ public class PaymentContext {
                 .currency("KRW")
                 .country("KR")
                 .isRecurring(false)
+                .build();
+    }
+
+    public static PaymentContext forCancel(PaymentCancelRequest request) {
+        return PaymentContext.builder()
+                .pgProvider(PgProvider.TOSS)
                 .build();
     }
 }

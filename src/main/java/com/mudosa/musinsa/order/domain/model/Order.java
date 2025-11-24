@@ -126,14 +126,28 @@ public class Order extends BaseEntity {
         this.isSettleable = true;
     }
 
-    public void refund() {
-        this.status = this.status.refund();
+    public void rollbackStatus() {
+        this.status = this.status.rollback();
         this.isSettleable = false;
     }
 
-    public void rollbackStatus() {
-        this.status = this.status.rollbackToPending();
+    public boolean isCancable() {
+        return this.status.isCancable();
+    }
+
+
+    public void cancel() {
+        this.status = this.status.cancel();
         this.isSettleable = false;
+    }
+
+    public boolean canFetchDetail() {
+        return this.status.isCompleted() || this.status.isCancelled();
+    }
+
+    public void rollbackToCompleted() {
+        this.status = this.status.rollback();
+        this.isSettleable = true;
     }
 }
 

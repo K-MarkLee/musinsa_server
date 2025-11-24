@@ -1,7 +1,10 @@
 package com.mudosa.musinsa.order.domain.repository;
 
-import com.mudosa.musinsa.order.application.dto.PendingOrderItem;
-import com.mudosa.musinsa.order.application.dto.QPendingOrderItem;
+import com.mudosa.musinsa.order.application.dto.OrderFlatDto;
+import com.mudosa.musinsa.order.application.dto.OrderItem;
+import com.mudosa.musinsa.order.application.dto.QOrderFlatDto;
+import com.mudosa.musinsa.order.application.dto.QOrderItem;
+import com.mudosa.musinsa.order.domain.model.OrderStatus;
 import com.mudosa.musinsa.product.domain.model.ValueName;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.StringExpression;
@@ -22,7 +25,6 @@ import static com.mudosa.musinsa.product.domain.model.QProduct.product;
 import static com.mudosa.musinsa.product.domain.model.QProductOption.productOption;
 import static com.mudosa.musinsa.product.domain.model.QProductOptionValue.productOptionValue;
 
-
 @Repository
 @RequiredArgsConstructor
 public class OrderRepositoryImpl implements OrderRepositoryCustom{
@@ -30,46 +32,17 @@ public class OrderRepositoryImpl implements OrderRepositoryCustom{
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<PendingOrderItem> findOrderItems(String orderNo) {
-
-        StringExpression sizeValue = new CaseBuilder()
-                .when(optionValue1.optionName.eq(ValueName.SIZE.getName()))
-                .then(optionValue1.optionValue)
-                .otherwise((String) null);
-
-        StringExpression colorValue = new CaseBuilder()
-                .when(optionValue1.optionName.eq(ValueName.COLOR.getName()))
-                .then(optionValue1.optionValue)
-                .otherwise((String) null);
-
-        JPQLQuery<String> imageOne = JPAExpressions
-                .select(image.imageUrl)
-                .from(image)
-                .where(image.product.eq(product)
-                        .and(image.isThumbnail.eq(true)))
-                .orderBy(image.imageId.asc())
-                .limit(1);
-
+    public List<OrderItem> findOrderItems(String orderNo) {
         return queryFactory
-                .select(new QPendingOrderItem(
-                        productOption.productOptionId,
-                        brand.nameKo,
-                        product.productName,
-                        productOption.productPrice.amount,
-                        orderProduct.productQuantity,
-                        imageOne,
-                        sizeValue.max(),
-                        colorValue.max()
-                ))
+                .select(createOrderItemProjection())
                 .from(order)
                 .join(order.orderProducts, orderProduct)
                 .join(orderProduct.productOption, productOption)
                 .join(productOption.product, product)
                 .join(product.brand, brand)
-                .join(productOption.productOptionValues, productOptionValue)
-                .join(productOptionValue.optionValue, optionValue1)
-                .where(order.orderNo.eq(orderNo)
-                        .and(optionValue1.optionName.in(ValueName.SIZE.getName(),ValueName.COLOR.getName())))
+                .leftJoin(productOption.productOptionValues, productOptionValue)
+                .leftJoin(productOptionValue.optionValue, optionValue1)
+                .where(order.orderNo.eq(orderNo))
                 .groupBy(
                         productOption.productOptionId,
                         brand.nameKo,
@@ -78,5 +51,81 @@ public class OrderRepositoryImpl implements OrderRepositoryCustom{
                         orderProduct.productQuantity
                 )
                 .fetch();
+    }
+
+    @Override
+    public List<OrderFlatDto> findFlatOrderListWithDetails(Long userId) {
+        StringExpression sizeValue = createSizeValueExpression();
+        StringExpression colorValue = createColorValueExpression();
+        JPQLQuery<String> imageOne = createThumbnailImageSubquery();
+
+        return queryFactory
+                .select(new QOrderFlatDto(
+                        order.orderNo,
+                        order.status,
+                        order.registeredAt,
+                        order.totalPrice.amount,
+                        productOption.productOptionId,
+                        brand.nameKo,
+                        product.productName,
+                        productOption.productPrice.amount,
+                        orderProduct.productQuantity,
+                        imageOne,
+                        sizeValue,
+                        colorValue
+                ))
+                .from(order)
+                .join(order.orderProducts, orderProduct)
+                .join(orderProduct.productOption, productOption)
+                .join(productOption.product, product)
+                .join(product.brand, brand)
+                .leftJoin(productOption.productOptionValues, productOptionValue)
+                .leftJoin(productOptionValue.optionValue, optionValue1)
+                .where(order.userId.eq(userId).and(order.status.ne(OrderStatus.PENDING)))
+                .groupBy(
+                        order.orderNo, order.status, order.registeredAt, order.totalPrice.amount,
+                        productOption.productOptionId, brand.nameKo, product.productName,
+                        productOption.productPrice.amount, orderProduct.productQuantity
+                )
+                .fetch();
+    }
+
+    private QOrderItem createOrderItemProjection() {
+        return new QOrderItem(
+                productOption.productOptionId,
+                brand.nameKo,
+                product.productName,
+                productOption.productPrice.amount,
+                orderProduct.productQuantity,
+                createThumbnailImageSubquery(),
+                createSizeValueExpression(),
+                createColorValueExpression()
+        );
+    }
+
+    private StringExpression createSizeValueExpression() {
+        return new CaseBuilder()
+                .when(optionValue1.optionName.eq(ValueName.SIZE.getName()))
+                .then(optionValue1.optionValue)
+                .otherwise((String) null)
+                .max();
+    }
+
+    private StringExpression createColorValueExpression() {
+        return new CaseBuilder()
+                .when(optionValue1.optionName.eq(ValueName.COLOR.getName()))
+                .then(optionValue1.optionValue)
+                .otherwise((String) null)
+                .max();
+    }
+
+    private JPQLQuery<String> createThumbnailImageSubquery() {
+        return JPAExpressions
+                .select(image.imageUrl)
+                .from(image)
+                .where(image.product.eq(product)
+                        .and(image.isThumbnail.eq(true)))
+                .orderBy(image.imageId.asc())
+                .limit(1);
     }
 }

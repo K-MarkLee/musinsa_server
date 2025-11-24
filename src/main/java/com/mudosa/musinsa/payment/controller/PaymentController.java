@@ -1,7 +1,9 @@
 package com.mudosa.musinsa.payment.controller;
 
 import com.mudosa.musinsa.common.dto.ApiResponse;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelRequest;
 import com.mudosa.musinsa.payment.application.dto.request.PaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.response.PaymentCancelResponse;
 import com.mudosa.musinsa.payment.application.dto.response.PaymentConfirmResponse;
 import com.mudosa.musinsa.payment.application.service.PaymentService;
 import com.mudosa.musinsa.security.CustomUserDetails;
@@ -12,10 +14,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 
 @Slf4j
 @Tag(name = "Payment", description = "결제 API")
@@ -41,8 +42,19 @@ public class PaymentController {
 		return ResponseEntity.ok(ApiResponse.success(response));
 	}
 
-	/* 결제 취소 */
+	@Operation(
+			summary = "결제 취소",
+			description = "결제를 취소 합니다."
+	)
+	@PutMapping("/cancel")
+	public ResponseEntity<ApiResponse<PaymentCancelResponse>> cancelOrder(
+			@RequestBody PaymentCancelRequest request,
+			@AuthenticationPrincipal CustomUserDetails userDetails
+	){
+		Long userId = userDetails.getUserId();
+		LocalDateTime cancelledAt = LocalDateTime.now();
 
-	/* 결제 실패 */
-
+		PaymentCancelResponse response = paymentService.cancelPayment(request, userId, cancelledAt);
+		return ResponseEntity.ok(ApiResponse.success(response));
+	}
 }
