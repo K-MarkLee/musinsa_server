@@ -1,37 +1,75 @@
 package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DisplayName("Image 엔티티는 URL 필수 검증과 썸네일 속성 설정을 보장해야 한다")
+@DisplayName("Image 도메인 모델의 테스트")
 class ImageTest {
 
     @Test
-    @DisplayName("유효한 URL과 isThumbnail 값을 전달하면 Image가 생성되어 해당 값들이 설정되어야 한다")
-    void create_happyPath() {
+    @DisplayName("이미지에 올바른 URL을 넣으면 이미지가 정상적으로 생성된다.")
+    void createImage() {
         // given
-        String url = "http://example.com/x.jpg";
+        String imageUrl = "http://example.com/image.jpg";
 
         // when
-        Image img = Image.builder()
-                .imageUrl(url)
-                .isThumbnail(true)
-                .build();
+        Image image = Image.create(null, imageUrl, false);
 
         // then
-        assertThat(img.getImageUrl()).isEqualTo(url);
-        assertThat(img.getIsThumbnail()).isTrue();
+        assertThat(image.getImageUrl()).isEqualTo(imageUrl);
     }
 
     @Test
-    @DisplayName("null 또는 공백 URL을 전달하면 Image.create 호출 시 BusinessException이 발생해야 한다")
-    void create_invalidUrl_throws() {
-        // when / then
-        assertThatThrownBy(() -> Image.create(null, null, false)).isInstanceOf(BusinessException.class);
-        assertThatThrownBy(() -> Image.create(null, " ", false)).isInstanceOf(BusinessException.class);
+    @DisplayName("이미지가 정상적으로 생성된다.")
+    void createImageWithProduct() {
+        // given
+        Product product = Product.builder().build();
+        String imageUrl = "http://example.com/image.jpg";
+
+        // when
+        Image image = Image.create(product, imageUrl, true);
+
+        // then
+        assertThat(image.getProduct()).isEqualTo(product);
+        assertThat(image.getImageUrl()).isEqualTo(imageUrl);
+        assertThat(image.getIsThumbnail()).isTrue();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" "})
+    @DisplayName("이미지에 올바르지 못한(null, 빈값) URL 값을 넣으면 BusinessException이 발생한다.")
+    void createImageWithInvalidUrl(String invalidUrl) {
+        // when // then
+        assertThatThrownBy(() -> Image.create(null, invalidUrl, false))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.URL_REQUIRED);
+    }
+
+    @Test
+	@DisplayName("이미지에 상품을 연결하면 연관관계가 설정된다.")
+    void setProduct() {
+        // given
+        Product product = Product.builder().build();
+        Image image = Image.builder()
+                .imageUrl("http://example.com/image.jpg")
+                .isThumbnail(false)
+                .build();
+
+        // when
+        image.setProduct(product);
+
+        //then
+        assertThat(image.getProduct()).isEqualTo(product);
     }
 }
