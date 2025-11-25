@@ -51,6 +51,7 @@ public class SecurityConfig {
             auth ->
                 auth
                     .requestMatchers("/ws/**").permitAll()
+                    .requestMatchers("/ws-native/**").permitAll()
                     .requestMatchers("/brand/**").permitAll()
                     .requestMatchers("/chat/**").permitAll()
                     .requestMatchers("/api-docs/**").permitAll()
