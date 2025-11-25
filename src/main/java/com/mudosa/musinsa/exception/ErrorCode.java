@@ -113,6 +113,7 @@ public enum ErrorCode {
   INVENTORY_STOCK_QUANTITY_REQUIRED("90002", "재고 수량은 필수입니다.", HttpStatus.BAD_REQUEST),
   INVENTORY_INSUFFICIENT_STOCK("90003", "재고가 부족합니다.", HttpStatus.BAD_REQUEST),
   INVALID_INVENTORY_UPDATE_VALUE("90004", "재고 변경 값은 0이 될 수 없습니다.", HttpStatus.BAD_REQUEST),
+  INVENTORY_STOCK_QUANTITY_INVALID("90005", "재고 수량이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
 
   //image
   IMAGE_REQUIRED("100001", "이미지는 필수입니다.", HttpStatus.BAD_REQUEST),

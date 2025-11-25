@@ -1,5 +1,7 @@
 package com.mudosa.musinsa.product.domain.model;
 
+import org.checkerframework.checker.units.qual.s;
+
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
@@ -60,8 +62,11 @@ public class Inventory extends BaseEntity {
     
     // 요청 수량만큼 재고가 충분한지 확인한다.
     public boolean isSufficientStock(int requestedQuantity) {
-        if (requestedQuantity <= 0 || stockQuantity == null) {
+        if (requestedQuantity <= 0) {
             throw new BusinessException(ErrorCode.INVENTORY_STOCK_QUANTITY_INVALID);
+        }
+        if (stockQuantity == null) {
+            throw new BusinessException(ErrorCode.INVENTORY_STOCK_QUANTITY_REQUIRED);
         }
         return this.stockQuantity.getValue() >= requestedQuantity;
     }
