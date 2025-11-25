@@ -23,9 +23,7 @@ class ProductOptionValueTest {
         ProductOption productOption = ProductOption.builder()
             .productPrice(new Money(10000L))
             .inventory(
-                Inventory.builder()
-                    .stockQuantity(new StockQuantity(10))
-                    .build()
+                Inventory.create(new StockQuantity(10))
             )
             .build();
 
@@ -102,7 +100,7 @@ class ProductOptionValueTest {
             .build();
 
         OptionValue optionValue = OptionValue.create("색상", "레드");
-        
+
         ProductOptionValue productOptionValue = ProductOptionValue.builder()
             .optionValue(optionValue)
             .build();
