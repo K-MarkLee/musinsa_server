@@ -64,6 +64,7 @@ public class ChatServiceImpl implements ChatService {
   private final Tracer tracer;
 
   @Override
+  @Transactional(readOnly = true)
   public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
     //userId, chatId 쌍이 존재하고 delete_at이 null(떠나지 않은 사용자)에 만족하는 채팅방 불러오기
     List<ChatRoom> chatRooms =
@@ -74,7 +75,6 @@ public class ChatServiceImpl implements ChatService {
         .map(chatRoom -> {
           // 이 시점에서는 유저가 참여 중인 방만 조회했으므로 true 고정
           ChatRoomInfoResponse base = chatRoomMapper.toChatRoomInfoResponse(chatRoom, true);
-
           return base;
         })
         .toList();
@@ -617,7 +617,7 @@ public class ChatServiceImpl implements ChatService {
   //event 발행
   private void publishMessageEvents(MessageResponse dto) {
     messageEventPublisher.publishMessageCreated(dto);
-    notificationEventPublisher.publishChatNotificationCreatedEvent(dto);
+//    notificationEventPublisher.publishChatNotificationCreatedEvent(dto);
     log.info("이벤트 발행 완료. messageId={}", dto.getMessageId());
   }
 
