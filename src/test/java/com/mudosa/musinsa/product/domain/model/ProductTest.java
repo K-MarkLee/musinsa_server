@@ -258,7 +258,7 @@ class ProductTest {
 	}
 
 	@ParameterizedTest
-	@MethodSource("UpdateValuesEmpty")
+	@MethodSource("updateValuesEmpty")
 	@DisplayName("상품의 수정가능한 정보에 빈값을 넣고 수정하면 BusinessException이 발생한다.")
 	void updateProductWithEmptyValue(String productName,
 									 String productInfo,
@@ -279,7 +279,7 @@ class ProductTest {
 			.isEqualTo(expectedCode);
 	}
 
-	private static Stream<Arguments> UpdateValuesEmpty() {
+	private static Stream<Arguments> updateValuesEmpty() {
 		return Stream.of(
 			Arguments.of(" ", "상품 정보", ErrorCode.PRODUCT_NAME_REQUIRED),
 			Arguments.of("상품명", " ", ErrorCode.PRODUCT_INFO_REQUIRED)
