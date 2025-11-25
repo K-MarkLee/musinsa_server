@@ -12,6 +12,7 @@ import com.mudosa.musinsa.notification.domain.dto.NotificationDTO;
 import com.mudosa.musinsa.notification.domain.event.ChatNotificationCreatedEvent;
 import com.mudosa.musinsa.notification.domain.model.Notification;
 import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
+import com.mudosa.musinsa.notification.domain.service.FcmService;
 import com.mudosa.musinsa.notification.domain.service.NotificationService;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.model.UserRole;
@@ -20,10 +21,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.NoSuchElementException;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 @DisplayName("알림 서비스 테스트")
@@ -31,6 +35,8 @@ class NotificationServiceTest extends ServiceConfig {
 
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private FcmService fcmService;
 
     @AfterEach
     void tearDown() {
@@ -125,6 +131,76 @@ class NotificationServiceTest extends ServiceConfig {
             assertThat(notifications).hasSize(2);
 
         }
+
+        @DisplayName("메타데이터가 없는 경우")
+        @Test
+        void CreateChatNotificationNoMetadataTest(){
+        // given
+            User user1 = saveUser("user1");
+            User user2 = saveUser("user2");
+            User user3 = saveUser("user3");
+
+            Brand brand = saveBrand("브랜드", "brand");
+
+            ChatRoom chatRoom = saveChatRoom(brand);
+
+            saveChatPart(chatRoom, user1);
+            saveChatPart(chatRoom, user2);
+            saveChatPart(chatRoom, user3);
+
+            ChatNotificationCreatedEvent chatNotificationCreatedEvent = createChatNotificationCreatedEvent(user1,chatRoom);
+        // when // then
+            assertThatThrownBy(()->notificationService.createChatNotification(chatNotificationCreatedEvent))
+                    .isInstanceOf(NoSuchElementException.class);
+
+        }
+
+        @DisplayName("첨부파일이 있는 경우")
+        @Test
+        void CreateChatNotificationWithFileTest(){
+        // given
+            User user1 = saveUser("user1");
+            User user2 = saveUser("user2");
+            User user3 = saveUser("user3");
+
+            Brand brand = saveBrand("브랜드", "brand");
+
+            ChatRoom chatRoom = saveChatRoom(brand);
+
+            saveChatPart(chatRoom, user1);
+            saveChatPart(chatRoom, user2);
+            saveChatPart(chatRoom, user3);
+
+            saveNotificationMetadata("CHAT");
+
+            ChatNotificationCreatedEvent chatNotificationCreatedEvent = createChatNotificationCreatedEventwithNull(user1,chatRoom);
+        // when
+            List<Notification> notifications = notificationService.createChatNotification(chatNotificationCreatedEvent);
+        // then
+            assertThat(notifications.getFirst().getNotificationMessage()).isEqualTo("첨부파일이 있습니다");
+        }
+
+        @DisplayName("알림 리스트가 Empty 인 경우")
+        @Test
+        void CreateChatNotificationEmptyTest(){
+        // given
+            User user1 = saveUser("user1");
+
+            Brand brand = saveBrand("브랜드", "brand");
+
+            saveNotificationMetadata("CHAT");
+
+            ChatRoom chatRoom = saveChatRoom(brand);
+
+            saveChatPart(chatRoom, user1);
+
+            ChatNotificationCreatedEvent chatNotificationCreatedEvent = createChatNotificationCreatedEvent(user1,chatRoom);
+        // when
+            List<Notification> notifications = notificationService.createChatNotification(chatNotificationCreatedEvent);
+        // then
+            assertThat(notifications).isNull();
+
+        }
     }
 
     private User saveUser(String userName){
@@ -168,6 +244,15 @@ class NotificationServiceTest extends ServiceConfig {
                 .userId(user.getId())
                 .chatId(chatRoom.getChatId())
                 .content("")
+                .build()
+        );
+    }
+
+    private ChatNotificationCreatedEvent createChatNotificationCreatedEventwithNull(User user, ChatRoom chatRoom) {
+        return new ChatNotificationCreatedEvent(MessageResponse.builder()
+                .userId(user.getId())
+                .chatId(chatRoom.getChatId())
+                .content(null)
                 .build()
         );
     }

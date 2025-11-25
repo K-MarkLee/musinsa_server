@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.notification.domain.service;
 
+import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.fbtoken.service.FirebaseTokenService;
@@ -9,6 +10,9 @@ import com.mudosa.musinsa.notification.domain.model.Notification;
 import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
 import com.mudosa.musinsa.notification.domain.repository.NotificationMetadataRepository;
 import com.mudosa.musinsa.notification.domain.repository.NotificationRepository;
+import com.mudosa.musinsa.user.domain.model.User;
+import com.mudosa.musinsa.user.domain.repository.UserRepository;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,30 +30,18 @@ import java.util.Objects;
 
 @Slf4j
 @Service
+@AllArgsConstructor
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationMetadataRepository notificationMetadataRepository;
     private final FcmService fcmService;
     private final FirebaseTokenService firebaseTokenService;
     private final ChatPartRepository chatPartRepository;
+
     private final String CHAT_METADATA_CATEGORY = "CHAT";
     private final String MESSAGE_FROM_CHAT_ROOM = "채팅방에서 메세지가 왔습니다.";
     private final String ATTACHED_FILE = "첨부파일이 있습니다";
     private final String CHAT_URL = "/chat/";
-
-
-    public NotificationService(
-            NotificationRepository notificationRepository,
-            NotificationMetadataRepository notificationMetadataRepository,
-            @Autowired(required = false) FcmService fcmService,
-            FirebaseTokenService firebaseTokenService,
-            ChatPartRepository chatPartRepository) {
-        this.notificationRepository = notificationRepository;
-        this.notificationMetadataRepository = notificationMetadataRepository;
-        this.fcmService = fcmService;
-        this.firebaseTokenService = firebaseTokenService;
-        this.chatPartRepository = chatPartRepository;
-    }
 
     public List<NotificationDTO> readNotification(Long userId){
         return notificationRepository.findByUserId(userId).stream()
@@ -124,7 +116,7 @@ public class NotificationService {
 //        notificationRepository.save(notification);
 //        //푸시 알림 보내기
 //        if (fcmService != null) {
-//            fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(userId));
+//            fcmService.sendMessageByToken(notification.getNotificationTitle(),notification.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(List.of(resultUser.getId())));
 //        } else {
 //            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
 //        }
@@ -171,11 +163,7 @@ public class NotificationService {
 //                .build();
 //        notificationRepository.save(note);
 //        if (fcmService != null) {
-//            try{
-//                fcmService.sendMessageByToken(note.getNotificationTitle(),note.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(dto.getUserId()));
-//            } catch (FirebaseMessagingException e){
-//                log.error(e.getMessage());
-//            }
+//            fcmService.sendMessageByToken(note.getNotificationTitle(),note.getNotificationMessage(),firebaseTokenService.readFirebaseTokens(List.of(dto.getUserId())));
 //        } else {
 //            log.info("FCM이 비활성화되어 있습니다. 푸시 알림을 전송하지 않습니다.");
 //        }
