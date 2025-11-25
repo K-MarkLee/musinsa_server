@@ -137,6 +137,7 @@ public enum ErrorCode {
   CART_ITEM_USER_REQUIRED("B0001", "사용자는 필수입니다.", HttpStatus.BAD_REQUEST),
   CART_ITEM_PRODUCT_OPTION_REQUIRED("B0002", "상품 옵션은 필수입니다.", HttpStatus.BAD_REQUEST),
   CART_ITEM_QUANTITY_INVALID("B0003", "수량은 1개 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
+  CART_ITEM_QUANTITY_REQUIRED("B0004", "수량은 필수입니다.", HttpStatus.BAD_REQUEST),
 
   //category
   CATEGORY_NAME_REQUIRED("C0001", "카테고리 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
