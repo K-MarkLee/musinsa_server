@@ -70,6 +70,20 @@ class InventoryTest {
     }
 
     @Test
+    @DisplayName("요청한 수량이 0 이하이면 BusinessException이 발생한다.")
+    void decreaseInventoryWithInvalidQuantity() {
+        // given
+        Inventory inventory = Inventory.create(new StockQuantity(40));
+        int decreaseQuantity = 0;
+
+        // when & then
+        assertThatThrownBy(() -> inventory.decrease(decreaseQuantity))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(com.mudosa.musinsa.exception.ErrorCode.INVALID_INVENTORY_UPDATE_VALUE);
+    }
+
+    @Test
     @DisplayName("요청한 수량이 올바르면 정상적으로 재고가 증가된다.")
     void increaseInventoryWithValidQuantity() {
         // given
@@ -113,7 +127,7 @@ class InventoryTest {
 
     @Test
     @DisplayName("요청한 수량이 현재 재고보다 많으면 충분한 재고가 없다고 반환한다.")
-    void issufficientStockWithInsufficientQuantity() {
+    void isSufficientStockWithInsufficientQuantity() {
         // given
         Inventory inventory = Inventory.create(new StockQuantity(80));
         int requestedQuantity = 120;
@@ -136,7 +150,7 @@ class InventoryTest {
         assertThatThrownBy(() -> inventory.isSufficientStock(requestedQuantity))
             .isInstanceOf(BusinessException.class)
             .extracting(e -> ((BusinessException) e).getErrorCode())
-            .isEqualTo(com.mudosa.musinsa.exception.ErrorCode.INVENTORY_STOCK_QUANTITY_REQUIRED);
+            .isEqualTo(com.mudosa.musinsa.exception.ErrorCode.INVENTORY_STOCK_QUANTITY_INVALID);
     }
 
     /** 

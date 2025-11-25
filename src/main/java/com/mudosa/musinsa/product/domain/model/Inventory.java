@@ -42,7 +42,10 @@ public class Inventory extends BaseEntity {
     // 요청 수량만큼 재고를 감소시키고 품절 여부를 갱신한다.
     public void decrease(int quantity) {
         if (this.stockQuantity.getValue() < quantity) {
-            throw new BusinessException(ErrorCode.INVENTORY_INSUFFICIENT_STOCK, "재고가 부족합니다. 현재 재고: " + this.stockQuantity.getValue() + ", 요청 수량: " + quantity);
+            throw new BusinessException(ErrorCode.INVENTORY_INSUFFICIENT_STOCK);
+        }
+        if (quantity <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_INVENTORY_UPDATE_VALUE);
         }
         this.stockQuantity.decrease(quantity);
     }
@@ -58,7 +61,7 @@ public class Inventory extends BaseEntity {
     // 요청 수량만큼 재고가 충분한지 확인한다.
     public boolean isSufficientStock(int requestedQuantity) {
         if (requestedQuantity <= 0 || stockQuantity == null) {
-            throw new BusinessException(ErrorCode.INVENTORY_STOCK_QUANTITY_REQUIRED);
+            throw new BusinessException(ErrorCode.INVENTORY_STOCK_QUANTITY_INVALID);
         }
         return this.stockQuantity.getValue() >= requestedQuantity;
     }
