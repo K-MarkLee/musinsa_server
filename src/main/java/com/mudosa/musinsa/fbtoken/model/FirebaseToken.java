@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.fbtoken.model;
 
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,10 +11,12 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class FirebaseToken {
+public class FirebaseToken extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long tokenId;
+
+    @Column(unique = true)
     private String firebaseTokenKey;
 
     @ManyToOne
