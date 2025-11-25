@@ -1,7 +1,5 @@
 package com.mudosa.musinsa.product.domain.model;
 
-import org.checkerframework.checker.units.qual.s;
-
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
