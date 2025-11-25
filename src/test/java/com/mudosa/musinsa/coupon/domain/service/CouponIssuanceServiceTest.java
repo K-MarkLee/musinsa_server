@@ -19,6 +19,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+
 @DisplayName("CouponIssuanceService 테스트")
 @Transactional
 class CouponIssuanceServiceTest extends ServiceConfig {
@@ -207,3 +208,5 @@ class CouponIssuanceServiceTest extends ServiceConfig {
         assertThat(count).isEqualTo(0);
     }
 }
+
+

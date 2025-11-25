@@ -18,7 +18,7 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
     * */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select distinct c from Coupon c left join fetch c.couponProducts cp where c.id = :couponId")
-    Optional<Coupon> findByIdForUpdate(@Param("couponId") Long couponId);
 
+    Optional<Coupon> findByIdForUpdate(@Param("couponId") Long couponId);
 
 }

@@ -57,14 +57,31 @@ public class CouponIssuanceService {
         coupon.validateIssuable(now);
 
 
-        return memberCouponRepository.findByUserIdAndCouponId(userId, couponId)
-                .map(mc -> {
-                    log.info("기존 발급 재사용 - userId: {}, couponId: {}", userId, couponId);
-                    return CouponIssuanceResult.duplicate(
-                            mc.getId(), couponId, mc.getExpiredAt(), mc.getCreatedAt()
-                    );
-                })
-                .orElseGet(() -> createMemberCoupon(userId,coupon));
+        Optional<MemberCoupon> existing = memberCouponRepository
+                .findByUserIdAndCouponId(userId, couponId);
+
+        if (existing.isPresent()) {
+            MemberCoupon mc = existing.get();
+            log.info("기존 발급 재사용 - userId: {}, couponId: {}", userId, couponId);
+            return CouponIssuanceResult.duplicate(
+                    mc.getId(), couponId, mc.getExpiredAt(), mc.getCreatedAt()
+            );
+        }
+
+        // ✅ 4. 신규 발급
+        return createMemberCoupon(userId, coupon);
+
+
+
+
+//        return memberCouponRepository.findByUserIdAndCouponId(userId, couponId)
+//                .map(mc -> {
+//                    log.info("기존 발급 재사용 - userId: {}, couponId: {}", userId, couponId);
+//                    return CouponIssuanceResult.duplicate(
+//                            mc.getId(), couponId, mc.getExpiredAt(), mc.getCreatedAt()
+//                    );
+//                })
+//                .orElseGet(() -> createMemberCoupon(userId,coupon));
 
     }
 
@@ -83,6 +100,7 @@ public class CouponIssuanceService {
                     coupon.getRemainingQuantity() : "무제한");
 
         return CouponIssuanceResult.issued(
+                // 흠 saved? 비동기?
                 saved.getId(),
                 coupon.getId(),
                 saved.getExpiredAt(),

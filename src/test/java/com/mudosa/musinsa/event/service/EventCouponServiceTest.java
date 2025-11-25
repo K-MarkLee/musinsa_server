@@ -149,7 +149,6 @@ class EventCouponServiceTest extends ServiceConfig {
         // when
         EventCouponService.EventCouponIssueResult result = eventCouponService.issueCoupon(
                 event.getId(),
-                productOption.getProductOptionId(),
                 userId
         );
 
@@ -246,13 +245,12 @@ class EventCouponServiceTest extends ServiceConfig {
         entityManager.clear();
 
         // 첫 번째 발급
-        eventCouponService.issueCoupon(event.getId(), productOption.getProductOptionId(), userId);
+        eventCouponService.issueCoupon(event.getId(),userId);
 
         // when
         // 두 번째 발급 시도
         EventCouponService.EventCouponIssueResult result = eventCouponService.issueCoupon(
                 event.getId(),
-                productOption.getProductOptionId(),
                 userId
         );
 
@@ -272,7 +270,6 @@ class EventCouponServiceTest extends ServiceConfig {
         // when & then
         assertThatThrownBy(() -> eventCouponService.issueCoupon(
                 nonExistentEventId,
-                nonExistentProductOptionId,
                 userId
         ))
                 .isInstanceOf(BusinessException.class);
@@ -366,7 +363,6 @@ class EventCouponServiceTest extends ServiceConfig {
         // when & then
         assertThatThrownBy(() -> eventCouponService.issueCoupon(
                 event.getId(),
-                productOption.getProductOptionId(),
                 userId
         ))
                 .isInstanceOf(BusinessException.class);
@@ -459,13 +455,12 @@ class EventCouponServiceTest extends ServiceConfig {
         entityManager.clear();
 
         // 첫 번째 사용자가 발급받음
-        eventCouponService.issueCoupon(event.getId(), productOption.getProductOptionId(), userId1);
+        eventCouponService.issueCoupon(event.getId(),userId1);
 
         // when & then
         // 두 번째 사용자가 발급 시도 - 재고 부족으로 실패
         assertThatThrownBy(() -> eventCouponService.issueCoupon(
                 event.getId(),
-                productOption.getProductOptionId(),
                 userId2
         ))
                 .isInstanceOf(BusinessException.class);

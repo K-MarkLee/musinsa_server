@@ -10,6 +10,7 @@ import com.mudosa.musinsa.event.repository.EventRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ class EventServiceTest extends ServiceConfig {
     private EventOptionRepository eventOptionRepository;
 
     @Test
+    @Transactional
     @DisplayName("[해피케이스] 이벤트 타입별 조회 - DROP 타입 이벤트 목록을 조회한다")
     void getEventListByType_Drop_Success() {
         // given
@@ -73,6 +75,7 @@ class EventServiceTest extends ServiceConfig {
     }
 
     @Test
+    @Transactional
     @DisplayName("[해피케이스] 이벤트 타입별 조회 - COMMENT 타입 이벤트 목록을 조회한다")
     void getEventListByType_Comment_Success() {
         // given
@@ -100,6 +103,7 @@ class EventServiceTest extends ServiceConfig {
     }
 
     @Test
+    @Transactional
     @DisplayName("[해피케이스] 날짜 필터링 조회 - 현재 시간 이후에 시작하는 이벤트만 조회한다")
     void getFilteredEventList_Success() {
         // given
@@ -146,6 +150,7 @@ class EventServiceTest extends ServiceConfig {
     }
 
     @Test
+    @Transactional
     @DisplayName("[해피케이스] 이벤트 목록 조회 - 썸네일 이미지가 포함된 이벤트를 조회한다")
     void getEventListByType_WithThumbnail_Success() {
         // given
@@ -176,6 +181,7 @@ class EventServiceTest extends ServiceConfig {
     }
 
     @Test
+    @Transactional
     @DisplayName("[예외케이스] 이벤트 타입별 조회 - 해당 타입 이벤트가 없으면 빈 리스트를 반환한다")
     void getEventListByType_NoEvents_ReturnsEmptyList() {
         // given
@@ -189,6 +195,7 @@ class EventServiceTest extends ServiceConfig {
     }
 
     @Test
+    @Transactional
     @DisplayName("[예외케이스] 날짜 필터링 조회 - 조건에 맞는 이벤트가 없으면 빈 리스트를 반환한다")
     void getFilteredEventList_NoMatchingEvents_ReturnsEmptyList() {
         // given

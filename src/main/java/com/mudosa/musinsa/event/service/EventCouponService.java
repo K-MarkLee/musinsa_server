@@ -25,16 +25,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 public class EventCouponService {
 
-    private final EventService eventService;
     private final EventOptionRepository eventOptionRepository;
-    private final EventEntryService eventEntryService;
     private final CouponIssuanceService couponIssuanceService;
 
 
     /*
 
-    * 목적: 동시성 제어/슬롯 확보. 토큰이 close 될 때(블록 종료) 슬롯 반납.
+    * 이벤트 상태 및 사용자 제한 검증
     * 혼잡 시 진입 제한/큐 처리/TTL 관리 등을 캡슐화
+    * 이벤트 컨텍스트에서의 쿠폰 발급 조율
 
     * */
 
@@ -43,24 +42,28 @@ public class EventCouponService {
     public EventCouponIssueResult issueCoupon(Long eventId,
                                               Long userId ){
 
-        // 1. 동시성 제어 : 같은 유저의 중복 요청 방지
-        try (EventEntryService.EventEntryToken ignored = eventEntryService.acquireSlot(eventId, userId)){
 
-            // 2. 이벤트 옵션 조회 락 불필요(읽기 전용) , 이벤트와 1:1 매핑
+            // 1. 이벤트 옵션 조회 락 불필요(읽기 전용) , 이벤트와 1:1 매핑
             EventOption eventOption = eventOptionRepository.findByEventIdWithDetails(eventId)
                     // 레포에 생성 필요 -1
                     .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_NOT_FOUND));
 
             Event event = eventOption.getEvent();
 
-            // 3. 이벤트 상태 검증
+            // 2. 이벤트 상태 검증( 진행중인지 )
             validateEventState(event);
 
-            // 4. 쿠폰 정보 확인
+            // 3. 쿠폰 정보 확인
             Coupon coupon = Optional.ofNullable(event.getCoupon())
                     .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_COUPON_NOT_ASSIGNED));
 
             Long couponId = coupon.getId();
+
+            //  4. 사용자별 제한 확인
+            validateUserLimit(event, coupon, userId);
+
+            // 상품 ID 확인
+            Long productId = resolveProductId(eventOption);
 
             //  5. 멱등성 체크 : 이미 발급된 쿠폰이 있는지 먼저 조회 , 있으면 그대로 재사용
 
@@ -71,11 +74,7 @@ public class EventCouponService {
                 return EventCouponIssueResult.from(existing.get());
             }
 
-            // 사용자별 제한 확인
-            validateUserLimit(event, coupon, userId);
 
-            // 상품 ID 확인
-            Long productId = resolveProductId(eventOption);
 
             // 6. 실제 쿠폰 발급 ! => 쿠폰 도메인 책임
             /*
@@ -98,7 +97,7 @@ public class EventCouponService {
 
             return EventCouponIssueResult.from(issuanceResult);
         }
-    }
+
 
     // 현재 진행하고 있는 유효한 이벤트인지
     private void validateEventState(Event event) {
