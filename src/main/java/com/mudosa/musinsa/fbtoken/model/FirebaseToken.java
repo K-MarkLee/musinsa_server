@@ -6,7 +6,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name="firebase_token")
+@Table(name="firebase_token",
+uniqueConstraints = {
+        @UniqueConstraint(name="UC_firebase_token_key", columnNames={"firebase_token_key","user_id"})
+})
 @Getter
 @Builder
 @AllArgsConstructor
@@ -16,7 +19,7 @@ public class FirebaseToken extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long tokenId;
 
-    @Column(unique = true)
+    @Column(name="firebase_token_key")
     private String firebaseTokenKey;
 
     @ManyToOne
