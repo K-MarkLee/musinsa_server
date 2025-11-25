@@ -24,10 +24,10 @@ public class StockQuantity {
     // 숫자 범위를 점검해 잘못된 재고 입력을 막는다.
     private void validate(Integer value) {
         if (value == null) {
-            throw new BusinessException(ErrorCode.STOCK_QUANTITY_INVALID,"재고 수량은 null일 수 없습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_CANNOT_BE_NULL);
         }
         if (value < 0) {
-            throw new BusinessException(ErrorCode.STOCK_QUANTITY_INVALID,"재고 수량은 음수일 수 없습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_CANNOT_BE_NEGATIVE);
         }
     }
     
@@ -41,10 +41,10 @@ public class StockQuantity {
     public void decrease(int quantity){
         // 음수 재고를 방지하기 위한 방어 로직
         if (quantity <= 0) {
-            throw new BusinessException(ErrorCode.STOCK_QUANTITY_INVALID,"감소 수량은 0 이하일 수 없습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_CANNOT_BE_LESS_THAN_ONE);
         }
         if (this.value - quantity < 0) {
-            throw new BusinessException(ErrorCode.STOCK_QUANTITY_INVALID,"재고 수량은 음수가 될 수 없습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_OUT_OF_STOCK);
         }
         this.value -= quantity;
     }
