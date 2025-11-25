@@ -66,18 +66,18 @@ class CartServiceIntegrationTest extends ServiceConfig {
         int suffix = PRODUCT_SEQ.incrementAndGet();
         Brand brand = brandRepository.save(Brand.create("카트브랜드", "cart-brand", BigDecimal.ONE));
         Product product = productRepository.save(Product.builder()
-            .brand(brand)
-            .productName("장바구니 상품-" + suffix)
-            .productInfo("통합 테스트용 상품-" + suffix)
-            .productGenderType(ProductGenderType.ALL)
-            .brandName(brand.getNameKo())
-            .categoryPath("상의>후드티")
-            .isAvailable(true)
-            .build());
+                .brand(brand)
+                .productName("장바구니 상품-" + suffix)
+                .productInfo("통합 테스트용 상품-" + suffix)
+                .productGenderType(ProductGenderType.ALL)
+                .brandName(brand.getNameKo())
+                .categoryPath("상의>후드티")
+                .isAvailable(true)
+                .build());
 
         Inventory inventory = Inventory.builder()
-            .stockQuantity(new StockQuantity(stockQuantity))
-            .build();
+                .stockQuantity(new StockQuantity(stockQuantity))
+                .build();
         ProductOption option = ProductOption.create(product, new Money(15000L), inventory);
         product.addProductOption(option);
         return productRepository.save(product).getProductOptions().get(0);
@@ -91,9 +91,9 @@ class CartServiceIntegrationTest extends ServiceConfig {
 
         CartItemResponse response = cartService.addCartItem(user.getId(),
             CartItemCreateRequest.builder()
-                .productOptionId(option.getProductOptionId())
-                .quantity(2)
-                .build());
+                    .productOptionId(option.getProductOptionId())
+                    .quantity(2)
+                    .build());
 
         assertThat(response.getQuantity()).isEqualTo(2);
         assertThat(cartItemRepository.findAll()).hasSize(1);
@@ -106,9 +106,9 @@ class CartServiceIntegrationTest extends ServiceConfig {
         ProductOption option = createProductOption(3);
 
         cartService.addCartItem(user.getId(), CartItemCreateRequest.builder()
-            .productOptionId(option.getProductOptionId())
-            .quantity(1)
-            .build());
+                .productOptionId(option.getProductOptionId())
+                .quantity(1)
+                .build());
 
         List<CartItemDetailResponse> details = cartService.getCartItems(user.getId());
 
@@ -125,10 +125,10 @@ class CartServiceIntegrationTest extends ServiceConfig {
         ProductOption option = createProductOption(10);
 
         CartItem cartItem = cartItemRepository.save(CartItem.builder()
-            .user(user)
-            .productOption(option)
-            .quantity(1)
-            .build());
+                .user(user)
+                .productOption(option)
+                .quantity(1)
+                .build());
 
         CartItemResponse response = cartService.updateCartItemQuantity(
             user.getId(),

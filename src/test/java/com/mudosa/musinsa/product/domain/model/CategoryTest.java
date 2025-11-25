@@ -10,13 +10,13 @@ public class CategoryTest {
     void buildPath_createsCorrectPath() {
         // given
         Category root = Category.builder()
-            .categoryName("상의")
-            .build();
+                .categoryName("상의")
+                .build();
         
         Category child = Category.builder()
-            .categoryName("티셔츠")
-            .parent(root)
-            .build();
+                .categoryName("티셔츠")
+                .parent(root)
+                .build();
         
         // when
         String path = child.buildPath();

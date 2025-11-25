@@ -64,23 +64,23 @@ class ProductQueryServiceIntegrationTest extends ServiceConfig {
                                  int stock,
                                  ProductGenderType gender) {
         Product product = Product.builder()
-            .brand(brand)
-            .productName(name)
-            .productInfo("설명 " + name)
-            .productGenderType(gender)
-            .brandName(brand.getNameKo())
-            .categoryPath(categoryPath)
-            .isAvailable(true)
-            .build();
+                .brand(brand)
+                .productName(name)
+                .productInfo("설명 " + name)
+                .productGenderType(gender)
+                .brandName(brand.getNameKo())
+                .categoryPath(categoryPath)
+                .isAvailable(true)
+                .build();
 
         product.addImage(Image.builder()
-            .imageUrl("http://example.com/images/" + name.replaceAll(" ", "_") + ".jpg")
-            .isThumbnail(true)
-            .build());
+                .imageUrl("http://example.com/images/" + name.replaceAll(" ", "_") + ".jpg")
+                .isThumbnail(true)
+                .build());
 
         Inventory inventory = Inventory.builder()
-            .stockQuantity(new StockQuantity(stock))
-            .build();
+                .stockQuantity(new StockQuantity(stock))
+                .build();
         ProductOption option = ProductOption.create(product, new Money(price), inventory);
         product.addProductOption(option);
 
@@ -91,12 +91,12 @@ class ProductQueryServiceIntegrationTest extends ServiceConfig {
     @DisplayName("LOWEST 정렬은 가격이 낮은 순서(저가→중간→고가)로 결과를 반환한다")
     void searchProducts_sortedByLowestPrice() {
         ProductSearchCondition condition = ProductSearchCondition.builder()
-            .keyword("티셔츠")
-            .categoryPaths(List.of("상의>티셔츠"))
-            .gender(ProductGenderType.ALL)
-            .priceSort(ProductSearchCondition.PriceSort.LOWEST)
-            .pageable(PageRequest.of(0, 10))
-            .build();
+                .keyword("티셔츠")
+                .categoryPaths(List.of("상의>티셔츠"))
+                .gender(ProductGenderType.ALL)
+                .priceSort(ProductSearchCondition.PriceSort.LOWEST)
+                .pageable(PageRequest.of(0, 10))
+                .build();
 
         ProductSearchResponse response = productQueryService.searchProducts(condition);
 
@@ -110,12 +110,12 @@ class ProductQueryServiceIntegrationTest extends ServiceConfig {
     @DisplayName("HIGHEST 정렬은 최고가 상품이 맨 앞에 온다")
     void searchProducts_sortedByHighestPrice() {
         ProductSearchCondition condition = ProductSearchCondition.builder()
-            .keyword("티셔츠")
-            .categoryPaths(List.of("상의>티셔츠"))
-            .gender(ProductGenderType.ALL)
-            .priceSort(ProductSearchCondition.PriceSort.HIGHEST)
-            .pageable(PageRequest.of(0, 10))
-            .build();
+                .keyword("티셔츠")
+                .categoryPaths(List.of("상의>티셔츠"))
+                .gender(ProductGenderType.ALL)
+                .priceSort(ProductSearchCondition.PriceSort.HIGHEST)
+                .pageable(PageRequest.of(0, 10))
+                .build();
 
         ProductSearchResponse response = productQueryService.searchProducts(condition);
 
@@ -127,9 +127,9 @@ class ProductQueryServiceIntegrationTest extends ServiceConfig {
     @DisplayName("카테고리 필터를 적용하면 다른 카테고리 상품은 제외된다")
     void searchProducts_filtersByCategory() {
         ProductSearchCondition condition = ProductSearchCondition.builder()
-            .categoryPaths(List.of("상의>티셔츠"))
-            .pageable(PageRequest.of(0, 10))
-            .build();
+                .categoryPaths(List.of("상의>티셔츠"))
+                .pageable(PageRequest.of(0, 10))
+                .build();
 
         ProductSearchResponse response = productQueryService.searchProducts(condition);
 
@@ -142,9 +142,9 @@ class ProductQueryServiceIntegrationTest extends ServiceConfig {
     @DisplayName("성별 필터를 WOMEN으로 주면 여성 카테고리 상품만 조회된다")
     void searchProducts_filtersByGender() {
         ProductSearchCondition condition = ProductSearchCondition.builder()
-            .gender(ProductGenderType.WOMEN)
-            .pageable(PageRequest.of(0, 10))
-            .build();
+                .gender(ProductGenderType.WOMEN)
+                .pageable(PageRequest.of(0, 10))
+                .build();
 
         ProductSearchResponse response = productQueryService.searchProducts(condition);
 

@@ -50,18 +50,18 @@ class ProductInventoryServiceIntegrationTest extends ServiceConfig {
         brandMemberRepository.save(BrandMember.create(BRAND_MANAGER_ID, brand));
 
         Product product = productRepository.save(Product.builder()
-            .brand(brand)
-            .productName("통합테스트 상품")
-            .productInfo("재고 조정 검증용 상품")
-            .productGenderType(ProductGenderType.ALL)
-            .brandName(brand.getNameKo())
-            .categoryPath("상의>티셔츠")
-            .isAvailable(true)
-            .build());
+                .brand(brand)
+                .productName("통합테스트 상품")
+                .productInfo("재고 조정 검증용 상품")
+                .productGenderType(ProductGenderType.ALL)
+                .brandName(brand.getNameKo())
+                .categoryPath("상의>티셔츠")
+                .isAvailable(true)
+                .build());
 
         Inventory inventory = inventoryRepository.save(Inventory.builder()
-            .stockQuantity(new StockQuantity(stock))
-            .build());
+                .stockQuantity(new StockQuantity(stock))
+                .build());
         ProductOption option = ProductOption.create(product, new Money(1000L), inventory);
         product.addProductOption(option);
         return productRepository.save(product);
@@ -74,9 +74,9 @@ class ProductInventoryServiceIntegrationTest extends ServiceConfig {
         ProductOption option = product.getProductOptions().get(0);
 
         StockAdjustmentRequest request = StockAdjustmentRequest.builder()
-            .productOptionId(option.getProductOptionId())
-            .quantity(4)
-            .build();
+                .productOptionId(option.getProductOptionId())
+                .quantity(4)
+                .build();
 
         ProductOptionStockResponse response = inventoryService.addStock(
             product.getBrand().getBrandId(),
@@ -97,9 +97,9 @@ class ProductInventoryServiceIntegrationTest extends ServiceConfig {
         ProductOption option = product.getProductOptions().get(0);
 
         StockAdjustmentRequest request = StockAdjustmentRequest.builder()
-            .productOptionId(option.getProductOptionId())
-            .quantity(5)
-            .build();
+                .productOptionId(option.getProductOptionId())
+                .quantity(5)
+                .build();
 
         assertThatThrownBy(() -> inventoryService.subtractStock(
             product.getBrand().getBrandId(),

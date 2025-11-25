@@ -104,9 +104,9 @@ class ProductQueryMapperTest {
             setId(opt, "productOptionId", 40L);
 
         OptionValue ov = OptionValue.builder()
-            .optionName("컬러")
-            .optionValue("레드")
-            .build();
+                .optionName("컬러")
+                .optionValue("레드")
+                .build();
         setId(ov, "optionValueId", 50L);
         ProductOptionValue mapping = ProductOptionValue.create(opt, ov);
             opt.addOptionValue(mapping);

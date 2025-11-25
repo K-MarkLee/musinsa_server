@@ -1,0 +1,46 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/musinsa_test?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 1234 # ← 본인 MySQL 비밀번호
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # 테스트 시작 시 생성, 종료 시 삭제
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+
+mybatis:
+  mapper-locations: classpath:mappers/settlement/*.xml
+  type-aliases-package: com.mudosa.musinsa.settlement.batch.dto
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+jwt:
+  secret: "this-is-a-very-long-test-secret-key-32bytes-min"
+
+tosspayments:
+  secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
+  client-key: test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm
+
+fcm:
+  service-acount-file: key/fdbdproject.json
+  topic-name: test-topic
+  project-id: test-project
+
+logging:
+  level:
+    org:
+      hibernate:
+        sql: debug
+        type.descriptor.sql.BasicBinder: TRACE
+        orm.jdbc.internal.LogicalConnectionImpl: DEBUG
+      springframework.orm.jpa: DEBUG
+      springframework.transaction: DEBUG
+    com.mudosa.musinsa: DEBUG

@@ -28,7 +28,7 @@ public class KakaoFakePaymentStrategy implements PaymentStrategy {
 
 		// Fake 응답 반환 (실제 API 호출 없음)
 		return PaymentResponseDto.builder()
-				.pgProvider(PROVIDER_NAME.name())
-				.build();
+		        .pgProvider(PROVIDER_NAME.name())
+		        .build();
 	}
 }

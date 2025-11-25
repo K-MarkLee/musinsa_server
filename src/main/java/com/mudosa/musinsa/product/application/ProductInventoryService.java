@@ -180,21 +180,21 @@ public class ProductInventoryService {
         String productName = product != null ? product.getProductName() : null;
 
         return ProductOptionStockResponse.builder()
-            .productOptionId(productOption.getProductOptionId())
-            .productName(productName)
-            .productPrice(productPrice)
-            .stockQuantity(stockQuantity)
-            .hasStock(hasStock)
-            .optionValues(optionValueSummaries)
-            .build();
+                .productOptionId(productOption.getProductOptionId())
+                .productName(productName)
+                .productPrice(productPrice)
+                .stockQuantity(stockQuantity)
+                .hasStock(hasStock)
+                .optionValues(optionValueSummaries)
+                .build();
     }
 
     private ProductOptionStockResponse.OptionValueSummary mapToOptionValueSummary(ProductOptionValue productOptionValue) {
         OptionValue optionValue = productOptionValue.getOptionValue();
         return ProductOptionStockResponse.OptionValueSummary.builder()
-            .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-            .optionName(optionValue != null ? optionValue.getOptionName() : null)
-            .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
-            .build();
+                .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
+                .optionName(optionValue != null ? optionValue.getOptionName() : null)
+                .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+                .build();
     }
 }

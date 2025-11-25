@@ -65,15 +65,15 @@ class ProductCommandServiceIntegrationTest extends ServiceConfig {
         brandMemberRepository.save(BrandMember.create(BRAND_MANAGER_ID, brand));
 
         Category parent = categoryRepository.save(Category.builder()
-            .categoryName("상의")
-            .imageUrl(null)
-            .parent(null)
-            .build());
+                .categoryName("상의")
+                .imageUrl(null)
+                .parent(null)
+                .build());
         Category category = categoryRepository.save(Category.builder()
-            .categoryName("티셔츠")
-            .parent(parent)
-            .imageUrl(null)
-            .build());
+                .categoryName("티셔츠")
+                .parent(parent)
+                .imageUrl(null)
+                .build());
 
         OptionValue color = optionValueRepository.save(
             OptionValue.builder().optionName("색상").optionValue("Red").build());
@@ -81,21 +81,21 @@ class ProductCommandServiceIntegrationTest extends ServiceConfig {
             OptionValue.builder().optionName("사이즈").optionValue("M").build());
 
         ProductCreateRequest request = ProductCreateRequest.builder()
-            .productName("베이직 티셔츠")
-            .productInfo("유저가 업로드한 기본 티셔츠")
-            .productGenderType(ProductGenderType.ALL)
-            .categoryPath(category.buildPath())
-            .isAvailable(true)
-            .images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+                .productName("베이직 티셔츠")
+                .productInfo("유저가 업로드한 기본 티셔츠")
+                .productGenderType(ProductGenderType.ALL)
+                .categoryPath(category.buildPath())
+                .isAvailable(true)
+                .images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
                 .imageUrl("https://cdn.musinsa.test/product/awesome-tee.jpg")
                 .isThumbnail(true)
                 .build()))
-            .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
+                .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(BigDecimal.valueOf(19900))
                 .stockQuantity(7)
                 .optionValueIds(List.of(color.getOptionValueId(), size.getOptionValueId()))
                 .build()))
-            .build();
+                .build();
 
         // --- 실행: 실제 서비스 메서드를 호출한다.
         Long productId = productCommandService.createProduct(request, brand, category, BRAND_MANAGER_ID);
@@ -123,10 +123,10 @@ class ProductCommandServiceIntegrationTest extends ServiceConfig {
         // --- 준비: 브랜드/카테고리는 존재하지만 BrandMember 레코드는 만들지 않는다.
         Brand brand = brandRepository.save(Brand.create("다른브랜드", "another", BigDecimal.valueOf(15.0)));
         Category category = categoryRepository.save(Category.builder()
-            .categoryName("아우터")
-            .imageUrl(null)
-            .parent(null)
-            .build());
+                .categoryName("아우터")
+                .imageUrl(null)
+                .parent(null)
+                .build());
 
         OptionValue color = optionValueRepository.save(
             OptionValue.builder().optionName("색상").optionValue("Black").build());
@@ -134,20 +134,20 @@ class ProductCommandServiceIntegrationTest extends ServiceConfig {
             OptionValue.builder().optionName("사이즈").optionValue("M").build());
 
         ProductCreateRequest request = ProductCreateRequest.builder()
-            .productName("블랙 자켓")
-            .productInfo("브랜드 권한 없이 생성 시도")
-            .productGenderType(ProductGenderType.MEN)
-            .categoryPath(category.buildPath())
-            .images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+                .productName("블랙 자켓")
+                .productInfo("브랜드 권한 없이 생성 시도")
+                .productGenderType(ProductGenderType.MEN)
+                .categoryPath(category.buildPath())
+                .images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
                 .imageUrl("https://cdn.musinsa.test/product/jacket.jpg")
                 .isThumbnail(true)
                 .build()))
-            .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
+                .options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
                 .productPrice(BigDecimal.valueOf(99000))
                 .stockQuantity(3)
                 .optionValueIds(List.of(color.getOptionValueId(), size.getOptionValueId()))
                 .build()))
-            .build();
+                .build();
 
         // --- 검증: 브랜드 멤버가 아니므로 BusinessException 이 발생해야 한다.
         assertThatThrownBy(() -> productCommandService.createProduct(request, brand, category, BRAND_MANAGER_ID))

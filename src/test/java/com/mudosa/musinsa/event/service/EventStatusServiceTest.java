@@ -282,16 +282,16 @@ class EventStatusServiceTest {
             LocalDateTime pastTime = LocalDateTime.now().minusHours(1);
             LocalDateTime futureTime = LocalDateTime.now().plusDays(7);
 
-            Event plannedEvent = Event.create(
-                    "PLANNED 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    true,
-                    pastTime,
-                    futureTime,
-                    null
-            );
+            Event plannedEvent = Event.builder()
+                    .title("PLANNED 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(true)
+                    .startedAt(pastTime)
+                    .endedAt(futureTime)
+                    .coupon(null)
+                    .build();
             eventRepository.save(plannedEvent);
 
             entityManager.flush();
@@ -316,16 +316,16 @@ class EventStatusServiceTest {
             LocalDateTime pastStartTime = LocalDateTime.now().minusDays(7);
             LocalDateTime pastEndTime = LocalDateTime.now().minusHours(1);
 
-            Event event = Event.create(
-                    "자동 종료 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    true,
-                    pastStartTime,
-                    pastEndTime,
-                    null
-            );
+            Event event = Event.builder()
+                    .title("자동 종료 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(true)
+                    .startedAt(pastStartTime)
+                    .endedAt(pastEndTime)
+                    .coupon(null)
+                    .build();
             event.open();
             Event savedEvent = eventRepository.save(event);
 
@@ -354,26 +354,26 @@ class EventStatusServiceTest {
 
             String uniqueCouponName = "테스트 쿠폰 - " + System.currentTimeMillis();
 
-            Coupon coupon = Coupon.create(
-                    uniqueCouponName,
-                    DiscountType.AMOUNT,
-                    new BigDecimal("10000"),
-                    pastTime,
-                    futureTime,
-                    100
-            );
+            Coupon coupon = Coupon.builder()
+                    .couponName(uniqueCouponName)
+                    .discountType(DiscountType.AMOUNT)
+                    .discountValue(new BigDecimal("10000"))
+                    .startDate(pastTime)
+                    .endDate(futureTime)
+                    .totalQuantity(100)
+                    .build();
             couponRepository.save(coupon);
 
-            Event event = Event.create(
-                    "수동 업데이트 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    true,
-                    pastTime,
-                    futureTime,
-                    coupon
-            );
+            Event event = Event.builder()
+                    .title("수동 업데이트 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(true)
+                    .startedAt(pastTime)
+                    .endedAt(futureTime)
+                    .coupon(coupon)
+                    .build();
             Event savedEvent = eventRepository.save(event);
 
             entityManager.flush();
@@ -398,16 +398,16 @@ class EventStatusServiceTest {
             LocalDateTime pastStartTime = LocalDateTime.now().minusDays(7);
             LocalDateTime pastEndTime = LocalDateTime.now().minusHours(1);
 
-            Event event = Event.create(
-                    "수동 종료 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    true,
-                    pastStartTime,
-                    pastEndTime,
-                    null
-            );
+            Event event = Event.builder()
+                    .title("수동 종료 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(true)
+                    .startedAt(pastStartTime)
+                    .endedAt(pastEndTime)
+                    .coupon(null)
+                    .build();
             event.open();
             Event savedEvent = eventRepository.save(event);
 
@@ -433,44 +433,44 @@ class EventStatusServiceTest {
             LocalDateTime now = LocalDateTime.now();
 
             // 종료된 이벤트 (OPEN → ENDED로 변경되어야 함)
-            Event endedEvent = Event.create(
-                    "종료된 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    true,
-                    now.minusDays(7),
-                    now.minusHours(1),
-                    null
-            );
+            Event endedEvent = Event.builder()
+                    .title("종료된 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(true)
+                    .startedAt(now.minusDays(7))
+                    .endedAt(now.minusHours(1))
+                    .coupon(null)
+                    .build();
             endedEvent.open();
             eventRepository.save(endedEvent);
 
             // 진행 중인 이벤트 (OPEN 유지)
-            Event openEvent = Event.create(
-                    "진행 중 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    true,
-                    now.minusHours(1),
-                    now.plusDays(7),
-                    null
-            );
+            Event openEvent = Event.builder()
+                    .title("진행 중 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(true)
+                    .startedAt(now.minusHours(1))
+                    .endedAt(now.plusDays(7))
+                    .coupon(null)
+                    .build();
             openEvent.open();
             eventRepository.save(openEvent);
 
             // 취소된 이벤트 (CANCELLED 유지)
-            Event cancelledEvent = Event.create(
-                    "취소된 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    true,
-                    now.minusDays(7),
-                    now.minusHours(1),
-                    null
-            );
+            Event cancelledEvent = Event.builder()
+                    .title("취소된 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(true)
+                    .startedAt(now.minusDays(7))
+                    .endedAt(now.minusHours(1))
+                    .coupon(null)
+                    .build();
             cancelledEvent.cancel();
             eventRepository.save(cancelledEvent);
 
@@ -505,29 +505,29 @@ class EventStatusServiceTest {
             LocalDateTime futureTime = LocalDateTime.now().plusDays(7);
 
             // 공개 이벤트
-            Event publicEvent = Event.create(
-                    "공개 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    true,
-                    pastTime,
-                    futureTime,
-                    null
-            );
+            Event publicEvent = Event.builder()
+                    .title("공개 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(true)
+                    .startedAt(pastTime)
+                    .endedAt(futureTime)
+                    .coupon(null)
+                    .build();
             eventRepository.save(publicEvent);
 
             // 비공개 이벤트
-            Event privateEvent = Event.create(
-                    "비공개 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    false,
-                    pastTime,
-                    futureTime,
-                    null
-            );
+            Event privateEvent = Event.builder()
+                    .title("비공개 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(false)
+                    .startedAt(pastTime)
+                    .endedAt(futureTime)
+                    .coupon(null)
+                    .build();
             eventRepository.save(privateEvent);
 
             entityManager.flush();
@@ -558,16 +558,16 @@ class EventStatusServiceTest {
             // Given
             LocalDateTime now = LocalDateTime.now();
 
-            Event pausedEvent = Event.create(
-                    "일시정지 이벤트",
-                    "설명",
-                    Event.EventType.DROP,
-                    1,
-                    true,
-                    now.minusHours(1),
-                    now.plusDays(7),
-                    null
-            );
+            Event pausedEvent = Event.builder()
+                    .title("일시정지 이벤트")
+                    .description("설명")
+                    .eventType(Event.EventType.DROP)
+                    .limitPerUser(1)
+                    .isPublic(true)
+                    .startedAt(now.minusHours(1))
+                    .endedAt(now.plusDays(7))
+                    .coupon(null)
+                    .build();
             pausedEvent.open();
             pausedEvent.pause();
             eventRepository.save(pausedEvent);

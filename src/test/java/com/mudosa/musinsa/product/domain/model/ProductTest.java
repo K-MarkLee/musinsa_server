@@ -27,14 +27,14 @@ class ProductTest {
 			// given
 			Brand brand = Brand.create("테스트", "TEST", BigDecimal.ZERO);
 			Product product = Product.builder()
-				.brand(brand)
-				.productName("old")
-				.productInfo("old info")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("테스트")
-				.categoryPath("상의>티셔츠")
-				.isAvailable(true)
-				.build();
+			        .brand(brand)
+			        .productName("old")
+			        .productInfo("old info")
+			        .productGenderType(ProductGenderType.ALL)
+			        .brandName("테스트")
+			        .categoryPath("상의>티셔츠")
+			        .isAvailable(true)
+			        .build();
 
 			// when
 			boolean changed = product.updateBasicInfo("new", "new info");
@@ -50,14 +50,14 @@ class ProductTest {
 		void givenBlankName_whenUpdateBasicInfo_thenThrows() {
 			// given
 			Product product = Product.builder()
-				.brand(Brand.create("b", "b", BigDecimal.ZERO))
-				.productName("name")
-				.productInfo("info")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("b")
-				.categoryPath("c")
-				.isAvailable(true)
-				.build();
+			        .brand(Brand.create("b", "b", BigDecimal.ZERO))
+			        .productName("name")
+			        .productInfo("info")
+			        .productGenderType(ProductGenderType.ALL)
+			        .brandName("b")
+			        .categoryPath("c")
+			        .isAvailable(true)
+			        .build();
 
 			// when/then
 			assertThatThrownBy(() -> product.updateBasicInfo(" ", "info"))
@@ -74,14 +74,14 @@ class ProductTest {
 		void givenInitialAvailable_whenChangeAvailability_thenToggles() {
 			// given
 			Product product = Product.builder()
-				.brand(Brand.create("b", "b", BigDecimal.ZERO))
-				.productName("n")
-				.productInfo("i")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("b")
-				.categoryPath("c")
-				.isAvailable(true)
-				.build();
+			        .brand(Brand.create("b", "b", BigDecimal.ZERO))
+			        .productName("n")
+			        .productInfo("i")
+			        .productGenderType(ProductGenderType.ALL)
+			        .brandName("b")
+			        .categoryPath("c")
+			        .isAvailable(true)
+			        .build();
 
 			// when
 			product.changeAvailability(false);
@@ -106,20 +106,20 @@ class ProductTest {
 		void givenImage_whenAddImage_thenProductReferenceSet() {
 			// given
 			Product product = Product.builder()
-				.brand(Brand.create("b", "b", BigDecimal.ZERO))
-				.productName("n")
-				.productInfo("i")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("b")
-				.categoryPath("c")
-				.isAvailable(true)
-				.build();
+			        .brand(Brand.create("b", "b", BigDecimal.ZERO))
+			        .productName("n")
+			        .productInfo("i")
+			        .productGenderType(ProductGenderType.ALL)
+			        .brandName("b")
+			        .categoryPath("c")
+			        .isAvailable(true)
+			        .build();
 
 			// when
 			Image img = Image.builder()
-				.imageUrl("http://example.com/image.jpg")
-				.isThumbnail(false)
-				.build();
+			        .imageUrl("http://example.com/image.jpg")
+			        .isThumbnail(false)
+			        .build();
 			product.addImage(img);
 
 			// then
@@ -132,22 +132,22 @@ class ProductTest {
 		void givenOption_whenAddProductOption_thenAssociated() {
 			// given
 			Product product = Product.builder()
-				.brand(Brand.create("b", "b", BigDecimal.ZERO))
-				.productName("n")
-				.productInfo("i")
-				.productGenderType(ProductGenderType.ALL)
-				.brandName("b")
-				.categoryPath("c")
-				.isAvailable(true)
-				.build();
+			        .brand(Brand.create("b", "b", BigDecimal.ZERO))
+			        .productName("n")
+			        .productInfo("i")
+			        .productGenderType(ProductGenderType.ALL)
+			        .brandName("b")
+			        .categoryPath("c")
+			        .isAvailable(true)
+			        .build();
 
 			// when
 			Inventory inventory = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
 			ProductOption option = ProductOption.builder()
-				.product(product)
-				.productPrice(new Money(1000L))
-				.inventory(inventory)
-				.build();
+			        .product(product)
+			        .productPrice(new Money(1000L))
+			        .inventory(inventory)
+			        .build();
 			product.addProductOption(option);
 
 			// then

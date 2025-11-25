@@ -128,10 +128,10 @@ public class CartService {
     private CartItem createNewCartItem(User user, ProductOption productOption, int quantity) {
         verifyRequestedQuantity(productOption, quantity);
         return CartItem.builder()
-            .user(user)
-            .productOption(productOption)
-            .quantity(quantity)
-            .build();
+                .user(user)
+                .productOption(productOption)
+                .quantity(quantity)
+                .build();
     }
 
     private void validateOptionAvailability(ProductOption productOption) {

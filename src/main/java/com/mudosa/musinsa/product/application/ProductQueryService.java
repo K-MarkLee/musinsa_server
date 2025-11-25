@@ -62,12 +62,12 @@ public class ProductQueryService {
 		int totalPages = page.getTotalPages();
 
 		return ProductSearchResponse.builder()
-			.products(summaries)
-			.totalElements(page.getTotalElements())
-			.totalPages(totalPages)
-			.page(pageNumber)
-			.size(pageSize)
-			.build();
+		        .products(summaries)
+		        .totalElements(page.getTotalElements())
+		        .totalPages(totalPages)
+		        .page(pageNumber)
+		        .size(pageSize)
+		        .build();
 	}
 
 	/**

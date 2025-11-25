@@ -63,7 +63,7 @@ public class NotificationService {
                         .notificationStatus(notification.getNotificationStatus())
                         .readAt(notification.getReadAt())
                         .build())
-                .toList();
+                        .toList();
     }
 
     public List<Notification> createChatNotification(ChatNotificationCreatedEvent chatNotificationCreatedEvent){
@@ -86,7 +86,7 @@ public class NotificationService {
                         .notificationMessage(Objects.isNull(message)?ATTACHED_FILE:message)
                         .notificationUrl(CHAT_URL + chatPart.getChatRoom().getChatId()+"/")
                         .build())
-                .toList();
+                        .toList();
 
         List<Notification> notifications = notificationRepository.saveAll(notificationList);
 

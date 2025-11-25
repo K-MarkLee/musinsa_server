@@ -41,27 +41,27 @@ class EventServiceTest extends ServiceConfig {
         LocalDateTime startedAt = LocalDateTime.of(2025, 11, 20, 0, 0);
         LocalDateTime endedAt = LocalDateTime.of(2025, 12, 20, 23, 59);
 
-        Event dropEvent1 = Event.create(
-                "드롭 이벤트1",
-                "드롭 설명1",
-                Event.EventType.DROP,
-                1,
-                true,
-                startedAt,
-                endedAt,
-                null
-        );
+        Event dropEvent1 = Event.builder()
+                .title("드롭 이벤트1")
+                .description("드롭 설명1")
+                .eventType(Event.EventType.DROP)
+                .limitPerUser(1)
+                .isPublic(true)
+                .startedAt(startedAt)
+                .endedAt(endedAt)
+                .coupon(null)
+                .build();
 
-        Event dropEvent2 = Event.create(
-                "드롭 이벤트2",
-                "드롭 설명2",
-                Event.EventType.DROP,
-                1,
-                true,
-                startedAt,
-                endedAt,
-                null
-        );
+        Event dropEvent2 = Event.builder()
+                .title("드롭 이벤트2")
+                .description("드롭 설명2")
+                .eventType(Event.EventType.DROP)
+                .limitPerUser(1)
+                .isPublic(true)
+                .startedAt(startedAt)
+                .endedAt(endedAt)
+                .coupon(null)
+                .build();
 
         eventRepository.save(dropEvent1);
         eventRepository.save(dropEvent2);
@@ -82,16 +82,16 @@ class EventServiceTest extends ServiceConfig {
         LocalDateTime startedAt = LocalDateTime.of(2025, 11, 20, 0, 0);
         LocalDateTime endedAt = LocalDateTime.of(2025, 12, 20, 23, 59);
 
-        Event commentEvent = Event.create(
-                "댓글 이벤트",
-                "댓글 설명",
-                Event.EventType.COMMENT,
-                1,
-                true,
-                startedAt,
-                endedAt,
-                null
-        );
+        Event commentEvent = Event.builder()
+                .title("댓글 이벤트")
+                .description("댓글 설명")
+                .eventType(Event.EventType.COMMENT)
+                .limitPerUser(1)
+                .isPublic(true)
+                .startedAt(startedAt)
+                .endedAt(endedAt)
+                .coupon(null)
+                .build();
 
         eventRepository.save(commentEvent);
 
@@ -113,27 +113,27 @@ class EventServiceTest extends ServiceConfig {
         LocalDateTime pastStartedAt = LocalDateTime.of(2025, 11, 1, 0, 0);
         LocalDateTime pastEndedAt = LocalDateTime.of(2025, 11, 10, 23, 59);
 
-        Event futureEvent = Event.create(
-                "미래 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                futureStartedAt,
-                futureEndedAt,
-                null
-        );
+        Event futureEvent = Event.builder()
+                .title("미래 이벤트")
+                .description("설명")
+                .eventType(Event.EventType.DROP)
+                .limitPerUser(1)
+                .isPublic(true)
+                .startedAt(futureStartedAt)
+                .endedAt(futureEndedAt)
+                .coupon(null)
+                .build();
 
-        Event pastEvent = Event.create(
-                "과거 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                pastStartedAt,
-                pastEndedAt,
-                null
-        );
+        Event pastEvent = Event.builder()
+                .title("과거 이벤트")
+                .description("설명")
+                .eventType(Event.EventType.DROP)
+                .limitPerUser(1)
+                .isPublic(true)
+                .startedAt(pastStartedAt)
+                .endedAt(pastEndedAt)
+                .coupon(null)
+                .build();
 
         eventRepository.save(futureEvent);
         eventRepository.save(pastEvent);
@@ -157,19 +157,22 @@ class EventServiceTest extends ServiceConfig {
         LocalDateTime startedAt = LocalDateTime.of(2025, 11, 20, 0, 0);
         LocalDateTime endedAt = LocalDateTime.of(2025, 12, 20, 23, 59);
 
-        Event event = Event.create(
-                "썸네일 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                startedAt,
-                endedAt,
-                null
-        );
+        Event event = Event.builder()
+                .title("썸네일 이벤트")
+                .description("설명")
+                .eventType(Event.EventType.DROP)
+                .limitPerUser(1)
+                .isPublic(true)
+                .startedAt(startedAt)
+                .endedAt(endedAt)
+                .coupon(null)
+                .build();
         Event savedEvent = eventRepository.save(event);
 
-        EventImage thumbnailImage = EventImage.create("https://example.com/thumbnail.jpg", true);
+        EventImage thumbnailImage = EventImage.builder()
+                .imageUrl("https://example.com/thumbnail.jpg")
+                .isThumbnail(true)
+                .build();
         thumbnailImage.assignEvent(savedEvent);
         eventImageRepository.save(thumbnailImage);
 

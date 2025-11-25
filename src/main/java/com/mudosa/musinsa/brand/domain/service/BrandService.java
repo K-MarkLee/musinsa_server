@@ -46,21 +46,21 @@ public class BrandService {
     // 채팅방 생성
     log.info("request: " + request.toString());
     Brand brand = Brand.builder()
-        .nameKo(request.getNameKo())
-        .nameEn(request.getNameEn())
-        .logoUrl(logoUrl)
-        .commissionRate(request.getCommissionRate())
-        .status(BrandStatus.ACTIVE)
-        .createdAt(LocalDateTime.now())
-        .updatedAt(LocalDateTime.now())
-        .build();
+            .nameKo(request.getNameKo())
+            .nameEn(request.getNameEn())
+            .logoUrl(logoUrl)
+            .commissionRate(request.getCommissionRate())
+            .status(BrandStatus.ACTIVE)
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
 
     Brand createdBrand = brandRepository.save(brand);
 
     ChatRoom chatRoom = ChatRoom.builder()
-        .brand(createdBrand)
-        .type(ChatRoomType.GROUP)
-        .build();
+            .brand(createdBrand)
+            .type(ChatRoomType.GROUP)
+            .build();
 
     chatRoomRepository.save(chatRoom);
 
@@ -88,12 +88,12 @@ public class BrandService {
 
           // BrandResponseDTO 조립
           return BrandResponseDTO.builder()
-              .brandId(brand.getBrandId())
-              .nameKo(brand.getNameKo())
-              .nameEn(brand.getNameEn())
-              .logoURL(brand.getLogoUrl())
-              .products(productSummaries)
-              .build();
+                  .brandId(brand.getBrandId())
+                  .nameKo(brand.getNameKo())
+                  .nameEn(brand.getNameEn())
+                  .logoURL(brand.getLogoUrl())
+                  .products(productSummaries)
+                  .build();
         })
         .toList();
   }
@@ -111,11 +111,11 @@ public class BrandService {
    */
   private BrandResponseDTO convertToBrandResponse(Brand brand) {
     return BrandResponseDTO.builder()
-        .brandId(brand.getBrandId())
-        .nameKo(brand.getNameKo())
-        .nameEn(brand.getNameEn())
-        .logoURL(brand.getLogoUrl())
-        .build();
+            .brandId(brand.getBrandId())
+            .nameKo(brand.getNameKo())
+            .nameEn(brand.getNameEn())
+            .logoURL(brand.getLogoUrl())
+            .build();
   }
 
   private ProductSearchResponse.ProductSummary mapToProductSummary(Product product) {
@@ -135,8 +135,8 @@ public class BrandService {
         .orElse(null);
 
     return ProductSearchResponse.ProductSummary.builder()
-        .productId(product.getProductId())
-        .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
+            .productId(product.getProductId())
+            .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
         // 엔티티에 brandName 필드가 없다면 아래 줄을 brand.getNameKo() 등으로 교체
         .brandName(product.getBrand().getNameKo())
         .productName(product.getProductName())

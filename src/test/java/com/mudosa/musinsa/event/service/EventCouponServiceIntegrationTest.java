@@ -237,35 +237,35 @@ class EventCouponServiceIntegrationTest extends ServiceConfig {
         ProductOption productOption = ProductOption.create(product, price, inventory);
         productOptionRepository.save(productOption);
 
-        Coupon coupon = Coupon.create(
-                "통합테스트 쿠폰",
-                DiscountType.AMOUNT,
-                new BigDecimal("10000"),
-                startDate,
-                endDate,
-                couponStock
-        );
+        Coupon coupon = Coupon.builder()
+                .couponName("통합테스트 쿠폰")
+                .discountType(DiscountType.AMOUNT)
+                .discountValue(new BigDecimal("10000"))
+                .startDate(startDate)
+                .endDate(endDate)
+                .totalQuantity(couponStock)
+                .build();
         couponRepository.save(coupon);
 
-        Event event = Event.create(
-                "통합테스트 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                limitPerUser,
-                true,
-                startDate,
-                endDate,
-                coupon
-        );
+        Event event = Event.builder()
+                .title("통합테스트 이벤트")
+                .description("설명")
+                .eventType(Event.EventType.DROP)
+                .limitPerUser(limitPerUser)
+                .isPublic(true)
+                .startedAt(startDate)
+                .endedAt(endDate)
+                .coupon(coupon)
+                .build();
         event.open();
         eventRepository.save(event);
 
-        EventOption eventOption = EventOption.create(
-                event,
-                productOption,
-                new BigDecimal("80000"),
-                couponStock
-        );
+        EventOption eventOption = EventOption.builder()
+                .event(event)
+                .productOption(productOption)
+                .eventPrice(new BigDecimal("80000"))
+                .eventStock(couponStock)
+                .build();
         eventOptionRepository.save(eventOption);
 
         entityManager.flush();
@@ -311,25 +311,25 @@ class EventCouponServiceIntegrationTest extends ServiceConfig {
         LocalDateTime startDate = LocalDateTime.now().minusDays(1);
         LocalDateTime endDate = LocalDateTime.now().plusDays(30);
 
-        Event event = Event.create(
-                "쿠폰 없는 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                startDate,
-                endDate,
-                null // 쿠폰 없음!
-        );
+        Event event = Event.builder()
+                .title("쿠폰 없는 이벤트")
+                .description("설명")
+                .eventType(Event.EventType.DROP)
+                .limitPerUser(1)
+                .isPublic(true)
+                .startedAt(startDate)
+                .endedAt(endDate)
+                .coupon(null) // 쿠폰 없음!
+                .build();
         event.open();
         eventRepository.save(event);
 
-        EventOption eventOption = EventOption.create(
-                event,
-                productOption,
-                new BigDecimal("80000"),
-                100
-        );
+        EventOption eventOption = EventOption.builder()
+                .event(event)
+                .productOption(productOption)
+                .eventPrice(new BigDecimal("80000"))
+                .eventStock(100)
+                .build();
         eventOptionRepository.save(eventOption);
 
         entityManager.flush();
@@ -375,35 +375,35 @@ class EventCouponServiceIntegrationTest extends ServiceConfig {
         LocalDateTime startDate = LocalDateTime.now().minusDays(1);
         LocalDateTime endDate = LocalDateTime.now().plusDays(30);
 
-        Coupon coupon = Coupon.create(
-                "DRAFT 테스트 쿠폰",
-                DiscountType.AMOUNT,
-                new BigDecimal("10000"),
-                startDate,
-                endDate,
-                100
-        );
+        Coupon coupon = Coupon.builder()
+                .couponName("DRAFT 테스트 쿠폰")
+                .discountType(DiscountType.AMOUNT)
+                .discountValue(new BigDecimal("10000"))
+                .startDate(startDate)
+                .endDate(endDate)
+                .totalQuantity(100)
+                .build();
         couponRepository.save(coupon);
 
-        Event event = Event.create(
-                "DRAFT 이벤트",
-                "설명",
-                Event.EventType.DROP,
-                1,
-                true,
-                startDate,
-                endDate,
-                coupon
-        );
+        Event event = Event.builder()
+                .title("DRAFT 이벤트")
+                .description("설명")
+                .eventType(Event.EventType.DROP)
+                .limitPerUser(1)
+                .isPublic(true)
+                .startedAt(startDate)
+                .endedAt(endDate)
+                .coupon(coupon)
+                .build();
         // open() 호출 안 함! DRAFT 상태 유지
         eventRepository.save(event);
 
-        EventOption eventOption = EventOption.create(
-                event,
-                productOption,
-                new BigDecimal("80000"),
-                100
-        );
+        EventOption eventOption = EventOption.builder()
+                .event(event)
+                .productOption(productOption)
+                .eventPrice(new BigDecimal("80000"))
+                .eventStock(100)
+                .build();
         eventOptionRepository.save(eventOption);
 
         entityManager.flush();
