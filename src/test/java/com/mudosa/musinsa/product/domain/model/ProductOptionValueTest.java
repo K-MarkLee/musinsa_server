@@ -1,50 +1,118 @@
 package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.exception.BusinessException;
-import com.mudosa.musinsa.brand.domain.model.Brand;
+import com.mudosa.musinsa.exception.ErrorCode;
+
 import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DisplayName("ProductOptionValue는 옵션-값 매핑의 무결성과 식별자 갱신을 보장해야 한다")
+@DisplayName("ProductOptionValue 도메인 모델의 테스트")
 class ProductOptionValueTest {
 
     @Test
-    @DisplayName("productOption 또는 optionValue가 null이면 생성 시 BusinessException이 발생해야 한다")
-    void constructor_nullArgs_throws() {
+    @DisplayName("상품 옵션 값에 올바른 정보를 넣으면 상품 옵션 값이 정상적으로 생성된다.")
+    void createProductOptionValue() {
         // given
-        OptionValue ov = OptionValue.builder().optionName("size").optionValue("M").build();
-        Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
-        Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
-        Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-        ProductOption option = ProductOption.builder().product(product).productPrice(new Money(1000L)).inventory(inv).build();
+        ProductOption productOption = ProductOption.builder()
+            .productPrice(new Money(10000L))
+            .inventory(
+                Inventory.builder()
+                    .stockQuantity(new StockQuantity(10))
+                    .build()
+            )
+            .build();
 
-        // when / then
-        assertThatThrownBy(() -> ProductOptionValue.create(option, null)).isInstanceOf(BusinessException.class);
-        assertThatThrownBy(() -> ProductOptionValue.create(null, ov)).isInstanceOf(BusinessException.class);
+        OptionValue optionValue = OptionValue.create("색상", "레드");
+
+        // when
+        ProductOptionValue productOptionValue = ProductOptionValue.create(productOption, optionValue);
+
+        // then
+        assertThat(productOptionValue).isNotNull();
+        assertThat(productOptionValue.getProductOption()).isEqualTo(productOption);
+        assertThat(productOptionValue.getOptionValue()).isEqualTo(optionValue);
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @DisplayName("상품 옵션에 null 값을 넣으면 BusinessException이 발생한다.")
+    void createProductOptionValueWithNullProductOption(ProductOption invalidProductOption) {
+        // given
+        OptionValue optionValue = OptionValue.create("색상", "레드");
+
+        // when // then
+        assertThatThrownBy(() -> ProductOptionValue.create(invalidProductOption, optionValue))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.PRODUCT_OPTION_REQUIRED);
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @DisplayName("옵션 값에 null을 넣으면 BusinessException이 발생한다.")
+    void createProductOptionValueWithNullOptionValue(OptionValue invalidOptionValue) {
+        // given
+        ProductOption productOption = ProductOption.builder()
+            .productPrice(new Money(10000L))
+            .inventory(Inventory.create(new StockQuantity(10)))
+            .build();
+
+        // when // then
+        assertThatThrownBy(() -> ProductOptionValue.create(productOption, invalidOptionValue))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.OPTION_VALUE_REQUIRED);
     }
 
     @Test
-    @DisplayName("attachTo 호출 시 복합 식별자가 현재 연관 상태에 맞게 갱신되어야 한다")
-    void attachTo_updatesIdentifiers() {
+    @DisplayName("상품 옵션이 나중에 연결되면 연관관계가 설정된다.")
+    void attachToProductOption() {
         // given
-        OptionValue ov = OptionValue.builder().optionName("size").optionValue("M").build();
-        Brand brand = Brand.create("b","b", java.math.BigDecimal.ZERO);
-        Product product = Product.builder().brand(brand).productName("n").productInfo("i").productGenderType(ProductGenderType.ALL).brandName("b").categoryPath("c").isAvailable(true).build();
-        Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
-        ProductOption option = ProductOption.builder().product(product).productPrice(new Money(1000L)).inventory(inv).build();
+        ProductOption productOption = ProductOption.builder()
+            .productPrice(new Money(10000L))
+            .inventory(Inventory.create(new StockQuantity(10)))
+            .build();
+
+        OptionValue optionValue = OptionValue.create("색상", "레드");
+        ProductOptionValue productOptionValue = ProductOptionValue.builder()
+            .optionValue(optionValue)
+            .build();
 
         // when
-        ProductOptionValue pov = ProductOptionValue.builder().productOption(option).optionValue(ov).build();
+        productOptionValue.attachTo(productOption);
 
-        // then: getters reflect associations
-        assertThat(pov.getOptionValue()).isEqualTo(ov);
-        assertThat(pov.getProductOption()).isEqualTo(option);
-        // id fields may be null prior to persistence but object should be constructed
-        assertThat(pov).isNotNull();
+        // then
+        assertThat(productOptionValue.getProductOption()).isEqualTo(productOption);
     }
+
+    @Test
+    @DisplayName("복합 키가 올바르게 갱신된다.")
+    void refreshIdentifiers() {
+        // given
+        ProductOption productOption = ProductOption.builder()
+            .productPrice(new Money(10000L))
+            .inventory(Inventory.create(new StockQuantity(10)))
+            .build();
+
+        OptionValue optionValue = OptionValue.create("색상", "레드");
+        
+        ProductOptionValue productOptionValue = ProductOptionValue.builder()
+            .optionValue(optionValue)
+            .build();
+
+        // when
+        productOptionValue.attachTo(productOption);
+
+        // then
+        assertThat(productOptionValue.getId().getProductOptionId()).isEqualTo(productOption.getProductOptionId());
+        assertThat(productOptionValue.getId().getOptionValueId()).isEqualTo(optionValue.getOptionValueId());
+    }
+
 }
