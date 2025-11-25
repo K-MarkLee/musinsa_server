@@ -57,7 +57,7 @@ class CartItemTest {
         assertThatThrownBy(() -> CartItem.create(user, productOption, invalidQuantity))
             .isInstanceOf(BusinessException.class)
             .extracting(e -> ((BusinessException) e).getErrorCode())
-            .isEqualTo(ErrorCode.CART_ITEM_QUANTITY_REQUIRED);
+            .isEqualTo(ErrorCode.CART_ITEM_QUANTITY_INVALID);
     }
 
     @Test
