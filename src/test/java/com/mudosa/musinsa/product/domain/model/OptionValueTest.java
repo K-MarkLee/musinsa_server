@@ -47,7 +47,7 @@ class OptionValueTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {" "})
-    @DisplayName("옵션 값에 올바르지 못한(null, 빈값) 옵션명을 넣으면 BusinessException이 발생한다.")
+    @DisplayName("옵션값에 올바르지 못한(null, 빈값) 옵션값을 넣으면 BusinessException이 발생한다.")
     void createOptionValueWithInvalidOptionValue(String invalidOptionValue) {
         // given
         String optionName = "색상";
