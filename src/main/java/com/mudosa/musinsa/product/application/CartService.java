@@ -160,7 +160,7 @@ public class CartService {
             : null;
 
         if (stock == null) {
-            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "재고 정보가 유효하지 않습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_REQUIRED, "재고 정보가 유효하지 않습니다.");
         }
 
         if (stock < quantity) {
