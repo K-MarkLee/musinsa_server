@@ -69,11 +69,15 @@ public final class ProductCommandMapper {
 
     private static ProductDetailResponse.OptionDetail.OptionValueDetail toOptionValueDetail(ProductOptionValue mapping) {
         OptionValue optionValue = mapping.getOptionValue();
+        String optionName = optionValue != null ? optionValue.getOptionName() : null;
+        if (optionName != null) {
+            optionName = optionName.trim();
+        }
         return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
-                .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-                .optionName(optionValue != null ? optionValue.getOptionName() : null)
-                .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
-                .build();
+            .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
+            .optionName(optionName)
+            .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+            .build();
     }
 
     public static ProductManagerResponse toManagerResponse(Product product) {
