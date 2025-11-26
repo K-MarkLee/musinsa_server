@@ -19,22 +19,37 @@ tosspayments:
   base_cancel_url: ${TOSS_CANCEL_URL}
 
 fcm:
-  service-acount-file: key/fdbdproject.json
+  service-account-file: key/fdbdproject.json
   topic-name: fdbdMessage
   project-id: fdbdproject
 
+aws:
+  s3:
+    bucket: ${S3_BUCKET}
+    accessKey: ${S3_ACCESS_KEY}
+    secretKey: ${S3_SECRET_KEY}
+
+server:
+  port: 8080
+  address: 0.0.0.0
+
 management:
+  server:
+    port: 8082
   endpoints:
     web:
       exposure:
         include: prometheus, health, info
+
   tracing:
     enabled: true
     sampling:
       probability: 1.0
-    otlp:
-      tracing:
-        endpoint: http://172.16.24.31:4318/v1/traces
+
+  otlp:
+    tracing:
+      endpoint: http://172.16.24.21:4318/v1/traces #21 대신 본인 포트로
+
 
 logging:
   level:

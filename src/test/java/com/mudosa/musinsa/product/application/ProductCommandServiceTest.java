@@ -8,7 +8,6 @@ import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductOptionCreateRequest;
 import com.mudosa.musinsa.product.domain.model.*;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
-import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.repository.ImageRepository;
@@ -42,9 +41,6 @@ class ProductCommandServiceTest {
 
     @Mock
     private OptionValueRepository optionValueRepository;
-
-    @Mock
-    private ProductLikeRepository productLikeRepository;
 
     @Mock
     private BrandMemberRepository brandMemberRepository;
@@ -240,52 +236,6 @@ class ProductCommandServiceTest {
             assertThatThrownBy(() -> service.addProductOption(10L, 200L, req, 999L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("상품을 찾을 수 없습니다");
-        }
-    }
-
-    @Nested
-    @DisplayName("toggleLike 메서드")
-    class ToggleLikeTests {
-
-        @Test
-        @DisplayName("이미 좋아요가 존재하면 삭제하고 최신 카운트를 반환한다")
-        void toggle_whenExists_deletes() {
-            Product product = Product.builder().brand(null).productName("p").productInfo("i").brandName(null).categoryPath(null).isAvailable(true).build();
-            setId(product, "productId", 300L);
-
-            ProductLike existing = ProductLike.builder().product(product).userId(999L).build();
-            setId(existing, "productLikeId", 77L);
-
-            given(productRepository.findById(eq(300L))).willReturn(Optional.of(product));
-            given(productLikeRepository.findByProductAndUserId(eq(product), eq(999L))).willReturn(Optional.of(existing));
-            willDoNothing().given(productLikeRepository).delete(existing);
-            given(productLikeRepository.countByProduct(eq(product))).willReturn(5L);
-
-            long count = service.toggleLike(300L, 999L);
-
-            assertThat(count).isEqualTo(5L);
-            then(productLikeRepository).should().delete(existing);
-        }
-
-        @Test
-        @DisplayName("좋아요가 없으면 생성하고 최신 카운트를 반환한다")
-        void toggle_whenNotExists_saves() {
-            Product product = Product.builder().brand(null).productName("p").productInfo("i").brandName(null).categoryPath(null).isAvailable(true).build();
-            setId(product, "productId", 300L);
-
-            given(productRepository.findById(eq(300L))).willReturn(Optional.of(product));
-            given(productLikeRepository.findByProductAndUserId(eq(product), eq(111L))).willReturn(Optional.empty());
-            given(productLikeRepository.save(any(ProductLike.class))).willAnswer(inv -> {
-                ProductLike pl = inv.getArgument(0);
-                setId(pl, "productLikeId", 888L);
-                return pl;
-            });
-            given(productLikeRepository.countByProduct(eq(product))).willReturn(1L);
-
-            long count = service.toggleLike(300L, 111L);
-
-            assertThat(count).isEqualTo(1L);
-            then(productLikeRepository).should().save(any(ProductLike.class));
         }
     }
 

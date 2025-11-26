@@ -62,6 +62,7 @@ public enum ErrorCode {
   //inventory
   INVENTORY_NOT_FOUND("50001", "재고 정보를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
   INSUFFICIENT_STOCK("50002", "재고가 부족한 상품이 있습니다", HttpStatus.BAD_REQUEST),
+  INVENTORY_REQUIRED("50003", "재고 정보는 필수입니다.", HttpStatus.BAD_REQUEST),
 
     //event
     EVENT_NOT_FOUND("50003", "이벤트를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
@@ -90,7 +91,7 @@ public enum ErrorCode {
 
 
   //product
-  PRODUCT_OPTION_NOT_AVAILABLE("80001", "상품 옵션이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_NOT_VALID("80001", "상품 옵션이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
   DUPLICATE_PRODUCT_OPTION("80002", "상품 옵션은 중복될 수 없습니다.", HttpStatus.BAD_REQUEST),
   DUPLICATE_PRODUCT_IMAGE("80003", "중복된 상품 이미지가 존재합니다", HttpStatus.BAD_REQUEST),
   PRODUCT_INFO_REQUIRED("80004", "상품 정보들은 비워둘 수 없습니다.", HttpStatus.BAD_REQUEST),
@@ -103,6 +104,8 @@ public enum ErrorCode {
   PRODUCT_BRAND_NAME_REQUIRED("80011", "역정규화 브랜드 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_CATEGORY_PATH_REQUIRED("80012", "역정규화 카테고리 경로는 필수입니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_REQUIRED("80013", "상품은 필수입니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_NOT_AVAILABLE("80014", "상품 옵션이 판매 가능한 상태가 아닙니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_NOT_EXIST("80015", "요청한 상품 옵션이 존재하지 않습니다.", HttpStatus.BAD_REQUEST),
 
   //chat
   MESSAGE_OR_FILE_REQUIRED("110001", "메시지 또는 파일 중 하나는 반드시 포함되어야 합니다.", HttpStatus.BAD_REQUEST),
@@ -119,6 +122,7 @@ public enum ErrorCode {
   INVENTORY_STOCK_QUANTITY_REQUIRED("90002", "재고 수량은 필수입니다.", HttpStatus.BAD_REQUEST),
   INVENTORY_INSUFFICIENT_STOCK("90003", "재고가 부족합니다.", HttpStatus.BAD_REQUEST),
   INVALID_INVENTORY_UPDATE_VALUE("90004", "재고 변경 값은 0이 될 수 없습니다.", HttpStatus.BAD_REQUEST),
+  INVENTORY_STOCK_QUANTITY_INVALID("90005", "재고 수량이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
 
   //image
   IMAGE_REQUIRED("100001", "이미지는 필수입니다.", HttpStatus.BAD_REQUEST),
@@ -133,6 +137,7 @@ public enum ErrorCode {
   CART_ITEM_USER_REQUIRED("B0001", "사용자는 필수입니다.", HttpStatus.BAD_REQUEST),
   CART_ITEM_PRODUCT_OPTION_REQUIRED("B0002", "상품 옵션은 필수입니다.", HttpStatus.BAD_REQUEST),
   CART_ITEM_QUANTITY_INVALID("B0003", "수량은 1개 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
+  CART_ITEM_QUANTITY_REQUIRED("B0004", "수량은 필수입니다.", HttpStatus.BAD_REQUEST),
 
   //category
   CATEGORY_NAME_REQUIRED("C0001", "카테고리 이름은 필수입니다.", HttpStatus.BAD_REQUEST),
@@ -141,11 +146,10 @@ public enum ErrorCode {
   // Option
   OPTION_NAME_REQUIRED("D0001", "옵션명은 필수입니다.", HttpStatus.BAD_REQUEST),
   OPTION_VALUE_REQUIRED("D0002", "옵션 값은 필수입니다.", HttpStatus.BAD_REQUEST),
-  PRODUCT_PRICE_INVALID("D0003", "상품 옵션 가격이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_PRICE_REQUIRED("D0003", "상품 옵션 가격은 필수입니다.", HttpStatus.BAD_REQUEST),
   OPTION_VALUE_ID_REQUIRED("D0004", "옵션 값 식별자는 필수입니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_OPTION_ID_REQUIRED("D0005", "상품 옵션 식별자는 필수입니다.", HttpStatus.BAD_REQUEST),
   RECOVER_VALUE_INVALID("D0006", "복구 값이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
-  PRODUCT_PRICE_REQUIRED("D0007", "상품 옵션 가격은 필수입니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_STOCK_QUANTITY_REQUIRED("D0008", "상품 옵션 재고 수량은 필수입니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_OPTION_VALUE_ID_REQUIRED("D0009", "상품 옵션 값 식별자는 최소 1개 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
   INVALID_PRODUCT_OPTION_VALUE_IDS("D0010", "상품 옵션 값 식별자가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
@@ -153,11 +157,19 @@ public enum ErrorCode {
   INVALID_PRODUCT_OPTION_VALUE("D0012", "상품 옵션 값이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
   REQUIRED_TWO_DIFFERENT_OPTION_NAMES("D0013", "서로 다른 두 가지 옵션명이 필요합니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE("D0014", "상품 옵션은 각 색상과 사이즈의 값이 1개여야 합니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_OPTION_OUT_OF_STOCK("D0015", "상품 옵션의 재고가 부족합니다.", HttpStatus.BAD_REQUEST),
+  
   // user
   USER_ID_REQUIRED("E0001", "사용자 ID는 필수입니다.", HttpStatus.BAD_REQUEST),
 
   //stock
-  STOCK_QUANTITY_INVALID("F0001", "재고 수량이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
+  STOCK_QUANTITY_INVALID("F0001", "재고 수량이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+  STOCK_QUANTITY_REQUIRED("F0002", "재고 수량은 필수입니다.", HttpStatus.BAD_REQUEST),
+  STOCK_QUANTITY_CANNOT_BE_NEGATIVE("F0003", "재고 수량은 음수가 될 수 없습니다.", HttpStatus.BAD_REQUEST),
+  STOCK_QUANTITY_CANNOT_BE_NULL("F0004", "재고 수량은 null일 수 없습니다.", HttpStatus.BAD_REQUEST),
+  STOCK_QUANTITY_OUT_OF_STOCK("F0005", "재고 수량이 부족합니다.", HttpStatus.BAD_REQUEST),
+  STOCK_QUANTITY_CANNOT_BE_LESS_THAN_ONE("F0006", "재고 감소 수량은 1 이상이어야 합니다.", HttpStatus.BAD_REQUEST)
+  ;
   
   
 

@@ -121,15 +121,15 @@ public class ProductInventoryService {
                                                    Long productId,
                                                    Long productOptionId) {
         ProductOption productOption = productOptionRepository.findByIdWithProductAndInventory(productOptionId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "상품 옵션을 찾을 수 없습니다. productOptionId=" + productOptionId));
+            .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_VALID));
 
         Product product = productOption.getProduct();
         if (product == null) {
-            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "상품 정보를 찾을 수 없습니다. productOptionId=" + productOptionId);
+            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_FOUND);
         }
 
         if (!Objects.equals(product.getProductId(), productId)) {
-            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "요청한 상품과 옵션이 일치하지 않습니다. productId=" + productId);
+            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_EXIST);
         }
 
         validateBrandOwnership(product, brandId);

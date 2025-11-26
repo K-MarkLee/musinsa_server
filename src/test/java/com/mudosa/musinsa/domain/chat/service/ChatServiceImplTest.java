@@ -1157,9 +1157,9 @@ class ChatServiceImplTest extends ServiceConfig {
     @Test
     void getChatMessages_WithCursor_ReturnsNextPage() {
       // given
+      User user = saveUser("user");
       Brand brand = saveBrand("브랜드", "Brand");
       ChatRoom chatRoom = saveChatRoom(brand);
-      User user = saveUser("user");
       ChatPart chatPart = saveChatPartOfUser(chatRoom, user);
 
       // 메시지 30개 생성 (createdAt 오름차순으로 저장 → 조회는 최신순)
