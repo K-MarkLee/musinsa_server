@@ -27,7 +27,7 @@ class FcmServiceTest extends ServiceConfig {
             String token = "test_token";
 
             FBTokenDTO fbTokenDTO = FBTokenDTO.builder()
-                    .firebaseTokenKey(token)
+                    .token(token)
                     .build();
             List<FBTokenDTO> fbTokenDTOList = List.of(fbTokenDTO);
 

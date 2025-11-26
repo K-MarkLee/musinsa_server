@@ -1,19 +1,25 @@
 package com.mudosa.musinsa.fbtoken.model;
 
+import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name="firebase_token")
+@Table(name="firebase_token",
+uniqueConstraints = {
+        @UniqueConstraint(name="UC_firebase_token_key", columnNames={"firebase_token_key","user_id"})
+})
 @Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class FirebaseToken {
+public class FirebaseToken extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long tokenId;
+
+    @Column(name="firebase_token_key")
     private String firebaseTokenKey;
 
     @ManyToOne
