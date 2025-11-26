@@ -12,11 +12,12 @@ spring:
       hibernate:
         format_sql: true
 
+
 tosspayments:
-  secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
-  client-key: test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm
-  confirm_url: ${TOSS_CONFIRM_URL}
-  base_cancel_url: ${TOSS_CANCEL_URL}
+  secret-key: ${TOSS_SECRET_KEY:test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}
+  client-key: ${TOSS_CLIENT_KEY:test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm}
+  confirm_url: https://api.tosspayments.com/v1/payments/confirm
+  base_cancel_url: https://api.tosspayments.com/v1/payments
 
 fcm:
   service-acount-file: key/fdbdproject.json
@@ -27,14 +28,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: prometheus, health, info
-  tracing:
-    enabled: true
-    sampling:
-      probability: 1.0
-    otlp:
-      tracing:
-        endpoint: http://172.16.24.31:4318/v1/traces
+        include: prometheus, health, info # 필요한 것만 나열하거나 "*"로 전체 노출
 
 logging:
   level:
