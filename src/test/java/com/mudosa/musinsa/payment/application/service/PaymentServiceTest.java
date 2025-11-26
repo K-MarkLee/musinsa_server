@@ -15,7 +15,10 @@ import com.mudosa.musinsa.order.domain.repository.OrderRepository;
 import com.mudosa.musinsa.payment.application.dto.PaymentCreateDto;
 import com.mudosa.musinsa.payment.application.dto.PaymentCreationResult;
 import com.mudosa.musinsa.payment.application.dto.PaymentResponseDto;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelRequest;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelResponseDto;
 import com.mudosa.musinsa.payment.application.dto.request.PaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.response.PaymentCancelResponse;
 import com.mudosa.musinsa.payment.application.dto.response.PaymentConfirmResponse;
 import com.mudosa.musinsa.payment.domain.model.*;
 import com.mudosa.musinsa.payment.domain.repository.PaymentLogRepository;
@@ -541,6 +544,237 @@ class PaymentServiceTest extends ServiceConfig {
 
         // then
         assertThat(response.getOrderNo()).isEqualTo(testData.orderNo);
+    }
+
+    @DisplayName("결제 취소 성공 시 결제 상태가 CANCELLED로 변경된다")
+    @Test
+    void cancelPayment_Success() {
+        // given
+        TestData testData = createTestData("ORD_CANCEL_001", 100, 2);
+
+        // 결제 생성 및 승인
+        Payment payment = Payment.create(
+                testData.orderId,
+                new BigDecimal(20000L),
+                PgProvider.TOSS,
+                testData.userId
+        );
+        LocalDateTime cancelledAt = LocalDateTime.of(2025, 11,12, 0,0);
+
+        payment.approve("test_pg_tx_123", testData.userId, LocalDateTime.now(), "카드");
+        Payment savedPayment = paymentRepository.save(payment);
+
+        // PG 취소 응답 모킹
+        PaymentCancelResponseDto pgCancelResponse = PaymentCancelResponseDto.builder()
+                .paymentKey("test_pg_tx_123")
+                .cancelledAt(cancelledAt)
+                .build();
+
+        when(paymentProcessor.processCancelPayment(any(PaymentCancelRequest.class)))
+                .thenReturn(pgCancelResponse);
+
+        PaymentCancelRequest request = new PaymentCancelRequest(
+                "고객 변심",
+                "test_pg_tx_123",
+                PgProvider.TOSS
+        );
+
+
+        // when
+        PaymentCancelResponse response = paymentService.cancelPayment(request, testData.userId, cancelledAt);
+
+        // then
+        assertThat(response.getPaymentKey()).isEqualTo("test_pg_tx_123");
+        assertThat(response.getCancelledAt()).isEqualTo(cancelledAt);
+
+        Payment cancelledPayment = paymentRepository.findById(savedPayment.getId()).orElseThrow();
+        assertThat(cancelledPayment.getStatus()).isEqualTo(PaymentStatus.CANCELLED);
+    }
+
+    @DisplayName("결제 취소 성공 시 CANCELLED 로그가 생성된다")
+    @Test
+    void createCancelledLogWhenCancelSuccess() {
+        // given
+        TestData testData = createTestData("ORD_CANCEL_002", 100, 2);
+
+        Payment payment = Payment.create(
+                testData.orderId,
+                new BigDecimal(20000L),
+                PgProvider.TOSS,
+                testData.userId
+        );
+        payment.approve("test_pg_tx_123", testData.userId, LocalDateTime.now(), "카드");
+        Payment savedPayment = paymentRepository.save(payment);
+
+        PaymentCancelResponseDto pgCancelResponse = PaymentCancelResponseDto.builder()
+                .paymentKey("test_pg_tx_123")
+                .cancelledAt(LocalDateTime.now())
+                .build();
+
+        when(paymentProcessor.processCancelPayment(any(PaymentCancelRequest.class)))
+                .thenReturn(pgCancelResponse);
+
+        PaymentCancelRequest request = new PaymentCancelRequest(
+                "고객 변심",
+                "test_pg_tx_123",
+                PgProvider.TOSS
+        );
+
+        // when
+        paymentService.cancelPayment(request, testData.userId, LocalDateTime.now());
+
+        // then
+        List<PaymentLog> logs = paymentLogRepository.findAllByPaymentId(savedPayment.getId());
+        assertThat(logs)
+                .extracting("eventStatus")
+                .contains(PaymentEventType.CREATED, PaymentEventType.APPROVED, PaymentEventType.CANCELLED);
+    }
+
+    @DisplayName("결제 취소 성공 시 재고가 복원된다")
+    @Test
+    void restoreStockWhenCancelSuccess() {
+        // given
+        TestData testData = createTestData("ORD_CANCEL_003", 100, 2);
+
+        Payment payment = Payment.create(
+                testData.orderId,
+                new BigDecimal(20000L),
+                PgProvider.TOSS,
+                testData.userId
+        );
+        payment.approve("test_pg_tx_123", testData.userId, LocalDateTime.now(), "카드");
+        paymentRepository.save(payment);
+
+        // 재고 차감 시뮬레이션
+        Inventory inventory = inventoryRepository.findById(testData.inventoryId).orElseThrow();
+        inventory.decrease(2);
+        inventoryRepository.save(inventory);
+
+        PaymentCancelResponseDto pgCancelResponse = PaymentCancelResponseDto.builder()
+                .paymentKey("test_pg_tx_123")
+                .cancelledAt(LocalDateTime.now())
+                .build();
+
+        when(paymentProcessor.processCancelPayment(any(PaymentCancelRequest.class)))
+                .thenReturn(pgCancelResponse);
+
+        PaymentCancelRequest request = new PaymentCancelRequest(
+                "고객 변심",
+                "test_pg_tx_123",
+                PgProvider.TOSS
+        );
+
+        // when
+        paymentService.cancelPayment(request, testData.userId, LocalDateTime.now());
+
+        // then
+        Inventory restoredInventory = inventoryRepository.findById(testData.inventoryId).orElseThrow();
+        assertThat(restoredInventory.getStockQuantity().getValue()).isEqualTo(100);
+    }
+
+    @DisplayName("이미 취소된 결제를 다시 취소하려고 하면 예외가 발생한다")
+    @Test
+    void cancelAlreadyCancelledPayment() {
+        // given
+        TestData testData = createTestData("ORD_CANCEL_006", 100, 2);
+
+        Payment payment = Payment.create(
+                testData.orderId,
+                new BigDecimal(20000L),
+                PgProvider.TOSS,
+                testData.userId
+        );
+        payment.approve("test_pg_tx_123", testData.userId, LocalDateTime.now(), "카드");
+        payment.cancel("이미 취소됨", testData.userId, LocalDateTime.now());
+        paymentRepository.save(payment);
+
+        PaymentCancelRequest request = new PaymentCancelRequest(
+                "고객 변심",
+                "test_pg_tx_123",
+                PgProvider.TOSS
+        );
+
+        // when & then
+        assertThatThrownBy(() -> paymentService.cancelPayment(request, testData.userId, LocalDateTime.now()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("결제 취소 상태에서는 취소할 수 없습니다");
+    }
+
+    @DisplayName("PG 취소 실패 시 결제 상태가 변경되지 않는다")
+    @Test
+    void paymentStatusNotChangedWhenPgCancelFails() {
+        // given
+        TestData testData = createTestData("ORD_CANCEL_008", 100, 2);
+
+        Payment payment = Payment.create(
+                testData.orderId,
+                new BigDecimal(20000L),
+                PgProvider.TOSS,
+                testData.userId
+        );
+        payment.approve("test_pg_tx_123", testData.userId, LocalDateTime.now(), "카드");
+        Payment savedPayment = paymentRepository.save(payment);
+
+        when(paymentProcessor.processCancelPayment(any(PaymentCancelRequest.class)))
+                .thenThrow(new BusinessException(ErrorCode.PAYMENT_CANCEL_FAILED, "PG사 취소 거부"));
+
+        PaymentCancelRequest request = new PaymentCancelRequest(
+                "고객 변심",
+                "test_pg_tx_123",
+                PgProvider.TOSS
+        );
+
+        // when & then
+        assertThatThrownBy(() -> paymentService.cancelPayment(request, testData.userId, LocalDateTime.now()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("PG사 취소 거부");
+
+        Payment unchangedPayment = paymentRepository.findById(savedPayment.getId()).orElseThrow();
+        assertThat(unchangedPayment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+    }
+
+    @DisplayName("결제 취소 실패 시 재고가 차감되지 않는다")
+    @Test
+    void stockNotChangedWhenPgCancelFails() {
+        // given
+        TestData testData = createTestData("ORD_CANCEL_003", 100, 2);
+
+        Payment payment = Payment.create(
+                testData.orderId,
+                new BigDecimal(20000L),
+                PgProvider.TOSS,
+                testData.userId
+        );
+        payment.approve("test_pg_tx_123", testData.userId, LocalDateTime.now(), "카드");
+        paymentRepository.save(payment);
+
+        // 재고 차감 시뮬레이션
+        Inventory inventory = inventoryRepository.findById(testData.inventoryId).orElseThrow();
+        inventory.decrease(2);
+        inventoryRepository.save(inventory);
+
+        PaymentCancelResponseDto pgCancelResponse = PaymentCancelResponseDto.builder()
+                .paymentKey("test_pg_tx_123")
+                .cancelledAt(LocalDateTime.now())
+                .build();
+
+        when(paymentProcessor.processCancelPayment(any(PaymentCancelRequest.class)))
+                .thenThrow(new BusinessException(ErrorCode.PAYMENT_CANCEL_FAILED, "PG사 취소 거부"));
+
+        PaymentCancelRequest request = new PaymentCancelRequest(
+                "고객 변심",
+                "test_pg_tx_123",
+                PgProvider.TOSS
+        );
+
+        // when
+        assertThatThrownBy(() -> paymentService.cancelPayment(request, testData.userId, LocalDateTime.now()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("PG사 취소 거부");
+
+        // then
+        Inventory restoredInventory = inventoryRepository.findById(testData.inventoryId).orElseThrow();
+        assertThat(restoredInventory.getStockQuantity().getValue()).isEqualTo(98);
     }
 
 

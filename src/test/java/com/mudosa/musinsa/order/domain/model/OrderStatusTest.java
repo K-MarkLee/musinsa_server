@@ -34,18 +34,6 @@ class OrderStatusTest {
         assertThat(result).isEqualTo(OrderStatus.CANCELLED);
     }
 
-    @Test
-    @DisplayName("PENDING → REFUNDED 전이 시도 시 예외 발생")
-    void pending_Refund_ThrowsException() {
-        // given
-        OrderStatus status = OrderStatus.PENDING;
-
-        // when & then
-        assertThatThrownBy(status::refund)
-            .isInstanceOf(BusinessException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_STATUS_TRANSITION)
-            .hasMessageContaining("결제 대기 상태에서는 환불할 수 없습니다");
-    }
 
     @Test
     @DisplayName("PENDING → PENDING 롤백 시 상태 유지")
@@ -54,7 +42,7 @@ class OrderStatusTest {
         OrderStatus status = OrderStatus.PENDING;
 
         // when
-        OrderStatus result = status.rollbackToPending();
+        OrderStatus result = status.rollback();
 
         // then
         assertThat(result).isEqualTo(OrderStatus.PENDING);
@@ -88,26 +76,13 @@ class OrderStatusTest {
     }
 
     @Test
-    @DisplayName("COMPLETED → REFUNDED 전이 성공")
-    void completed_Refund_Success() {
-        // given
-        OrderStatus status = OrderStatus.COMPLETED;
-
-        // when
-        OrderStatus result = status.refund();
-
-        // then
-        assertThat(result).isEqualTo(OrderStatus.REFUNDED);
-    }
-
-    @Test
     @DisplayName("COMPLETED → PENDING 롤백 성공")
     void completed_Rollback_Success() {
         // given
         OrderStatus status = OrderStatus.COMPLETED;
 
         // when
-        OrderStatus result = status.rollbackToPending();
+        OrderStatus result = status.rollback();
 
         // then
         assertThat(result).isEqualTo(OrderStatus.PENDING);
@@ -142,88 +117,18 @@ class OrderStatusTest {
             .hasMessageContaining("취소");
     }
 
-    @Test
-    @DisplayName("CANCELLED → REFUNDED 전이 시도 시 예외 발생")
-    void cancelled_Refund_ThrowsException() {
-        // given
-        OrderStatus status = OrderStatus.CANCELLED;
-
-        // when & then
-        assertThatThrownBy(status::refund)
-            .isInstanceOf(BusinessException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_STATUS_TRANSITION)
-            .hasMessageContaining("주문 취소")
-            .hasMessageContaining("환불");
-    }
 
     @Test
-    @DisplayName("CANCELLED → PENDING 롤백 시도 시 예외 발생")
+    @DisplayName("CANCELLED → COMPLETED 롤백 시도 시 예외 발생")
     void cancelled_Rollback_ThrowsException() {
         // given
         OrderStatus status = OrderStatus.CANCELLED;
 
-        // when & then
-        assertThatThrownBy(status::rollbackToPending)
-            .isInstanceOf(BusinessException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_STATUS_TRANSITION)
-            .hasMessageContaining("주문 취소")
-            .hasMessageContaining("롤백");
+        // when
+        OrderStatus result = status.rollback();
+
+        // then
+        assertThat(result).isEqualTo(OrderStatus.COMPLETED);
     }
 
-
-    @Test
-    @DisplayName("REFUNDED → COMPLETED 전이 시도 시 예외 발생")
-    void refunded_Complete_ThrowsException() {
-        // given
-        OrderStatus status = OrderStatus.REFUNDED;
-
-        // when & then
-        assertThatThrownBy(status::complete)
-            .isInstanceOf(BusinessException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_STATUS_TRANSITION)
-            .hasMessageContaining("환불 완료")
-            .hasMessageContaining("완료");
-    }
-
-    @Test
-    @DisplayName("REFUNDED → CANCELLED 전이 시도 시 예외 발생")
-    void refunded_Cancel_ThrowsException() {
-        // given
-        OrderStatus status = OrderStatus.REFUNDED;
-
-        // when & then
-        assertThatThrownBy(status::cancel)
-            .isInstanceOf(BusinessException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_STATUS_TRANSITION)
-            .hasMessageContaining("환불 완료")
-            .hasMessageContaining("취소");
-    }
-
-    @Test
-    @DisplayName("REFUNDED → REFUNDED 전이 시도 시 예외 발생")
-    void refunded_Refund_ThrowsException() {
-        // given
-        OrderStatus status = OrderStatus.REFUNDED;
-
-        // when & then
-        assertThatThrownBy(status::refund)
-            .isInstanceOf(BusinessException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_STATUS_TRANSITION)
-            .hasMessageContaining("환불 완료")
-            .hasMessageContaining("환불");
-    }
-
-    @Test
-    @DisplayName("REFUNDED → PENDING 롤백 시도 시 예외 발생")
-    void refunded_Rollback_ThrowsException() {
-        // given
-        OrderStatus status = OrderStatus.REFUNDED;
-
-        // when & then
-        assertThatThrownBy(status::rollbackToPending)
-            .isInstanceOf(BusinessException.class)
-            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_STATUS_TRANSITION)
-            .hasMessageContaining("환불 완료")
-            .hasMessageContaining("롤백");
-    }
 }

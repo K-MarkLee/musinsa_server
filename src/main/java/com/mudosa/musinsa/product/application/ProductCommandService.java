@@ -15,13 +15,11 @@ import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Image;
 import com.mudosa.musinsa.product.domain.model.Product;
-import com.mudosa.musinsa.product.domain.model.ProductLike;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
 import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ImageRepository;
-import com.mudosa.musinsa.product.domain.repository.ProductLikeRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
@@ -48,7 +46,6 @@ public class ProductCommandService {
 	
 	private final ProductRepository productRepository;
 	private final OptionValueRepository optionValueRepository;
-	private final ProductLikeRepository productLikeRepository;
 	private final BrandMemberRepository brandMemberRepository;
 	private final ProductOptionRepository productOptionRepository;
 	private final ImageRepository imageRepository;
@@ -255,24 +252,6 @@ public class ProductCommandService {
 		return ProductCommandMapper.toManagerResponse(product);
 	}
 
-	/**
-	 * 특정 사용자의 좋아요 상태를 토글한 뒤 결과 카운트를 반환한다. 현재는 미사용
-	 */
-	@Transactional
-	public long toggleLike(Long productId, Long userId) {
-		Product product = productRepository.findById(productId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "상품을 찾을 수 없습니다. productId=" + productId));
-
-		productLikeRepository.findByProductAndUserId(product, userId)
-			.ifPresentOrElse(
-				productLikeRepository::delete,
-				() -> productLikeRepository.save(ProductLike.create(product, userId))
-			);
-
-		return productLikeRepository.countByProduct(product);
-	}
-
-
 	// 브랜드 멤버 권한을 검증한다.
 	private void validateBrandMember(Long brandId, Long userId) {
 		if (brandId == null) {
@@ -359,34 +338,34 @@ public class ProductCommandService {
 	// 옵션 값 ID 목록으로부터 옵션 조합을 해석한다.
 	private OptionCombination resolveCombination(List<Long> optionValueIds, Map<Long, OptionValue> optionValueMap) {
 		if (optionValueIds == null || optionValueIds.size() != OptionCombination.REQUIRED_OPTION_COUNT) {
-			throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "상품 옵션은 사이즈와 색상 두 값으로 구성되어야 합니다.");
+			throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
 		}
 		Long sizeId = null;
 		Long colorId = null;
 		for (Long optionValueId : optionValueIds) {
 			OptionValue optionValue = optionValueMap.get(optionValueId);
 			if (optionValue == null) {
-				throw new BusinessException(ErrorCode.INVALID_PRODUCT_OPTION_VALUE_IDS, "존재하지 않는 옵션 값이 포함되어 있습니다.");
+				throw new BusinessException(ErrorCode.INVALID_PRODUCT_OPTION_VALUE);
 			}
 			String optionName = normalizeOptionName(optionValue.getOptionName());
 			if (OptionCombination.SIZE_OPTION_NAME.equals(optionName)) {
 				if (sizeId != null) {
-					throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "옵션에는 서로 다른 사이즈 값이 1개만 포함되어야 합니다.");
+					throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
 				}
 				sizeId = optionValue.getOptionValueId();
 				continue;
 			}
 			if (OptionCombination.COLOR_OPTION_NAME.equals(optionName)) {
 				if (colorId != null) {
-					throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "옵션에는 서로 다른 색상 값이 1개만 포함되어야 합니다.");
+					throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE);
 				}
 				colorId = optionValue.getOptionValueId();
 				continue;
 			}
-			throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "옵션은 사이즈와 색상 값으로만 구성될 수 있습니다.");
+			throw new BusinessException(ErrorCode.INVALID_PRODUCT_OPTION_VALUE);
 		}
 		if (sizeId == null || colorId == null) {
-			throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE, "옵션에는 사이즈와 색상이 각각 1개씩 포함되어야 합니다.");
+			throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
 		}
 		return new OptionCombination(sizeId, colorId);
 	}

@@ -34,13 +34,13 @@ public class CartItem extends BaseEntity {
 
     // 외부 노출 생성 메서드 + 필수 값 검증
     public static CartItem create(User user, ProductOption productOption, Integer quantity) {
-        if (user == null) {
-            throw new BusinessException(ErrorCode.CART_ITEM_USER_REQUIRED);
-        }
         if (productOption == null) {
             throw new BusinessException(ErrorCode.CART_ITEM_PRODUCT_OPTION_REQUIRED);
         }
-        if (quantity == null || quantity <= 0) {
+        if (quantity == null) {
+            throw new BusinessException(ErrorCode.CART_ITEM_QUANTITY_REQUIRED);
+        }
+        if (quantity <= 0) {
             throw new BusinessException(ErrorCode.CART_ITEM_QUANTITY_INVALID);
         }
         return new CartItem(user, productOption, quantity);

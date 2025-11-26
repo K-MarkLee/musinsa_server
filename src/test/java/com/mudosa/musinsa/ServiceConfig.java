@@ -70,7 +70,7 @@ public abstract class ServiceConfig {
   @MockitoBean
   private JobRepository jobRepository;
   @MockitoBean
-  private FcmService fcmService;
+  protected FcmService fcmService;
 
   @Autowired
   protected ChatRoomRepository chatRoomRepository;

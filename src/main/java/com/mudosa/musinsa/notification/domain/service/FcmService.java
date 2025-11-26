@@ -20,8 +20,8 @@ import java.util.List;
 @ConditionalOnProperty(name = "fcm.enabled", havingValue = "true", matchIfMissing = true)
 public class FcmService {
 
-    @Value("${fcm.service-acount-file}")
-    private String serviceAcountFilePath;
+    @Value("${fcm.service-account-file}")
+    private String serviceAccountFilePath;
 
     @Value("${fcm.topic-name}")
     private String topicName;
@@ -30,14 +30,21 @@ public class FcmService {
     private String projectId;
 
     @PostConstruct
-    public void initialize() throws IOException {
+    public void initialize() {
+        if (FirebaseApp.getApps().isEmpty()) {
+            try {
+                FirebaseOptions options = FirebaseOptions.builder()
+                        .setCredentials(GoogleCredentials.fromStream(new ClassPathResource(serviceAccountFilePath).getInputStream()))
+                        .setProjectId(projectId)
+                        .build();
 
-        FirebaseOptions options = FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(new ClassPathResource(serviceAcountFilePath).getInputStream()))
-                .setProjectId(projectId)
-                .build();
-
-        FirebaseApp.initializeApp(options);
+                FirebaseApp.initializeApp(options);
+                log.info("FirebaseApp has been initialized.");
+            } catch (IOException e) {
+                log.error("Failed to initialize FirebaseApp", e);
+                throw new IllegalStateException("Failed to initialize FirebaseApp", e);
+            }
+        }
     }
 
 //    public void sendMessageByTopic(String title, String body) throws IOException, FirebaseMessagingException {
@@ -50,14 +57,14 @@ public class FcmService {
 //            .build());
 //    }
 
-    public void sendMessageByToken(String title,String body,List<FBTokenDTO> tokenList){
+    public boolean sendMessageByToken(String title,String body,List<FBTokenDTO> tokenList){
         List<String> registrationTokens = tokenList.stream()
-                .map(FBTokenDTO::getFirebaseTokenKey)
+                .map(FBTokenDTO::getToken)
                 .toList();
 
         if(registrationTokens.isEmpty()){
             log.info("메세지를 보낼 토큰이 없습니다.");
-            return;
+            return false;
         }
 
         MulticastMessage message = MulticastMessage.builder()
@@ -69,13 +76,15 @@ public class FcmService {
                 .build();
 
         try {
-            BatchResponse response = FirebaseMessaging.getInstance().sendMulticast(message);
+            BatchResponse response = FirebaseMessaging.getInstance().sendEachForMulticast(message);
             if (response.getFailureCount() > 0){
                 log.warn("FCM messages failed to send to {} devices.",response.getFailureCount());
             }
             log.info("Successfully sent FCM messages to {} devices.",response.getSuccessCount());
+            return true;
         } catch (FirebaseMessagingException e) {
             log.error("Error sending Multicast message.", e);
+            return false;
         }
     }
 }

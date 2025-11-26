@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentConfirmRequest {
+
     @NotBlank(message = "결제 키는 필수입니다")
     private String paymentKey;
 

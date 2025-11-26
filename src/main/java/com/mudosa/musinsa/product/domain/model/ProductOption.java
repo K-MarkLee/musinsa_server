@@ -12,8 +12,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Comparator;
-import java.util.Objects;
 
 // 상품 옵션과 가격, 재고를 관리하는 엔티티이다.
 @Entity
@@ -45,14 +43,11 @@ public class ProductOption extends BaseEntity {
 
     // 외부 노출 생성 메서드 + 필수 값 검증
     public static ProductOption create(Product product, Money productPrice, Inventory inventory) {
-        if (product == null) {
-            throw new BusinessException(ErrorCode.PRODUCT_REQUIRED);
-        }
         if (productPrice == null || productPrice.isLessThanOrEqual(Money.ZERO)) {
-            throw new BusinessException(ErrorCode.PRODUCT_PRICE_INVALID);
+            throw new BusinessException(ErrorCode.PRODUCT_PRICE_REQUIRED);
         }
         if (inventory == null) {
-            throw new BusinessException(ErrorCode.INVENTORY_NOT_FOUND);
+            throw new BusinessException(ErrorCode.INVENTORY_REQUIRED);
         }
 
         return new ProductOption(product, productPrice, inventory);
@@ -65,26 +60,27 @@ public class ProductOption extends BaseEntity {
         this.inventory = inventory;
     }
 
+    // 옵션 값 매핑을 추가하고 현재 옵션과 연결한다.
+    public void addOptionValue(ProductOptionValue optionValue) {
+        if (optionValue == null) {
+            throw new BusinessException(ErrorCode.OPTION_VALUE_REQUIRED);
+        }
+        optionValue.attachTo(this);
+        this.productOptionValues.add(optionValue);
+    }
+
     // 상품 애그리거트에서만 호출해 양방향 연관을 설정한다.
     void setProduct(Product product) {
         this.product = product;
         this.productOptionValues.forEach(value -> value.attachTo(this));
     }
 
-    // 옵션 값 매핑을 추가하고 현재 옵션과 연결한다.
-    public void addOptionValue(ProductOptionValue optionValue) {
-        if (optionValue == null) {
-            return;
-        }
-        optionValue.attachTo(this);
-        this.productOptionValues.add(optionValue);
-    }
-
     // 주문 과정에서 옵션 재고를 차감한다.
     public void decreaseStock(int quantity) {
         if (quantity <= 0) {
-            throw new BusinessException(ErrorCode.INVALID_INVENTORY_UPDATE_VALUE);
+            throw new BusinessException(ErrorCode.INVALID_INVENTORY_UPDATE_VALUE, "차감 수량은 1 이상이어야 합니다.");
         }
+
         try {
             this.inventory.decrease(quantity);
         } catch (IllegalStateException ex) {
@@ -97,7 +93,6 @@ public class ProductOption extends BaseEntity {
         if (quantity <= 0) {
             throw new BusinessException(ErrorCode.RECOVER_VALUE_INVALID, "복구 수량은 1 이상이어야 합니다.");
         }
-
         this.inventory.increase(quantity);
     }
 
@@ -105,7 +100,7 @@ public class ProductOption extends BaseEntity {
     public void validateAvailable() {
         if (this.inventory.getStockQuantity() == null
             || this.inventory.getStockQuantity().getValue() <= 0) {
-            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE);
+            throw new BusinessException(ErrorCode.PRODUCT_OPTION_OUT_OF_STOCK);
         }
     }
 

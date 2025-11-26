@@ -53,7 +53,7 @@ public class Order extends BaseEntity {
 
     @Embedded
     @AttributeOverride(name = "amount", column = @Column(name = "total_discount"))
-    private Money totalDiscount = Money.ZERO;
+    private Money totalDiscount;
 
     @CreatedDate
     private LocalDateTime registeredAt;
@@ -69,7 +69,7 @@ public class Order extends BaseEntity {
         this.status = status;
         this.orderNo = orderNo;
         this.totalPrice = totalPrice;
-        this.totalDiscount = totalDiscount;
+        this.totalDiscount = Money.ZERO;
         this.registeredAt = registeredAt;
         this.isSettleable = isSettleable;
         this.settledAt = settledAt;
@@ -126,18 +126,28 @@ public class Order extends BaseEntity {
         this.isSettleable = true;
     }
 
+    public void rollbackStatus() {
+        this.status = this.status.rollback();
+        this.isSettleable = false;
+    }
+
+    public boolean isCancable() {
+        return this.status.isCancable();
+    }
+
+
     public void cancel() {
         this.status = this.status.cancel();
-    }
-
-    public void refund() {
-        this.status = this.status.refund();
         this.isSettleable = false;
     }
 
-    public void rollbackStatus() {
-        this.status = this.status.rollbackToPending();
-        this.isSettleable = false;
+    public boolean canFetchDetail() {
+        return this.status.isCompleted() || this.status.isCancelled();
+    }
+
+    public void rollbackToCompleted() {
+        this.status = this.status.rollback();
+        this.isSettleable = true;
     }
 }
 

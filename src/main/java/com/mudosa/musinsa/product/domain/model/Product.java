@@ -65,9 +65,6 @@ public class Product extends BaseEntity {
                                  Boolean isAvailable,
                                  java.util.List<Image> images,
                                  java.util.List<ProductOption> productOptions) {
-        if (brand == null) {
-            throw new BusinessException(ErrorCode.PRODUCT_BRAND_REQUIRED);
-        }
         if (productName == null || productName.trim().isEmpty()) {
             throw new BusinessException(ErrorCode.PRODUCT_NAME_REQUIRED);
         }
@@ -76,12 +73,6 @@ public class Product extends BaseEntity {
         }
         if (productGenderType == null) {
             throw new BusinessException(ErrorCode.PRODUCT_GENDER_TYPE_REQUIRED);
-        }
-        if (brandName == null || brandName.trim().isEmpty()) {
-            throw new BusinessException(ErrorCode.PRODUCT_BRAND_NAME_REQUIRED);
-        }
-        if (categoryPath == null || categoryPath.trim().isEmpty()) {
-            throw new BusinessException(ErrorCode.PRODUCT_CATEGORY_PATH_REQUIRED);
         }
 
         return new Product(brand, productName, productInfo, productGenderType, brandName, categoryPath,

@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.product.application;
 
+import com.mudosa.musinsa.ServerApplication;
 import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandMember;
@@ -21,6 +22,8 @@ import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -30,6 +33,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Transactional
 @DisplayName("ProductInventoryService 통합 테스트")
+@ActiveProfiles("test")
+@SpringBootTest(
+        classes = ServerApplication.class,
+        properties = {
+                "spring.main.allow-bean-definition-overriding=true",
+        }
+)
 class ProductInventoryServiceIntegrationTest extends ServiceConfig {
 
     private static final long BRAND_MANAGER_ID = 910L;

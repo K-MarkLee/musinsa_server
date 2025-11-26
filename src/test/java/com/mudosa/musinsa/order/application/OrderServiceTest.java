@@ -8,17 +8,16 @@ import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.order.application.dto.InsufficientStockItem;
 import com.mudosa.musinsa.order.application.dto.OrderCreateItem;
+import com.mudosa.musinsa.order.application.dto.PendingOrderResponse;
 import com.mudosa.musinsa.order.application.dto.request.OrderCreateRequest;
 import com.mudosa.musinsa.order.application.dto.response.OrderCreateResponse;
+import com.mudosa.musinsa.order.application.dto.response.OrderListResponse;
 import com.mudosa.musinsa.order.domain.model.Order;
 import com.mudosa.musinsa.order.domain.model.OrderProduct;
 import com.mudosa.musinsa.order.domain.model.OrderStatus;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
 import com.mudosa.musinsa.product.domain.model.*;
-import com.mudosa.musinsa.product.domain.repository.CartItemRepository;
-import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
-import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
-import com.mudosa.musinsa.product.domain.repository.ProductRepository;
+import com.mudosa.musinsa.product.domain.repository.*;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.model.UserRole;
@@ -68,6 +67,15 @@ class OrderServiceTest extends ServiceConfig {
 
     @Autowired
     private CartItemRepository cartItemRepository;
+
+    @Autowired
+    private OptionValueRepository optionValueRepository;
+
+    @Autowired
+    private ProductOptionValueRepository productOptionValueRepository;
+
+    @Autowired
+    private ImageRepository imageRepository;
 
     @DisplayName("상품 옵션과 수량을 갖는 맵으로 주문을 생성한다.")
     @Test
@@ -244,9 +252,17 @@ class OrderServiceTest extends ServiceConfig {
         orderRepository.save(order);
 
         //when & then
-        assertThatThrownBy(() -> orderService.completeOrder(testOrderNo))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("부족");
+        BusinessException thrown = catchThrowableOfType(() -> orderService.completeOrder(testOrderNo), BusinessException.class);
+
+        assertThat(thrown).isNotNull();
+        assertThat(thrown.getMessage()).contains("부족");
+
+        List<InsufficientStockItem> insufficientItems = (List<InsufficientStockItem>) thrown.getData();
+        assertThat(insufficientItems)
+                .extracting(InsufficientStockItem::getProductOptionId, InsufficientStockItem::getRequestedQuantity, InsufficientStockItem::getAvailableQuantity)
+                .containsExactly(
+                        tuple(productOption.getProductOptionId(), 5, 1)
+                );
     }
 
     @DisplayName("사용자가 동시에 결제하여 주문을 완료한다.")
@@ -397,6 +413,53 @@ class OrderServiceTest extends ServiceConfig {
         assertThat(result.getStockQuantity().getValue()).isEqualTo(15);
     }
 
+    @DisplayName("주문서를 조회한다.")
+    @Test
+    void fetchPendingOrder(){
+        //given
+        String orderNo = "ORD101";
+        createTestData(orderNo, 100, 2);
+
+        //when
+        PendingOrderResponse result = orderService.fetchPendingOrder(orderNo);
+
+        //then
+        assertThat(result)
+                .extracting("orderNo", "userName")
+                .contains(orderNo, "testUser");
+    }
+
+    @DisplayName("주문번호로 주문을 삭제합니다. ")
+    @Test
+    void cancelOrder(){
+        //given
+        String orderNo = "ORD101";
+        createTestData(orderNo, 100, 2);
+
+        //when
+        orderService.cancelPendingOrder(orderNo);
+
+        //then
+        assertThat(orderRepository.findByOrderNo(orderNo)).isEmpty();
+    }
+
+    @DisplayName("사용자의 주문 목록을 조회한다. ")
+    @Test
+    void fetchOrderList(){
+        //given
+        String orderNo = "ORD101";
+        TestData data = createTestData(orderNo, 100, 2);
+
+        //when
+        OrderListResponse orderListResponse = orderService.fetchOrderList(data.userId);
+
+        //then
+        assertThat(orderListResponse.getOrders())
+                .extracting("orderNo")
+                .containsExactlyInAnyOrder(orderNo);
+    }
+
+
 
     private Inventory createInventory(int stockQuantity) {
         return Inventory.builder()
@@ -484,6 +547,94 @@ class OrderServiceTest extends ServiceConfig {
                 .user(user)
                 .quantity(3)
                 .productOption(productOption)
+                .build();
+    }
+
+    private Order createOrder(Long userId, String orderNo, List<OrderProduct> orderProducts, Long totalPrice) {
+        return Order.builder()
+                .userId(userId)
+                .orderNo(orderNo)
+                .status(OrderStatus.PENDING)
+                .totalPrice(new Money(totalPrice))
+                .orderProducts(orderProducts)
+                .build();
+    }
+
+    private OrderServiceTest.TestData createTestData(String orderNo, int initialStock, int orderQuantity) {
+        User user = userRepository.save(createUser());
+        Brand brand = brandRepository.save(createBrand());
+        Product product = productRepository.save(createProduct(brand, true));
+        
+        imageRepository.save(createImage(product, "https://example.com/image1.jpg", true));
+        
+        Inventory inventory = createInventory(initialStock);
+        ProductOption productOption = productOptionRepository.save(
+                createProductOption(product, inventory, 10000L)
+        );
+
+        OptionValue sizeL = optionValueRepository.save(
+                createOptionValue(ValueName.SIZE.getName(), "L")
+        );
+        OptionValue colorBlack = optionValueRepository.save(
+                createOptionValue(ValueName.COLOR.getName(), "BLACK")
+        );
+
+        productOptionValueRepository.save(
+                createProductOptionValue(productOption, sizeL)
+        );
+        productOptionValueRepository.save(
+                createProductOptionValue(productOption, colorBlack)
+        );
+
+        List<OrderProduct> orderProducts = new ArrayList<>();
+        OrderProduct orderProduct = createOrderProduct(productOption, orderQuantity);
+        orderProducts.add(orderProduct);
+
+        Order order = createOrder(user.getId(), orderNo, orderProducts, 20000L);
+        orderProducts.forEach(op -> op.setOrderForTest(order));
+        orderRepository.save(order);
+
+        return new OrderServiceTest.TestData(
+                user.getId(),
+                order.getId(),
+                inventory.getInventoryId(),
+                orderNo
+        );
+    }
+
+    private static class TestData {
+        final Long userId;
+        final Long orderId;
+        final Long inventoryId;
+        final String orderNo;
+
+        TestData(Long userId, Long orderId, Long inventoryId, String orderNo) {
+            this.userId = userId;
+            this.orderId = orderId;
+            this.inventoryId = inventoryId;
+            this.orderNo = orderNo;
+        }
+    }
+
+    private OptionValue createOptionValue(String optionName, String value) {
+        return OptionValue.builder()
+                .optionName(optionName)
+                .optionValue(value)
+                .build();
+    }
+
+    private ProductOptionValue createProductOptionValue(ProductOption productOption, OptionValue optionValue) {
+        return ProductOptionValue.builder()
+                .productOption(productOption)
+                .optionValue(optionValue)
+                .build();
+    }
+
+    private Image createImage(Product product, String imageUrl, boolean isThumbnail) {
+        return Image.builder()
+                .product(product)
+                .imageUrl(imageUrl)
+                .isThumbnail(isThumbnail)
                 .build();
     }
 }

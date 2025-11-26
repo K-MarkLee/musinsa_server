@@ -1,13 +1,12 @@
 package com.mudosa.musinsa.order.application.dto;
 
 import com.querydsl.core.annotations.QueryProjection;
-import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
 
 @Getter
-public class PendingOrderItem{
+public class OrderItem {
     Long productOptionId;
     String brandName;
     String productOptionName;
@@ -18,8 +17,8 @@ public class PendingOrderItem{
     String color;
 
     @QueryProjection
-    public PendingOrderItem(Long productOptionId, String brandName, String productOptionName,
-                            BigDecimal amount, Integer quantity, String imageUrl, String size, String color) {
+    public OrderItem(Long productOptionId, String brandName, String productOptionName,
+                     BigDecimal amount, Integer quantity, String imageUrl, String size, String color) {
         this.productOptionId = productOptionId;
         this.brandName = brandName;
         this.productOptionName = productOptionName;

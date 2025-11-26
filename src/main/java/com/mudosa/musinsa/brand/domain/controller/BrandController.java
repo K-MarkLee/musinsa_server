@@ -39,7 +39,8 @@ public interface BrandController {
       )
       @RequestParam("request") String requestJson, // JSON 파트
       @Parameter(description = "브랜드 로고 이미지 파일", example = "logo.png")
-      @RequestPart(value = "file", required = false) MultipartFile file
+      @RequestPart(value = "file", required = false) MultipartFile file,
+      @AuthenticationPrincipal CustomUserDetails userDetails
   );
 
   @Operation(

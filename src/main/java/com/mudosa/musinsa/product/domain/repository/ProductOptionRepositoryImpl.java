@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.product.domain.repository;
 
-import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.LockModeType;

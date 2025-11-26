@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,30 @@ public class PaymentConfirmService {
 
     private final OrderService orderService;
     private final PaymentRepository paymentRepository;
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected PaymentCreationResult createPaymentTransaction(PaymentCreateDto request, Long userId) {
+        // 주문 완료(재고 차감, 주문 상태 변경)
+        Long orderId = orderService.completeOrder(
+                request.getOrderNo()
+        );
+
+        // 결제 생성
+        Payment payment = Payment.create(
+                orderId,
+                request.getTotalAmount(),
+                request.getPgProvider(),
+                userId
+        );
+
+        paymentRepository.save(payment);
+
+        return PaymentCreationResult.builder()
+                .paymentId(payment.getId())
+                .orderId(orderId)
+                .userId(userId)
+                .build();
+    }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void approvePayment(Long paymentId, Long userId, PaymentResponseDto paymentResponseDto, Long orderId) {
@@ -54,29 +80,6 @@ public class PaymentConfirmService {
         paymentRepository.save(payment);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    protected PaymentCreationResult createPaymentTransaction(PaymentCreateDto request, Long userId) {
-        // 주문 완료(재고 차감, 주문 상태 변경)
-        Long orderId = orderService.completeOrder(
-                request.getOrderNo()
-        );
-
-        // 결제 생성
-        Payment payment = Payment.create(
-                orderId,
-                request.getTotalAmount(),
-                request.getPgProvider(),
-                userId
-        );
-
-        paymentRepository.save(payment);
-
-        return PaymentCreationResult.builder()
-                .paymentId(payment.getId())
-                .orderId(orderId)
-                .userId(userId)
-                .build();
-    }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     protected void manualPaymentCheck(Long paymentId, Long userId){
@@ -84,5 +87,30 @@ public class PaymentConfirmService {
         payment.addLog(PaymentEventType.REQUIRES_MANUAL_CHECK,
                 "PG 승인 후 예상치 못한 오류 발생", userId);
         paymentRepository.save(payment);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void cancelPayment(String paymentTransactionId, String cancelReason, Long userId, LocalDateTime cancelledAt) {
+        log.info(paymentTransactionId);
+
+        //결제 조회
+        Payment payment = paymentRepository.findByPgTransactionId(paymentTransactionId);
+
+        //결제 상태 변경
+        payment.cancel(cancelReason, userId, cancelledAt);
+        paymentRepository.save(payment);
+
+        //주문 관련 원복
+        orderService.cancelOrder(payment.getOrderId());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void failCancel(String paymentKey, String message, Long userId) {
+        //결제 상태 변경
+        Payment payment = paymentRepository.findByPgTransactionId(paymentKey);
+        payment.cancelFail(message, userId);
+
+        //주문 및 재고 롤백
+        orderService.rollbackOrderCancel(payment.getOrderId());
     }
 }

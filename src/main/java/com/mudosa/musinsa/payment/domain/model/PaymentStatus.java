@@ -61,7 +61,7 @@ public enum PaymentStatus {
         }
 
         @Override
-        public PaymentStatus retryPending() {
+        public PaymentStatus rollback() {
             return PENDING;
         }
     },
@@ -82,6 +82,10 @@ public enum PaymentStatus {
             throw invalidTransition("취소");
         }
 
+        @Override
+        public PaymentStatus rollback() {
+            return APPROVED;
+        }
     };
 
     private final String description;
@@ -90,7 +94,7 @@ public enum PaymentStatus {
     public abstract PaymentStatus fail();
     public abstract PaymentStatus cancel();
 
-    public PaymentStatus retryPending() {
+    public PaymentStatus rollback() {
         throw invalidTransition("재시도");
     }
 

@@ -23,7 +23,6 @@ import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.Tracer.SpanInScope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -59,11 +58,12 @@ public class ChatServiceImpl implements ChatService {
   private final ChatRoomMapper chatRoomMapper;
   private final NotificationEventPublisher notificationEventPublisher;
 
-  private final @Qualifier("localFileStore") FileStore fileStore;
+  private final FileStore fileStore;
 
   private final Tracer tracer;
 
   @Override
+  @Transactional(readOnly = true)
   public List<ChatRoomInfoResponse> getChatRoomByUserId(Long userId) {
     //userId, chatId 쌍이 존재하고 delete_at이 null(떠나지 않은 사용자)에 만족하는 채팅방 불러오기
     List<ChatRoom> chatRooms =
@@ -74,7 +74,6 @@ public class ChatServiceImpl implements ChatService {
         .map(chatRoom -> {
           // 이 시점에서는 유저가 참여 중인 방만 조회했으므로 true 고정
           ChatRoomInfoResponse base = chatRoomMapper.toChatRoomInfoResponse(chatRoom, true);
-
           return base;
         })
         .toList();
@@ -599,8 +598,6 @@ public class ChatServiceImpl implements ChatService {
       if (file == null || file.isEmpty()) continue;
 
       try {
-        //TODO: 파일 처리 분리 필요!
-        // === 실제 경로 생성 ===
         String storedUrl = fileStore.storeMessageFile(chatId, messageId, file);
 
         MessageAttachment att = MessageAttachment.create(message, file, storedUrl);

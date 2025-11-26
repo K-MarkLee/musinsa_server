@@ -15,4 +15,13 @@ public interface FileStore {
    * @return 공개용(or 상대) URL
    */
   String storeMessageFile(Long chatId, Long messageId, MultipartFile file) throws IOException;
+
+  /**
+   * 채팅 메시지 첨부파일처럼 경로 패턴이 정해진 파일 저장
+   *
+   * @param brandId 브랜드 ID
+   * @param file    업로드 파일
+   * @return 공개용(or 상대) URL
+   */
+  String storeBrandLogo(Long brandId, MultipartFile file) throws IOException;
 }

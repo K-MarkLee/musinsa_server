@@ -4,7 +4,10 @@ import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.OrderService;
 import com.mudosa.musinsa.payment.application.dto.*;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelRequest;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelResponseDto;
 import com.mudosa.musinsa.payment.application.dto.request.PaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.response.PaymentCancelResponse;
 import com.mudosa.musinsa.payment.application.dto.response.PaymentConfirmResponse;
 import com.mudosa.musinsa.payment.domain.model.Payment;
 import com.mudosa.musinsa.payment.domain.model.PaymentEventType;
@@ -30,7 +33,6 @@ import static com.mudosa.musinsa.exception.ErrorCode.PAYMENT_TIMEOUT;
 @RequiredArgsConstructor
 public class PaymentService {
 
-    private final PaymentRepository paymentRepository;
     private final PaymentProcessor paymentProcessor;
     private final PaymentConfirmService paymentConfirmService;
 
@@ -60,28 +62,21 @@ public class PaymentService {
         }catch(BusinessException e){
             //결제 생성 전 오류 -> 롤백이 되기 때문에 보상할게 없음
             if(paymentId == null){
-                throw e;
+                if(e.getErrorCode() == ErrorCode.INSUFFICIENT_STOCK){
+                    throw e;
+                }
+
+                throw new BusinessException(ErrorCode.PAYMENT_FAILED_BEFORE_PG_CONFIRM, e.getMessage());
             }
 
             //PG사에 의한 오류 처리
             if(!pgApproved && isPgRelatedError(e.getErrorCode())){
-                try{
-                    paymentConfirmService.failPayment(paymentId, e.getMessage(), userId, orderId);
-                }catch(Exception compensationError){
-                    //TODO: 긴급 알림 발송
-                }
+                paymentConfirmService.failPayment(paymentId, e.getMessage(), userId, orderId);
                 throw e;
             }
 
             if(pgApproved){
-                try {
-                    paymentConfirmService.manualPaymentCheck(paymentId, userId);
-                } catch (Exception markError) {
-                    log.error("결제 상태 마킹도 실패: {}", markError.getMessage());
-                }
-
-                //TODO: 긴급 알림 발송
-
+                paymentConfirmService.manualPaymentCheck(paymentId, userId);
                 throw new BusinessException(
                         ErrorCode.PAYMENT_SYSTEM_ERROR,
                         "결제는 승인되었으나 후속 처리 중 오류가 발생했습니다. 고객센터로 문의해주세요."
@@ -89,37 +84,28 @@ public class PaymentService {
             }
 
             throw e;
-
-        }catch (Exception e){
-            if (paymentId != null && !pgApproved) {
-                log.warn("예상치 못한 오류로 보상 트랜잭션 시작: orderId={}", orderId);
-                try {
-                    paymentConfirmService.failPayment(paymentId, e.getMessage(), userId, orderId);
-                } catch (Exception compensationError) {
-                    log.error("failPayment 실패: {}", compensationError.getMessage(), compensationError);
-                }
-            }
-
-            if (pgApproved) {
-                try {
-                    paymentConfirmService.manualPaymentCheck(paymentId, userId);
-                } catch (Exception markError) {
-                    log.error("결제 상태 마킹도 실패: {}", markError.getMessage());
-                }
-            }
-
-            throw new BusinessException(
-                    ErrorCode.PAYMENT_SYSTEM_ERROR,
-                    "결제 처리 중 시스템 오류가 발생했습니다"
-            );
-
         }
     }
 
-
     private boolean isPgRelatedError(ErrorCode errorCode) {
-        return errorCode == ErrorCode.PAYMENT_APPROVAL_FAILED
-                || errorCode == ErrorCode.PAYMENT_TIMEOUT;
+        return errorCode == PAYMENT_APPROVAL_FAILED
+                || errorCode == PAYMENT_TIMEOUT;
     }
 
+    public PaymentCancelResponse cancelPayment(PaymentCancelRequest request, Long userId, LocalDateTime cancelledAt) {
+        try{
+            //TX1: 결제 상태 변경, 주문 관련 원복
+            paymentConfirmService.cancelPayment(request.getPaymentTransactionId(), request.getCancelReason(), userId, cancelledAt);
+
+            //트랜젹션 아님: 외부 PG사 호출
+            PaymentCancelResponseDto pgResponse =
+                    paymentProcessor.processCancelPayment(request);
+
+            return new PaymentCancelResponse(pgResponse);
+        }catch (BusinessException e){
+            paymentConfirmService.failCancel(request.getPaymentTransactionId(), e.getMessage(), userId);
+            throw e;
+        }
+
+    }
 }

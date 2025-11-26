@@ -5,6 +5,7 @@ plugins {
     id 'jacoco'
 }
 
+
 group = 'com.musinsa'
 version = '0.0.1-SNAPSHOT'
 description = 'server'
@@ -41,9 +42,10 @@ dependencies {
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.5'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+
     //QueryDSL
-    implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
-    annotationProcessor "com.querydsl:querydsl-apt:${dependencyManagement.importedProperties['querydsl.version']}:jakarta"
+    implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+    annotationProcessor "com.querydsl:querydsl-apt:5.1.0:jakarta"
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"
     annotationProcessor "jakarta.persistence:jakarta.persistence-api"
 
@@ -66,9 +68,6 @@ dependencies {
     // Swagger (SpringDoc OpenAPI)
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 
-    //retry
-    implementation 'org.springframework.retry:spring-retry'
-
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5'
@@ -83,39 +82,67 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok'
 
     // https://mvnrepository.com/artifact/com.google.firebase/firebase-admin
-    implementation 'com.google.firebase:firebase-admin:9.1.1'
+    implementation 'com.google.firebase:firebase-admin:9.7.0'
 
+    implementation platform("software.amazon.awssdk:bom:2.25.65") // 버전은 상황에 맞게
+    implementation "software.amazon.awssdk:s3"
+    
     // https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp
     implementation 'com.squareup.okhttp3:okhttp:5.2.1'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 }
+
+
 jacoco {
     toolVersion = "0.8.13"
     reportsDirectory = layout.buildDirectory.dir('customJacocoReportDir')
 }
+
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
 }
 
+def jacocoIncludes = ['com/mudosa/musinsa/order/**']
+def jacocoExcludes = ['**/Q*.*']
+
 jacocoTestReport {
     reports {
         xml.required = false
         csv.required = false
-        html.outputLocation = layout.buildDirectory.dir('jacocoHTML')
+        html.outputLocation = layout.buildDirectory.dir('jacoco')
     }
-    // dependsOn : 이 작업에 지정된 종속성을 추가
-    dependsOn test // jacocoTestReport 에 test라는 종속성을 추가
-    finalizedBy 'jacocoTestCoverageVerification'
+
+    dependsOn test
+
+    classDirectories.setFrom(
+            files(classDirectories.files.collect { dir ->
+                fileTree(
+                        dir: dir,
+                        include: jacocoIncludes,
+                        exclude: jacocoExcludes
+                )
+            })
+    )
 }
 
-jacocoTestCoverageVerification {
-    violationRules {
 
+jacocoTestCoverageVerification {
+
+    classDirectories.setFrom(
+            files(classDirectories.files.collect { dir ->
+                fileTree(
+                        dir: dir,
+                        include: jacocoIncludes,
+                        exclude: jacocoExcludes
+                )
+            })
+    )
+
+    violationRules {
         rule {
             enabled = true
-            //코드 버커리지 체크 기준
-            element = 'CLASS'
+            element = 'CLASS' // 클래스 단위 기준
 
             limit {
                 counter = 'METHOD'
