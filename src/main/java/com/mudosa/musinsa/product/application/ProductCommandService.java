@@ -345,7 +345,7 @@ public class ProductCommandService {
 			String optionName = normalizeOptionName(optionValue.getOptionName());
 			if (OptionCombination.SIZE_OPTION_NAME.equals(optionName)) {
 				if (sizeId != null) {
-					throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
+					throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE);
 				}
 				sizeId = optionValue.getOptionValueId();
 				continue;

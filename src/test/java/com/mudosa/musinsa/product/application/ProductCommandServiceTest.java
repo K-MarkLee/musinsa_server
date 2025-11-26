@@ -485,7 +485,7 @@ class ProductCommandServiceTest extends ServiceConfig {
 		assertThatThrownBy(() -> sut.addProductOption(brandId, productId, duplicateSizeRequest, userId))
 			.isInstanceOf(BusinessException.class)
 			.extracting("errorCode")
-			.isEqualTo(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
+			.isEqualTo(ErrorCode.PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE);
 
 		assertThatThrownBy(() -> sut.addProductOption(brandId, productId, duplicateColorRequest, userId))
 			.isInstanceOf(BusinessException.class)
