@@ -1,6 +1,9 @@
 package com.mudosa.musinsa.event.service;
 
 import com.mudosa.musinsa.ServiceConfig;
+import com.mudosa.musinsa.coupon.domain.model.Coupon;
+import com.mudosa.musinsa.coupon.domain.model.DiscountType;
+import com.mudosa.musinsa.coupon.domain.repository.CouponRepository;
 import com.mudosa.musinsa.event.model.Event;
 import com.mudosa.musinsa.event.model.EventImage;
 import com.mudosa.musinsa.event.presentation.dto.res.EventListResDto;
@@ -12,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +36,9 @@ class EventServiceTest extends ServiceConfig {
 
     @Autowired
     private EventOptionRepository eventOptionRepository;
+
+    @Autowired
+    private CouponRepository couponRepository;
 
     @Test
     @Transactional
@@ -211,5 +218,47 @@ class EventServiceTest extends ServiceConfig {
         // then
         // 결과는 빈 리스트거나 조건에 맞지 않는 이벤트들
         assertThat(result).isNotNull();
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("[해피케이스] 이벤트 목록 응답에 쿠폰 메타 정보가 포함된다")
+    void getEventListByType_IncludesCouponMeta() {
+        LocalDateTime startedAt = LocalDateTime.now().minusDays(1);
+        LocalDateTime endedAt = LocalDateTime.now().plusDays(10);
+
+        Coupon coupon = Coupon.builder()
+                .couponName("목록 테스트 쿠폰")
+                .discountType(DiscountType.AMOUNT)
+                .discountValue(new BigDecimal("5000"))
+                .startDate(startedAt)
+                .endDate(endedAt)
+                .totalQuantity(100)
+                .build();
+        couponRepository.save(coupon);
+
+        Event event = Event.builder()
+                .title("쿠폰 포함 이벤트")
+                .description("설명")
+                .eventType(Event.EventType.DROP)
+                .limitPerUser(1)
+                .isPublic(true)
+                .startedAt(startedAt)
+                .endedAt(endedAt)
+                .coupon(coupon)
+                .build();
+        Event saved = eventRepository.save(event);
+
+        List<EventListResDto> result = eventService.getEventListByType(Event.EventType.DROP);
+
+        EventListResDto target = result.stream()
+                .filter(dto -> dto.getEventId().equals(saved.getId()))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(target.getCoupon()).isNotNull();
+        assertThat(target.getCoupon().getCouponName()).isEqualTo("목록 테스트 쿠폰");
+        assertThat(target.getCoupon().getDiscountValue()).isEqualByComparingTo(new BigDecimal("5000"));
+        assertThat(target.getCoupon().getTotalQuantity()).isEqualTo(100);
     }
 }

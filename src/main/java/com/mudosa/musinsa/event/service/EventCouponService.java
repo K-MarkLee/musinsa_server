@@ -1,6 +1,7 @@
 package com.mudosa.musinsa.event.service;
 
 import com.mudosa.musinsa.coupon.domain.model.Coupon;
+import com.mudosa.musinsa.coupon.domain.model.DiscountType;
 import com.mudosa.musinsa.coupon.domain.service.CouponIssuanceService;
 import com.mudosa.musinsa.event.model.Event;
 
@@ -11,6 +12,7 @@ import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -107,6 +109,18 @@ public class EventCouponService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public EventCouponInfoResult getEventCoupon(Long eventId) {
+        EventOption eventOption = eventOptionRepository.findByEventIdWithDetails(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_NOT_FOUND));
+
+        Event event = eventOption.getEvent();
+        Coupon coupon = Optional.ofNullable(event.getCoupon())
+                .orElseThrow(() -> new BusinessException(ErrorCode.EVENT_COUPON_NOT_ASSIGNED));
+
+        return EventCouponInfoResult.from(event, coupon);
+    }
+
     // 이벤트 발급 이력 테이블 (X) => MemberCoupon 테이블을 기준으로 발급 추적
     // 한 이벤트 옵션 기준으로 쿠폰을 사용한다는 전제로 사용자 검증
     private void validateUserLimit(Event event, Coupon coupon, Long userId) {
@@ -139,6 +153,37 @@ public class EventCouponService {
                     result.issuedAt(),
                     result.expiredAt(),
                     result.duplicate()
+            );
+        }
+    }
+
+    public record EventCouponInfoResult(Long couponId,
+                                        String couponName,
+                                        DiscountType discountType,
+                                        BigDecimal discountValue,
+                                        BigDecimal minOrderAmount,
+                                        BigDecimal maxDiscountAmount,
+                                        Integer totalQuantity,
+                                        Integer issuedQuantity,
+                                        Integer remainingQuantity,
+                                        LocalDateTime startedAt,
+                                        LocalDateTime endedAt,
+                                        Integer limitPerUser) {
+
+        private static EventCouponInfoResult from(Event event, Coupon coupon) {
+            return new EventCouponInfoResult(
+                    coupon.getId(),
+                    coupon.getCouponName(),
+                    coupon.getDiscountType(),
+                    coupon.getDiscountValue(),
+                    coupon.getMinOrderAmount(),
+                    coupon.getMaxDiscountAmount(),
+                    coupon.getTotalQuantity(),
+                    coupon.getIssuedQuantity(),
+                    coupon.getRemainingQuantity(),
+                    coupon.getStartDate(),
+                    coupon.getEndDate(),
+                    event.getLimitPerUser()
             );
         }
     }

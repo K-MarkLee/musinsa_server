@@ -87,7 +87,7 @@ class CouponConcurrencyTest {
 
     @Test
     @DisplayName("선착순 쿠폰 발급 - 1000명 요청, 100명만 성공")
-    void 선착순_쿠폰_발급_동시성_테스트() throws InterruptedException {
+    void ConcurrencyTest() throws InterruptedException {
         // Given
         int threadCount = 30000;
         ExecutorService executorService = Executors.newFixedThreadPool(32);
@@ -219,7 +219,7 @@ class CouponConcurrencyTest {
 
     @Test
     @DisplayName("동일 유저 중복 발급 방지 테스트")
-    void 동일_유저_중복_발급_방지() throws InterruptedException {
+    void SameUserPrventTest() throws InterruptedException {
         // Given
         int threadCount = 100;
         Long sameUserId = 1L;  // 같은 유저

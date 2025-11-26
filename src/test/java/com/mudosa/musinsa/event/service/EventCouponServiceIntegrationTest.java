@@ -195,6 +195,26 @@ class EventCouponServiceIntegrationTest extends ServiceConfig {
                 .isInstanceOf(BusinessException.class);
     }
 
+    @Test
+    @DisplayName("[통합] 이벤트 쿠폰 정보 조회 성공")
+    void getEventCouponInfo_Success() {
+        TestData testData = createTestData(50, 2);
+
+        EventCouponService.EventCouponInfoResult result =
+                eventCouponService.getEventCoupon(testData.eventId);
+
+        Coupon coupon = couponRepository.findById(testData.couponId).orElseThrow();
+
+        assertThat(result).isNotNull();
+        assertThat(result.couponId()).isEqualTo(coupon.getId());
+        assertThat(result.couponName()).isEqualTo(coupon.getCouponName());
+        assertThat(result.discountType()).isEqualTo(coupon.getDiscountType());
+        assertThat(result.discountValue()).isEqualByComparingTo(coupon.getDiscountValue());
+        assertThat(result.totalQuantity()).isEqualTo(coupon.getTotalQuantity());
+        assertThat(result.limitPerUser()).isEqualTo(2);
+        assertThat(result.remainingQuantity()).isEqualTo(coupon.getRemainingQuantity());
+    }
+
     // ===== 헬퍼 메서드 =====
 
     private TestData createTestData(int couponStock, int limitPerUser) {
