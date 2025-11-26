@@ -85,25 +85,25 @@ class ProductCommandServiceTest {
             Category category = Category.builder().categoryName("상의").parent(null).imageUrl(null).build();
 
             ProductCreateRequest.OptionCreateRequest optReq = ProductCreateRequest.OptionCreateRequest.builder()
-                .productPrice(BigDecimal.valueOf(10000))
-                .stockQuantity(5)
-                .optionValueIds(List.of(101L, 102L))
-                .build();
+                    .productPrice(BigDecimal.valueOf(10000))
+                    .stockQuantity(5)
+                    .optionValueIds(List.of(101L, 102L))
+                    .build();
 
             ProductCreateRequest.ImageCreateRequest imgReq = ProductCreateRequest.ImageCreateRequest.builder()
-                .imageUrl("http://img")
-                .isThumbnail(true)
-                .build();
+                    .imageUrl("http://img")
+                    .isThumbnail(true)
+                    .build();
 
             ProductCreateRequest req = ProductCreateRequest.builder()
-                .productName("티셔츠")
-                .productInfo("설명")
-                .productGenderType(ProductGenderType.ALL)
-                .categoryPath(category.buildPath())
-                .isAvailable(true)
-                .images(List.of(imgReq))
-                .options(List.of(optReq))
-                .build();
+                    .productName("티셔츠")
+                    .productInfo("설명")
+                    .productGenderType(ProductGenderType.ALL)
+                    .categoryPath(category.buildPath())
+                    .isAvailable(true)
+                    .images(List.of(imgReq))
+                    .options(List.of(optReq))
+                    .build();
 
             given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(10L), anyLong())).willReturn(true);
 
@@ -134,25 +134,25 @@ class ProductCommandServiceTest {
             Category category = Category.builder().categoryName("상의").parent(null).imageUrl(null).build();
 
             ProductCreateRequest.OptionCreateRequest optReq = ProductCreateRequest.OptionCreateRequest.builder()
-                .productPrice(BigDecimal.valueOf(10000))
-                .stockQuantity(5)
-                .optionValueIds(List.of(101L, 102L))
-                .build();
+                    .productPrice(BigDecimal.valueOf(10000))
+                    .stockQuantity(5)
+                    .optionValueIds(List.of(101L, 102L))
+                    .build();
 
             ProductCreateRequest.ImageCreateRequest imgReq = ProductCreateRequest.ImageCreateRequest.builder()
-                .imageUrl("http://img")
-                .isThumbnail(true)
-                .build();
+                    .imageUrl("http://img")
+                    .isThumbnail(true)
+                    .build();
 
             ProductCreateRequest req = ProductCreateRequest.builder()
-                .productName("티셔츠")
-                .productInfo("설명")
-                .productGenderType(ProductGenderType.ALL)
-                .categoryPath(category.buildPath())
-                .isAvailable(true)
-                .images(List.of(imgReq))
-                .options(List.of(optReq))
-                .build();
+                    .productName("티셔츠")
+                    .productInfo("설명")
+                    .productGenderType(ProductGenderType.ALL)
+                    .categoryPath(category.buildPath())
+                    .isAvailable(true)
+                    .images(List.of(imgReq))
+                    .options(List.of(optReq))
+                    .build();
 
             given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(10L), anyLong())).willReturn(true);
             // repository returns only one OptionValue, so missing one id
@@ -180,10 +180,10 @@ class ProductCommandServiceTest {
             setId(product, "productId", 200L);
 
             ProductOptionCreateRequest req = ProductOptionCreateRequest.builder()
-                .productPrice(BigDecimal.valueOf(5000))
-                .stockQuantity(3)
-                .optionValueIds(List.of(201L, 202L))
-                .build();
+                    .productPrice(BigDecimal.valueOf(5000))
+                    .stockQuantity(3)
+                    .optionValueIds(List.of(201L, 202L))
+                    .build();
 
             given(brandMemberRepository.existsByBrand_BrandIdAndUserId(eq(10L), anyLong())).willReturn(true);
             given(productRepository.findDetailByIdForManagerWithLock(eq(200L), eq(10L))).willReturn(Optional.of(product));
@@ -228,10 +228,10 @@ class ProductCommandServiceTest {
             given(productRepository.findDetailByIdForManagerWithLock(eq(200L), eq(10L))).willReturn(Optional.empty());
 
             ProductOptionCreateRequest req = ProductOptionCreateRequest.builder()
-                .productPrice(BigDecimal.valueOf(5000))
-                .stockQuantity(3)
-                .optionValueIds(List.of(201L, 202L))
-                .build();
+                    .productPrice(BigDecimal.valueOf(5000))
+                    .stockQuantity(3)
+                    .optionValueIds(List.of(201L, 202L))
+                    .build();
 
             assertThatThrownBy(() -> service.addProductOption(10L, 200L, req, 999L))
                 .isInstanceOf(BusinessException.class)

@@ -20,23 +20,23 @@ public final class ProductCommandMapper {
     public static ProductDetailResponse toProductDetail(Product product) {
         List<ProductDetailResponse.ImageResponse> imageResponses = product.getImages().stream()
             .map(image -> ProductDetailResponse.ImageResponse.builder()
-                .imageId(image.getImageId())
-                .imageUrl(image.getImageUrl())
-                .isThumbnail(Boolean.TRUE.equals(image.getIsThumbnail()))
-                .build())
-            .collect(Collectors.toList());
+                    .imageId(image.getImageId())
+                    .imageUrl(image.getImageUrl())
+                    .isThumbnail(Boolean.TRUE.equals(image.getIsThumbnail()))
+                    .build())
+                    .collect(Collectors.toList());
 
         List<ProductDetailResponse.OptionDetail> optionDetails = product.getProductOptions().stream()
             .map(ProductCommandMapper::toOptionDetail)
             .collect(Collectors.toList());
 
         return ProductDetailResponse.builder()
-            .productId(product.getProductId())
-            .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
-            .brandName(product.getBrandName())
-            .productName(product.getProductName())
-            .productInfo(product.getProductInfo())
-            .productGenderType(product.getProductGenderType() != null
+                .productId(product.getProductId())
+                .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
+                .brandName(product.getBrandName())
+                .productName(product.getProductName())
+                .productInfo(product.getProductInfo())
+                .productGenderType(product.getProductGenderType() != null
                 ? product.getProductGenderType().name()
                 : null)
             .isAvailable(product.getIsAvailable())
@@ -59,55 +59,55 @@ public final class ProductCommandMapper {
         }
 
         return ProductDetailResponse.OptionDetail.builder()
-            .optionId(option.getProductOptionId())
-            .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
-            .stockQuantity(stockQuantity)
-            .hasStock(hasStock)
-            .optionValues(optionValueDetails)
-            .build();
+                .optionId(option.getProductOptionId())
+                .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
+                .stockQuantity(stockQuantity)
+                .hasStock(hasStock)
+                .optionValues(optionValueDetails)
+                .build();
     }
 
     private static ProductDetailResponse.OptionDetail.OptionValueDetail toOptionValueDetail(ProductOptionValue mapping) {
         OptionValue optionValue = mapping.getOptionValue();
         return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
-            .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-            .optionName(optionValue != null ? optionValue.getOptionName() : null)
-            .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
-            .build();
+                .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
+                .optionName(optionValue != null ? optionValue.getOptionName() : null)
+                .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+                .build();
     }
 
     public static ProductManagerResponse toManagerResponse(Product product) {
         List<ProductManagerResponse.ImageInfo> imageInfos = product.getImages().stream()
             .map(image -> ProductManagerResponse.ImageInfo.builder()
-                .imageId(image.getImageId())
-                .imageUrl(image.getImageUrl())
-                .isThumbnail(image.getIsThumbnail())
-                .build())
-            .collect(Collectors.toList());
+                    .imageId(image.getImageId())
+                    .imageUrl(image.getImageUrl())
+                    .isThumbnail(image.getIsThumbnail())
+                    .build())
+                    .collect(Collectors.toList());
 
         List<ProductManagerResponse.OptionInfo> optionInfos = product.getProductOptions().stream()
             .map(option -> ProductManagerResponse.OptionInfo.builder()
-                .optionId(option.getProductOptionId())
-                .price(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
-                .stockQuantity(option.getInventory().getStockQuantity().getValue())
-                .optionValues(option.getProductOptionValues().stream()
+                    .optionId(option.getProductOptionId())
+                    .price(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
+                    .stockQuantity(option.getInventory().getStockQuantity().getValue())
+                    .optionValues(option.getProductOptionValues().stream()
                     .map(pov -> pov.getOptionValue().getOptionValue())
                     .collect(Collectors.toList()))
-                .build())
-            .collect(Collectors.toList());
+                    .build())
+                    .collect(Collectors.toList());
 
         return ProductManagerResponse.builder()
-            .productId(product.getProductId())
-            .productName(product.getProductName())
-            .productInfo(product.getProductInfo())
-            .isAvailable(product.getIsAvailable())
-            .brandName(product.getBrandName())
-            .categoryPath(product.getCategoryPath())
-            .productGenderType(product.getProductGenderType())
-            .createdAt(product.getCreatedAt())
-            .updatedAt(product.getUpdatedAt())
-            .images(imageInfos)
-            .options(optionInfos)
-            .build();
+                .productId(product.getProductId())
+                .productName(product.getProductName())
+                .productInfo(product.getProductInfo())
+                .isAvailable(product.getIsAvailable())
+                .brandName(product.getBrandName())
+                .categoryPath(product.getCategoryPath())
+                .productGenderType(product.getProductGenderType())
+                .createdAt(product.getCreatedAt())
+                .updatedAt(product.getUpdatedAt())
+                .images(imageInfos)
+                .options(optionInfos)
+                .build();
     }
 }

@@ -178,7 +178,7 @@ class CartServiceTest {
 
         // When / Then: 매우 큰 수량 요청 시 재고 부족 예외 발생
         assertThatThrownBy(() -> sut.addCartItem(1L, CartItemCreateRequest.builder().productOptionId(555L).quantity(Integer.MAX_VALUE).build()))
-            .isInstanceOf(BusinessException.class);
+                .isInstanceOf(BusinessException.class);
     }
 
         @Test
@@ -282,7 +282,7 @@ class CartServiceTest {
 
             // When / Then
             assertThatThrownBy(() -> sut.addCartItem(1L, CartItemCreateRequest.builder().productOptionId(333L).quantity(1).build()))
-                .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(RuntimeException.class);
         }
 
     @Test
@@ -299,7 +299,7 @@ class CartServiceTest {
 
         // When / Then
         assertThatThrownBy(() -> sut.addCartItem(1L, CartItemCreateRequest.builder().productOptionId(333L).quantity(1).build()))
-            .isInstanceOf(BusinessException.class);
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test
@@ -318,7 +318,7 @@ class CartServiceTest {
 
         // When / Then: 음수 수량 요청 시 예외 발생
         assertThatThrownBy(() -> sut.addCartItem(1L, CartItemCreateRequest.builder().productOptionId(444L).quantity(-3).build()))
-            .isInstanceOf(BusinessException.class);
+                .isInstanceOf(BusinessException.class);
     }
     }
 

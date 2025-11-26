@@ -47,14 +47,14 @@ class ProductRepositoryCustomTest {
 
         // product A: price 1000
         Product a = Product.builder()
-            .brand(brand)
-            .productName("A")
-            .productInfo("infoA")
-            .productGenderType(ProductGenderType.ALL)
-            .brandName("bk")
-            .categoryPath("상의>티셔츠")
-            .isAvailable(true)
-            .build();
+                .brand(brand)
+                .productName("A")
+                .productInfo("infoA")
+                .productGenderType(ProductGenderType.ALL)
+                .brandName("bk")
+                .categoryPath("상의>티셔츠")
+                .isAvailable(true)
+                .build();
         em.persist(a);
 
         Inventory invA = Inventory.builder().stockQuantity(new StockQuantity(10)).build();
@@ -63,14 +63,14 @@ class ProductRepositoryCustomTest {
 
         // product B: price 2000
         Product b = Product.builder()
-            .brand(brand)
-            .productName("B")
-            .productInfo("infoB")
-            .productGenderType(ProductGenderType.ALL)
-            .brandName("bk")
-            .categoryPath("상의>티셔츠")
-            .isAvailable(true)
-            .build();
+                .brand(brand)
+                .productName("B")
+                .productInfo("infoB")
+                .productGenderType(ProductGenderType.ALL)
+                .brandName("bk")
+                .categoryPath("상의>티셔츠")
+                .isAvailable(true)
+                .build();
         em.persist(b);
 
         Inventory invB = Inventory.builder().stockQuantity(new StockQuantity(10)).build();
@@ -98,14 +98,14 @@ class ProductRepositoryCustomTest {
         em.persist(brand);
 
         Product p = Product.builder()
-            .brand(brand)
-            .productName("Nice Shirt")
-            .productInfo("Comfortable and warm")
-            .productGenderType(ProductGenderType.MEN)
-            .brandName("bk2")
-            .categoryPath("상의>셔츠")
-            .isAvailable(true)
-            .build();
+                .brand(brand)
+                .productName("Nice Shirt")
+                .productInfo("Comfortable and warm")
+                .productGenderType(ProductGenderType.MEN)
+                .brandName("bk2")
+                .categoryPath("상의>셔츠")
+                .isAvailable(true)
+                .build();
         em.persist(p);
 
         Inventory inv = Inventory.builder().stockQuantity(new StockQuantity(5)).build();
