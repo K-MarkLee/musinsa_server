@@ -43,6 +43,6 @@ class ProductCategoryTest {
 		// when // then
 		assertThatThrownBy(ctor::newInstance)
 			.hasCauseInstanceOf(IllegalStateException.class)
-			.hasMessageContaining("deprecated");
+			.satisfies(ex -> assertThat(ex.getCause()).hasMessageContaining("deprecated"));
 	}
 }

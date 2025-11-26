@@ -84,6 +84,63 @@ class ProductCommandServiceTest extends ServiceConfig {
 	}
 
 	@Test
+	@DisplayName("재고 수량이 0인 옵션으로도 상품이 생성된다.")
+	void createProductWithZeroStock() {
+		// given
+		ProductCreateRequest request = ProductCreateRequest.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.categoryPath(categoryPath)
+			.isAvailable(true)
+			.images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+				.imageUrl("http://example.com/thumb.jpg")
+				.isThumbnail(true)
+				.build()))
+			.options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
+				.productPrice(BigDecimal.valueOf(10000))
+				.stockQuantity(0)
+				.optionValueIds(optionValueIds)
+				.build()))
+			.build();
+
+		// when
+		Long productId = sut.createProduct(request, brandId, userId);
+
+		// then
+		Product saved = productRepository.findById(productId).orElseThrow();
+		assertThat(saved.getProductOptions().get(0).getInventory().getStockQuantity().getValue()).isZero();
+	}
+
+	@Test
+	@DisplayName("재고 수량이 음수이면 상품 생성 시 BusinessException이 발생한다.")
+	void createProductWithNegativeStock() {
+		// given
+		ProductCreateRequest request = ProductCreateRequest.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.categoryPath(categoryPath)
+			.isAvailable(true)
+			.images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+				.imageUrl("http://example.com/thumb.jpg")
+				.isThumbnail(true)
+				.build()))
+			.options(List.of(ProductCreateRequest.OptionCreateRequest.builder()
+				.productPrice(BigDecimal.valueOf(10000))
+				.stockQuantity(-1)
+				.optionValueIds(optionValueIds)
+				.build()))
+			.build();
+
+		// when // then
+		assertThatThrownBy(() -> sut.createProduct(request, brandId, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.STOCK_QUANTITY_CANNOT_BE_NEGATIVE);
+	}
+
+	@Test
 	@DisplayName("존재하지 않는 브랜드로 상품 생성 시 BusinessException이 발생한다.")
 	void createProductWithBrandNotExist() {
 		// given
@@ -419,6 +476,27 @@ class ProductCommandServiceTest extends ServiceConfig {
 	}
 
 	@Test
+	@DisplayName("색상만 포함하고 사이즈가 없으면 BusinessException이 발생한다.")
+	void addProductOptionWithMissingSizeOnly() {
+		// given
+		ProductCreateRequest createRequest = createProductRequest();
+		Long productId = sut.createProduct(createRequest, brandId, userId);
+		Long colorId = optionValueIds.get(1); // 블랙
+
+		ProductOptionCreateRequest request = ProductOptionCreateRequest.builder()
+			.productPrice(BigDecimal.valueOf(15000))
+			.stockQuantity(5)
+			.optionValueIds(List.of(colorId))
+			.build();
+
+		// when // then
+		assertThatThrownBy(() -> sut.addProductOption(brandId, productId, request, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
+	}
+
+	@Test
 	@DisplayName("사이즈/색상 외 옵션 이름을 포함하면 BusinessException이 발생한다.")
 	void addProductOptionWithInvalidOptionName() {
 		// given
@@ -511,6 +589,27 @@ class ProductCommandServiceTest extends ServiceConfig {
 			.isInstanceOf(BusinessException.class)
 			.extracting("errorCode")
 			.isEqualTo(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
+	}
+
+	@Test
+	@DisplayName("옵션 값이 2개 초과이면 BusinessException이 발생한다.")
+	void addProductOptionWithMoreThanTwoOptionValues() {
+		// given
+		ProductCreateRequest createRequest = createProductRequest();
+		Long productId = sut.createProduct(createRequest, brandId, userId);
+		Long extraOptionId = saveOptionValue("소재", "면").getOptionValueId();
+
+		ProductOptionCreateRequest request = ProductOptionCreateRequest.builder()
+			.productPrice(BigDecimal.valueOf(15000))
+			.stockQuantity(5)
+			.optionValueIds(List.of(optionValueIds.get(0), optionValueIds.get(1), extraOptionId))
+			.build();
+
+		// when // then
+		assertThatThrownBy(() -> sut.addProductOption(brandId, productId, request, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE);
 	}
 
 	@Test

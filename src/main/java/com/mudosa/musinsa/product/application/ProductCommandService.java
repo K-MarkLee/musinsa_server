@@ -335,8 +335,14 @@ public class ProductCommandService {
 
 	// 옵션 값 ID 목록으로부터 옵션 조합을 해석한다.
 	private OptionCombination resolveCombination(List<Long> optionValueIds, Map<Long, OptionValue> optionValueMap) {
-		if (optionValueIds == null || optionValueIds.size() != OptionCombination.REQUIRED_OPTION_COUNT) {
+		if (optionValueIds == null) {
 			throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
+		}
+		if (optionValueIds.size() < OptionCombination.REQUIRED_OPTION_COUNT) {
+			throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_SIZE_AND_VALUE);
+		}
+		if (optionValueIds.size() > OptionCombination.REQUIRED_OPTION_COUNT) {
+			throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE);
 		}
 		Long sizeId = null;
 		Long colorId = null;
