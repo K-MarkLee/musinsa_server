@@ -344,10 +344,16 @@ public class ProductCommandService {
 			OptionValue optionValue = optionValueMap.get(optionValueId);
 			String optionName = normalizeOptionName(optionValue.getOptionName());
 			if (OptionCombination.SIZE_OPTION_NAME.equals(optionName)) {
+				if (sizeId != null) {
+					throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE);
+				}
 				sizeId = optionValue.getOptionValueId();
 				continue;
 			}
 			if (OptionCombination.COLOR_OPTION_NAME.equals(optionName)) {
+				if (colorId != null) {
+					throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED_ONE_SIZE_AND_VALUE);
+				}
 				colorId = optionValue.getOptionValueId();
 				continue;
 			}
