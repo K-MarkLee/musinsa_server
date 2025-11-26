@@ -23,7 +23,6 @@ import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.Tracer.SpanInScope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -59,7 +58,7 @@ public class ChatServiceImpl implements ChatService {
   private final ChatRoomMapper chatRoomMapper;
   private final NotificationEventPublisher notificationEventPublisher;
 
-  private final @Qualifier("localFileStore") FileStore fileStore;
+  private final FileStore fileStore;
 
   private final Tracer tracer;
 
@@ -599,8 +598,6 @@ public class ChatServiceImpl implements ChatService {
       if (file == null || file.isEmpty()) continue;
 
       try {
-        //TODO: 파일 처리 분리 필요!
-        // === 실제 경로 생성 ===
         String storedUrl = fileStore.storeMessageFile(chatId, messageId, file);
 
         MessageAttachment att = MessageAttachment.create(message, file, storedUrl);
@@ -617,7 +614,7 @@ public class ChatServiceImpl implements ChatService {
   //event 발행
   private void publishMessageEvents(MessageResponse dto) {
     messageEventPublisher.publishMessageCreated(dto);
-//    notificationEventPublisher.publishChatNotificationCreatedEvent(dto);
+    notificationEventPublisher.publishChatNotificationCreatedEvent(dto);
     log.info("이벤트 발행 완료. messageId={}", dto.getMessageId());
   }
 
