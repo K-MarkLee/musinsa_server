@@ -83,7 +83,7 @@ dependencies {
 
     // https://mvnrepository.com/artifact/com.google.firebase/firebase-admin
     implementation 'com.google.firebase:firebase-admin:9.7.0'
-
+    implementation("com.amazonaws:aws-java-sdk-s3:1.12.174")
     // https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp
     implementation 'com.squareup.okhttp3:okhttp:5.2.1'
     implementation 'io.micrometer:micrometer-registry-prometheus'
@@ -149,7 +149,6 @@ jacocoTestCoverageVerification {
         }
     }
 }
-
 
 
 clean {
