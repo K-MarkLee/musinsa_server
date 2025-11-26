@@ -248,7 +248,7 @@ class ProductCommandServiceTest extends ServiceConfig {
 		assertThatThrownBy(() -> sut.updateProduct(brandId, productId, updateRequest, userId))
 			.isInstanceOf(BusinessException.class)
 			.extracting("errorCode")
-			.isEqualTo(ErrorCode.PRODUCT_NOTING_TO_UPDATE);
+			.isEqualTo(ErrorCode.PRODUCT_NOTHING_TO_UPDATE);
 	}
 
 	@Test

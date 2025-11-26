@@ -146,7 +146,7 @@ public class ProductCommandService {
 
 		// 3. 수정 가능한 필드가 없으면 예외 처리
 		if (!request.hasUpdatableField()) {
-			throw new BusinessException(ErrorCode.PRODUCT_NOTING_TO_UPDATE);
+			throw new BusinessException(ErrorCode.PRODUCT_NOTHING_TO_UPDATE);
 		}
 
 		// 4. 상품 정보 갱신 검증

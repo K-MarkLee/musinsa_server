@@ -98,7 +98,7 @@ public enum ErrorCode {
   PRODUCT_OPTION_NOT_AVAILABLE("80014", "상품 옵션이 판매 가능한 상태가 아닙니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_OPTION_NOT_EXIST("80015", "요청한 상품 옵션이 존재하지 않습니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_CATEGORY_REQUIRED("80016", "상품 카테고리는 필수입니다.", HttpStatus.BAD_REQUEST),
-  PRODUCT_NOTING_TO_UPDATE("80017", "변경할 항목이 없습니다.", HttpStatus.BAD_REQUEST),
+  PRODUCT_NOTHING_TO_UPDATE("80017", "변경할 항목이 없습니다.", HttpStatus.BAD_REQUEST),
   PRODUCT_NO_CHANGES_DETECTED("80018", "상품 정보에 변경된 내용이 없습니다.", HttpStatus.BAD_REQUEST),
 
   //chat
