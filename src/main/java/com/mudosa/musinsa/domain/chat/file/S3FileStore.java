@@ -1,14 +1,15 @@
 package com.mudosa.musinsa.domain.chat.file;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetUrlRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,7 +21,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class S3FileStore implements FileStore {
 
-  private final AmazonS3 amazonS3;
+  private final S3Client s3Client;
 
   @Value("${aws.s3.bucket}")
   private String bucketName;
@@ -48,21 +49,32 @@ public class S3FileStore implements FileStore {
   }
 
   /**
-   * 실제 S3 업로드 공통 처리
+   * 실제 S3 업로드 공통 처리 (v2 버전)
    */
   private String uploadToS3(String key, MultipartFile file, String original) throws IOException {
-    ObjectMetadata metadata = new ObjectMetadata();
-    metadata.setContentLength(file.getSize());
-    metadata.setContentType(file.getContentType());
-
     try (InputStream inputStream = file.getInputStream()) {
-      amazonS3.putObject(new PutObjectRequest(bucketName, key, inputStream, metadata));
+
+      PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+          .bucket(bucketName)
+          .key(key)
+          .contentType(file.getContentType())
+          .contentLength(file.getSize())
+          .build();
+
+      // v2: RequestBody 사용
+      s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
+
     } catch (IOException e) {
       log.error("Failed to upload file to S3. key={}, filename={}", key, original, e);
       throw e;
     }
 
-    // 전체 URL 반환 (현재 채팅과 동일한 방식)
-    return amazonS3.getUrl(bucketName, key).toString();
+    // v2에서 URL 생성: utilities().getUrl(...)
+    return s3Client.utilities()
+        .getUrl(GetUrlRequest.builder()
+            .bucket(bucketName)
+            .key(key)
+            .build())
+        .toString();
   }
 }
