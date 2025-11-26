@@ -49,18 +49,6 @@ public class ProductCommandController {
                 .body(ProductCreateResponse.builder().productId(productId).build());
     } 
 
-    // 브랜드별 상품 목록 조회 (비활성 상품 포함)
-    @GetMapping
-    public ResponseEntity<List<ProductManagerResponse>> getBrandProducts(
-            @PathVariable Long brandId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-
-        Long userId = userDetails.getUserId();
-        List<ProductManagerResponse> products = productService.getBrandProductsForManager(brandId, userId);
-
-        return ResponseEntity.ok(products);
-    }
-
     // 상품 정보 수정
     @PutMapping("/{productId}")
     public ResponseEntity<ProductDetailResponse> updateProduct(
@@ -88,6 +76,18 @@ public class ProductCommandController {
         return ResponseEntity.ok(product);
     }
 
+    // 브랜드별 상품 목록 조회 (비활성 상품 포함)
+    @GetMapping
+    public ResponseEntity<List<ProductManagerResponse>> getBrandProducts(
+            @PathVariable Long brandId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUserId();
+        List<ProductManagerResponse> products = productService.getBrandProductsForManager(brandId, userId);
+
+        return ResponseEntity.ok(products);
+    }
+
     // 상품 옵션 추가
     @PostMapping("/{productId}/options")
     public ResponseEntity<ProductDetailResponse.OptionDetail> addProductOption(
@@ -100,19 +100,6 @@ public class ProductCommandController {
         ProductDetailResponse.OptionDetail response = productService.addProductOption(brandId, productId, request, userId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    // 브랜드별 상품 옵션 재고 목록 조회
-    @GetMapping("/{productId}/inventory")
-    public ResponseEntity<List<ProductOptionStockResponse>> getProductOptionStocks(
-            @PathVariable Long brandId,
-            @PathVariable Long productId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-
-        Long userId = userDetails.getUserId();
-        List<ProductOptionStockResponse> response = productInventoryService.getProductOptionStocks(brandId, productId, userId);
-
-        return ResponseEntity.ok(response);
     }
 
     // 상품 옵션 재고 추가 (입고)
@@ -142,4 +129,18 @@ public class ProductCommandController {
 
         return ResponseEntity.ok(response);
     }
+
+    // 브랜드별 상품 옵션 재고 목록 조회
+    @GetMapping("/{productId}/inventory")
+    public ResponseEntity<List<ProductOptionStockResponse>> getProductOptionStocks(
+            @PathVariable Long brandId,
+            @PathVariable Long productId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUserId();
+        List<ProductOptionStockResponse> response = productInventoryService.getProductOptionStocks(brandId, productId, userId);
+
+        return ResponseEntity.ok(response);
+    }
+
 }
