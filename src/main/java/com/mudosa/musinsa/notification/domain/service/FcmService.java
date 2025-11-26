@@ -59,7 +59,7 @@ public class FcmService {
 
     public boolean sendMessageByToken(String title,String body,List<FBTokenDTO> tokenList){
         List<String> registrationTokens = tokenList.stream()
-                .map(FBTokenDTO::getFirebaseTokenKey)
+                .map(FBTokenDTO::getToken)
                 .toList();
 
         if(registrationTokens.isEmpty()){
