@@ -741,10 +741,8 @@ class ProductCommandServiceTest extends ServiceConfig {
 	@DisplayName("상품 생성 시 옵션 최저가가 default_price로 저장된다.")
 	void createProductSetsDefaultPriceFromOptions() {
 		// given
-		List<Long> newOptionValueIds = List.of(
-			saveOptionValue("사이즈", "L").getOptionValueId(),
-			saveOptionValue("색상", "블랙").getOptionValueId()
-		);
+		Long spacedSizeId = saveOptionValue("  사이즈 ", "XL").getOptionValueId();
+		Long spacedColorId = saveOptionValue(" 색상", "화이트").getOptionValueId();
 		ProductCreateRequest request = ProductCreateRequest.builder()
 			.productName("상품명")
 			.productInfo("상품 정보")
@@ -764,7 +762,7 @@ class ProductCommandServiceTest extends ServiceConfig {
 				ProductCreateRequest.OptionCreateRequest.builder()
 					.productPrice(BigDecimal.valueOf(8000))
 					.stockQuantity(3)
-					.optionValueIds(newOptionValueIds)
+					.optionValueIds(List.of(spacedSizeId, spacedColorId))
 					.build()
 			))
 			.build();
