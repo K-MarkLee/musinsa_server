@@ -9,8 +9,6 @@ import com.mudosa.musinsa.product.domain.model.ProductOption;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 /**
  * 상품 조회 응답 변환을 담당하는 임시 매퍼.
@@ -20,21 +18,17 @@ public final class ProductQueryMapper {
 	private ProductQueryMapper() {
 	}
 
-	// 상품 목록 페이지를 응답 DTO로 변환한다.
-	public static ProductSearchResponse toSearchResponse(Page<Product> page, Pageable pageable) {
-		List<ProductSearchResponse.ProductSummary> summaries = page.getContent().stream()
+	// 상품 목록을 응답 DTO로 변환한다.
+	public static ProductSearchResponse toSearchResponse(List<Product> products, String nextCursor, boolean hasNext, Long totalCount) {
+		List<ProductSearchResponse.ProductSummary> summaries = products.stream()
 			.map(ProductQueryMapper::toProductSummary)
 			.collect(Collectors.toList());
 
-		int pageNumber = pageable.isPaged() ? pageable.getPageNumber() : 0;
-		int pageSize = pageable.isPaged() ? pageable.getPageSize() : summaries.size();
-
 		return ProductSearchResponse.builder()
 		        .products(summaries)
-		        .totalElements(page.getTotalElements())
-		        .totalPages(page.getTotalPages())
-		        .page(pageNumber)
-		        .size(pageSize)
+		        .nextCursor(nextCursor)
+		        .hasNext(hasNext)
+		        .totalCount(totalCount)
 		        .build();
 	}
 

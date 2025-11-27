@@ -18,10 +18,9 @@ import java.util.List;
 public class ProductSearchResponse {
 
     private List<ProductSummary> products;
-    private long totalElements;
-    private int totalPages;
-    private int page;
-    private int size;
+    private String nextCursor;
+    private boolean hasNext;
+    private Long totalCount; // 무한스크롤에서는 기본 null (선택적)
 
     // 조회된 상품 요약 목록을 NULL 안전하게 반환한다.
     public List<ProductSummary> getProducts() {

@@ -19,7 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -72,7 +71,7 @@ public class ProductQueryServiceTest extends ServiceConfig {
 		ProductSearchResponse response = sut.searchProducts(null);
 
 		// then
-		assertThat(response.getTotalElements()).isEqualTo(2);
+		assertThat(response.isHasNext()).isFalse();
 		assertThat(response.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductName)
 			.containsExactlyInAnyOrder("블랙 티셔츠", "화이트 바지");
@@ -91,14 +90,13 @@ public class ProductQueryServiceTest extends ServiceConfig {
 			.categoryPaths(List.of(bottomsCategoryPath))
 			.gender(ProductGenderType.ALL)
 			.brandId(brandId)
-			.pageable(PageRequest.of(0, 10))
+			.limit(10)
 			.build();
 
 		// when
 		ProductSearchResponse response = sut.searchProducts(condition);
 
 		// then
-		assertThat(response.getTotalElements()).isEqualTo(1);
 		assertThat(response.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductName)
 			.containsExactly("화이트 바지");
@@ -115,14 +113,13 @@ public class ProductQueryServiceTest extends ServiceConfig {
 
 		ProductSearchCondition condition = ProductSearchCondition.builder()
 			.gender(ProductGenderType.MEN)
-			.pageable(PageRequest.of(0, 10))
+			.limit(10)
 			.build();
 
 		// when
 		ProductSearchResponse response = sut.searchProducts(condition);
 
 		// then
-		assertThat(response.getTotalElements()).isEqualTo(1);
 		assertThat(response.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductName)
 			.containsExactly("남성 티셔츠");
@@ -142,14 +139,13 @@ public class ProductQueryServiceTest extends ServiceConfig {
 
 		ProductSearchCondition condition = ProductSearchCondition.builder()
 			.brandId(otherBrandId)
-			.pageable(PageRequest.of(0, 10))
+			.limit(10)
 			.build();
 
 		// when
 		ProductSearchResponse response = sut.searchProducts(condition);
 
 		// then
-		assertThat(response.getTotalElements()).isEqualTo(1);
 		assertThat(response.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductName)
 			.containsExactly("다른 브랜드 바지");
@@ -169,14 +165,13 @@ public class ProductQueryServiceTest extends ServiceConfig {
 			.categoryPaths(List.of(topsCategoryPath))
 			.gender(ProductGenderType.ALL)
 			.brandId(brandId)
-			.pageable(PageRequest.of(0, 10))
+			.limit(10)
 			.build();
 
 		// when
 		ProductSearchResponse response = sut.searchProducts(condition);
 
 		// then
-		assertThat(response.getTotalElements()).isEqualTo(1);
 		assertThat(response.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductId)
 			.containsExactly(blackTeeId);
@@ -194,14 +189,13 @@ public class ProductQueryServiceTest extends ServiceConfig {
 		ProductSearchCondition condition = ProductSearchCondition.builder()
 			.keyword("   ")
 			.categoryPaths(List.of(bottomsCategoryPath))
-			.pageable(PageRequest.of(0, 10))
+			.limit(10)
 			.build();
 
 		// when
 		ProductSearchResponse response = sut.searchProducts(condition);
 
 		// then
-		assertThat(response.getTotalElements()).isEqualTo(1);
 		assertThat(response.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductName)
 			.containsExactly("화이트 바지");
@@ -218,7 +212,7 @@ public class ProductQueryServiceTest extends ServiceConfig {
 
 		ProductSearchCondition condition = ProductSearchCondition.builder()
 			.priceSort(ProductSearchCondition.PriceSort.LOWEST)
-			.pageable(PageRequest.of(0, 10))
+			.limit(10)
 			.build();
 
 		// when
@@ -241,7 +235,7 @@ public class ProductQueryServiceTest extends ServiceConfig {
 
         ProductSearchCondition condition = ProductSearchCondition.builder()
             .priceSort(ProductSearchCondition.PriceSort.HIGHEST)
-            .pageable(PageRequest.of(0, 10))
+            .limit(10)
             .build();
 
         // when
@@ -262,16 +256,15 @@ public class ProductQueryServiceTest extends ServiceConfig {
 		productCommandService.createProduct(createProductRequest("상품3", topsCategoryPath), brandId, userId);
 
 		ProductSearchCondition condition = ProductSearchCondition.builder()
-			.pageable(PageRequest.of(1, 2)) // second page (0-based)
+			.limit(2)
+			.cursor(null)
 			.build();
 
 		// when
 		ProductSearchResponse response = sut.searchProducts(condition);
 
 		// then
-		assertThat(response.getPage()).isEqualTo(1);
-		assertThat(response.getSize()).isEqualTo(2);
-		assertThat(response.getTotalElements()).isEqualTo(3);
+		assertThat(response.isHasNext()).isTrue();
 		assertThat(response.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductName)
 			.containsExactly("상품3");
@@ -285,16 +278,14 @@ public class ProductQueryServiceTest extends ServiceConfig {
 		productCommandService.createProduct(createProductRequest("상품2", topsCategoryPath), brandId, userId);
 
 		ProductSearchCondition condition = ProductSearchCondition.builder()
-			.pageable(org.springframework.data.domain.Pageable.unpaged())
+			.limit(null) // null이면 기본 30으로 처리
 			.build();
 
 		// when
 		ProductSearchResponse response = sut.searchProducts(condition);
 
 		// then
-		assertThat(response.getPage()).isEqualTo(0);
-		assertThat(response.getSize()).isEqualTo(24); // ensurePaged 기본값
-		assertThat(response.getTotalElements()).isEqualTo(2);
+		assertThat(response.isHasNext()).isFalse();
 	}
 
     @Test

@@ -12,13 +12,12 @@ import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
+import com.mudosa.musinsa.product.domain.repository.ProductRepositoryCustom;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -42,10 +41,19 @@ public class ProductQueryService {
 		SearchParams params = parseCondition(condition);
 
 		// 2. 키워드 유무에 따라 적절한 검색 메서드 호출
-		Page<Product> page = findProducts(params);
+		List<Product> products = findProducts(params);
+
+		boolean hasNext = products.size() > params.limit;
+		if (hasNext) {
+			products = products.subList(0, params.limit);
+		}
+
+		String nextCursor = hasNext && !products.isEmpty()
+			? buildCursor(products.get(products.size() - 1), params.priceSort)
+			: null;
 
 		// 3. 응답 DTO 변환
-		return ProductQueryMapper.toSearchResponse(page, params.pageable);
+		return ProductQueryMapper.toSearchResponse(products, nextCursor, hasNext, null);
 	}
 
 	/**
@@ -105,34 +113,59 @@ public class ProductQueryService {
 	// 검색 조건을 안전하게 파싱해 내부용 검색 파라미터 객체로 변환한다.
 	private SearchParams parseCondition(ProductSearchCondition condition) {
 		ProductSearchCondition safeCondition = condition != null ? condition : ProductSearchCondition.builder().build();
-		Pageable pageable = ensurePaged(safeCondition.getPageable());
+		int limit = safeCondition.getLimit();
+		ProductRepositoryCustom.Cursor cursor = parseCursor(safeCondition.getCursor(), safeCondition.getPriceSort());
 		return new SearchParams(
 			safeCondition.getKeyword(),
 			safeCondition.getCategoryPaths(),
 			safeCondition.getGender(),
 			safeCondition.getBrandId(),
-			pageable,
-			safeCondition.getPriceSort()
+			safeCondition.getPriceSort(),
+			cursor,
+			limit
 		);
 	}
 
-	// Pageable이 null이거나 unpaged인 경우 기본 페이지 크기로 변환한다.
-	private Pageable ensurePaged(Pageable pageable) {
-		if (pageable == null || pageable.isUnpaged()) {
-			// 기본 페이지 크기 24로 unpaged 요청을 방어한다.
-			return PageRequest.of(0, 24);
-		}
-		return pageable;
-	}
-
 	// 검색 파라미터에 따라 적절한 상품 조회 메서드를 호출한다.
-	private Page<Product> findProducts(SearchParams params) {
+	private List<Product> findProducts(SearchParams params) {
 		if (params.keyword != null && !params.keyword.isBlank()) {
 			return productRepository.searchByKeywordWithFilters(
-				params.keyword, params.categoryPaths, params.gender, params.brandId, params.priceSort, params.pageable);
+				params.keyword, params.categoryPaths, params.gender, params.brandId, params.priceSort, params.cursor, params.limit + 1);
 		}
-		return productRepository.findAllByFiltersWithPagination(
-			params.categoryPaths, params.gender, params.brandId, params.priceSort, params.pageable);
+		return productRepository.findAllByFiltersWithCursor(
+			params.categoryPaths, params.gender, params.brandId, params.priceSort, params.cursor, params.limit + 1);
+	}
+
+	private ProductRepositoryCustom.Cursor parseCursor(String cursor, ProductSearchCondition.PriceSort priceSort) {
+		if (cursor == null || cursor.isBlank()) {
+			return null;
+		}
+		try {
+			if (priceSort == null) {
+				Long id = Long.parseLong(cursor);
+				return new ProductRepositoryCustom.Cursor(null, id);
+			}
+			String[] parts = cursor.split(":");
+			if (parts.length != 2) {
+				return null;
+			}
+			BigDecimal price = new BigDecimal(parts[0]);
+			Long id = Long.parseLong(parts[1]);
+			return new ProductRepositoryCustom.Cursor(price, id);
+		} catch (NumberFormatException ex) {
+			return null;
+		}
+	}
+
+	private String buildCursor(Product last, ProductSearchCondition.PriceSort priceSort) {
+		if (last == null || last.getProductId() == null) {
+			return null;
+		}
+		if (priceSort == null) {
+			return String.valueOf(last.getProductId());
+		}
+		BigDecimal price = last.getDefaultPrice();
+		return (price != null ? price.toPlainString() : "0") + ":" + last.getProductId();
 	}
 
 	// 상품의 최저가를 계산한다.
@@ -141,8 +174,9 @@ public class ProductQueryService {
 		List<String> categoryPaths,
 		ProductGenderType gender,
 		Long brandId,
-		Pageable pageable,
-		ProductSearchCondition.PriceSort priceSort
+		ProductSearchCondition.PriceSort priceSort,
+		ProductRepositoryCustom.Cursor cursor,
+		int limit
 	) {
 	}
 }
