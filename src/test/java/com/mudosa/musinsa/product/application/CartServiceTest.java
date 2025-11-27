@@ -175,7 +175,7 @@ class CartServiceTest extends ServiceConfig {
         User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
         ProductOption productOption1 = prepareProductOption();
         ProductOption productOption2 = prepareProductOption();
-        cartItemRepository.saveAll(java.util.List.of(
+        cartItemRepository.saveAll(List.of(
             CartItem.builder().user(user).productOption(productOption1).quantity(2).build(),
             CartItem.builder().user(user).productOption(productOption2).quantity(3).build()
         ));
@@ -507,8 +507,8 @@ class CartServiceTest extends ServiceConfig {
             brand.getNameKo(),
             "상의/티셔츠",
             true,
-            java.util.List.of(),
-            java.util.List.of()
+            List.of(),
+            List.of()
         );
 
         ProductOption productOption = ProductOption.create(

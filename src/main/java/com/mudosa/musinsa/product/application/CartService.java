@@ -167,10 +167,6 @@ public class CartService {
             ? productOption.getInventory().getStockQuantity().getValue()
             : null;
 
-        if (stock == null) {
-            throw new BusinessException(ErrorCode.CART_ITEM_STOCK_QUANTITY_REQUIRED);
-        }
-
         if (stock < quantity) {
             throw new BusinessException(ErrorCode.CART_ITEM_INSUFFICIENT_STOCK);
         }
