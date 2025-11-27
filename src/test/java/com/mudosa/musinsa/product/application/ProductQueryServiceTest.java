@@ -4,6 +4,7 @@ import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.brand.domain.model.BrandMember;
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
+import com.mudosa.musinsa.product.application.dto.CategoryTreeResponse;
 import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.ProductSearchCondition;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
@@ -324,7 +325,36 @@ public class ProductQueryServiceTest extends ServiceConfig {
         );
     }
 
+    @Test
+    @DisplayName("카테고리 트리를 부모-자식 구조로 반환한다.")
+    void getCategoryTree_ReturnsTreeStructure() {
+        // given: setUp에서 상의>티셔츠, 하의>바지 저장
+
+        // when
+        CategoryTreeResponse response = sut.getCategoryTree();
+
+        // then
+        assertThat(response.getCategories()).hasSize(2);
+
+        CategoryTreeResponse.CategoryNode tops = findByName(response, "상의");
+        CategoryTreeResponse.CategoryNode bottoms = findByName(response, "하의");
+
+        assertThat(tops.getChildren())
+            .extracting(CategoryTreeResponse.CategoryNode::getCategoryName)
+            .containsExactly("티셔츠");
+        assertThat(bottoms.getChildren())
+            .extracting(CategoryTreeResponse.CategoryNode::getCategoryName)
+            .containsExactly("바지");
+    }
+
     // ==== helper methods ==== //
+	private CategoryTreeResponse.CategoryNode findByName(CategoryTreeResponse response, String name) {
+		return response.getCategories().stream()
+			.filter(node -> node.getCategoryName().equals(name))
+			.findFirst()
+			.orElseThrow();
+	}
+
 	private ProductCreateRequest createProductRequest(String name, String categoryPath) {
 		return createProductRequest(name, categoryPath, ProductGenderType.ALL, BigDecimal.valueOf(10000));
 	}
