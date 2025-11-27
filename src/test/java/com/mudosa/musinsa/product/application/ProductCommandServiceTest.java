@@ -65,7 +65,7 @@ class ProductCommandServiceTest extends ServiceConfig {
 	}
 
 	@Test
-	@DisplayName("올바른 요청으로 상품 생성시 상품 id를 반환한다.")
+	@DisplayName("올바른 요청으로 상품 생성시 상품이 정상적으로 생성되고 id를 반환한다.")
 	void createProduct() {
 		// given
 		ProductCreateRequest request = createProductRequest();
