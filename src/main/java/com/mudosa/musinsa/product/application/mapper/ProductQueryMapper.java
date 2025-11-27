@@ -1,16 +1,13 @@
 package com.mudosa.musinsa.product.application.mapper;
 
-import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
-import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,19 +39,15 @@ public final class ProductQueryMapper {
 	}
 
     // 상품 목록 조회 응답의 요약 정보를 변환한다.
-	public static ProductSearchResponse.ProductSummary toProductSummary(Product product) {
-		BigDecimal lowestPrice = calculateLowestPrice(product);
-        
-		boolean hasStock = product.getProductOptions().stream()
-			.map(ProductOption::getInventory)
-			.filter(Objects::nonNull)
-			.anyMatch(inventory -> inventory.getStockQuantity() != null
-				&& inventory.getStockQuantity().getValue() > 0);
+    public static ProductSearchResponse.ProductSummary toProductSummary(Product product) {
+        BigDecimal lowestPrice = product.getDefaultPrice() != null
+            ? product.getDefaultPrice()
+            : BigDecimal.ZERO;
 
-		String thumbnailUrl = product.getImages().stream()
-			.filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
-			.map(image -> image.getImageUrl())
-			.findFirst()
+        String thumbnailUrl = product.getImages().stream()
+            .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
+            .map(image -> image.getImageUrl())
+            .findFirst()
 			.orElse(null);
 
 		return ProductSearchResponse.ProductSummary.builder()
@@ -65,14 +58,14 @@ public final class ProductQueryMapper {
 		        .productInfo(product.getProductInfo())
 		        .productGenderType(product.getProductGenderType() != null
 				? product.getProductGenderType().name()
-				: null)
-			.isAvailable(product.getIsAvailable())
-			.hasStock(hasStock)
-			.lowestPrice(lowestPrice)
-			.thumbnailUrl(thumbnailUrl)
-			.categoryPath(product.getCategoryPath())
-			.build();
-	}
+                : null)
+            .isAvailable(product.getIsAvailable())
+            .hasStock(null) // 목록에서 옵션 재고를 계산하지 않는다.
+            .lowestPrice(lowestPrice)
+            .thumbnailUrl(thumbnailUrl)
+            .categoryPath(product.getCategoryPath())
+            .build();
+    }
 
     // 상품 상세 조회 응답으로 변환한다.
 	public static ProductDetailResponse toProductDetail(Product product) {
@@ -126,35 +119,9 @@ public final class ProductQueryMapper {
 		return ProductDetailResponse.OptionDetail.builder()
 		        .optionId(option.getProductOptionId())
 		        .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
-		        .stockQuantity(stockQuantity)
-		        .hasStock(hasStock)
-		        .optionValues(optionValueDetails)
-		        .build();
-	}
-
-	public static BigDecimal calculateLowestPrice(Product product) {
-		BigDecimal lowestAvailablePrice = product.getProductOptions().stream()
-			.filter(option -> {
-				Inventory inventory = option.getInventory();
-				return inventory != null
-					&& inventory.getStockQuantity() != null
-					&& inventory.getStockQuantity().getValue() > 0;
-			})
-			.map(ProductOption::getProductPrice)
-			.filter(Objects::nonNull)
-			.map(Money::getAmount)
-			.min(BigDecimal::compareTo)
-			.orElse(null);
-
-		if (lowestAvailablePrice != null) {
-			return lowestAvailablePrice;
-		}
-
-		return product.getProductOptions().stream()
-			.map(ProductOption::getProductPrice)
-			.filter(Objects::nonNull)
-			.map(Money::getAmount)
-			.min(BigDecimal::compareTo)
-			.orElse(BigDecimal.ZERO);
-	}
+                .stockQuantity(stockQuantity)
+                .hasStock(hasStock)
+                .optionValues(optionValueDetails)
+                .build();
+    }
 }

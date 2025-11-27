@@ -30,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -87,8 +88,15 @@ public class ProductCommandService {
 		
 		// 6. 옵션 값 엔티티 매핑
 		Map<Long, OptionValue> optionValueMap = loadOptionValuesByIds(new ArrayList<>(optionValueIds));
+
+		// 7. 옵션 목록에서 대표 가격(default_price)을 결정한다. 우선순위: 최저 옵션가
+		BigDecimal defaultPrice = optionRequests.stream()
+			.map(ProductCreateRequest.OptionCreateRequest::getProductPrice)
+			.filter(Objects::nonNull)
+			.min(BigDecimal::compareTo)
+			.orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_PRICE_REQUIRED));
 		
-		// 7. 상품 및 하위 엔티티 생성
+		// 8. 상품 및 하위 엔티티 생성
 		Product product = Product.create(
 			brand,
 			request.getProductName(),
@@ -97,17 +105,18 @@ public class ProductCommandService {
 			brand.getNameKo(),
 			category.buildPath(),
 			request.getIsAvailable(),
+			defaultPrice,
 			null,
 			null
 		);
 
-		// 8. 이미지 및 옵션 추가
+		// 9. 이미지 및 옵션 추가
 		request.getImages().forEach(image -> {
 			Image img = Image.create(product, image.getImageUrl(), image.getIsThumbnail());
 			product.addImage(img);
 		});
 
-		// 9. 옵션 생성 및 추가
+		// 10. 옵션 생성 및 추가
 		Set<OptionCombination> optionCombinations = new HashSet<>();
 		optionRequests.forEach(option -> {
 			OptionCombination combination = resolveCombination(option.getOptionValueIds(), optionValueMap);
@@ -125,7 +134,7 @@ public class ProductCommandService {
 			product.addProductOption(productOption);
 		});
 
-		// 10. 상품 저장 및 ID 반환
+		// 11. 상품 저장 및 ID 반환
 		Product saved = productRepository.save(product);
 		return saved.getProductId();
 	}
@@ -222,8 +231,11 @@ public class ProductCommandService {
 			optionValueMap
 		);
 		
-		// 6. 상품에 옵션 추가 및 저장
+		// 6. 상품에 옵션 추가 및 대표 가격 갱신
 		product.addProductOption(productOption);
+		if (request.getProductPrice() != null) {
+			product.applyLowerDefaultPrice(request.getProductPrice());
+		}
 		return ProductCommandMapper.toOptionDetail(productOption);
 	}
 	

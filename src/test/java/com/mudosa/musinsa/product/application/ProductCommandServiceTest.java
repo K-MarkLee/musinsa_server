@@ -737,6 +737,74 @@ class ProductCommandServiceTest extends ServiceConfig {
 		assertThat(combo1).hasSameHashCodeAs(combo2);
 	}
 
+	@Test
+	@DisplayName("상품 생성 시 옵션 최저가가 default_price로 저장된다.")
+	void createProductSetsDefaultPriceFromOptions() {
+		// given
+		Long spacedSizeId = saveOptionValue("  사이즈 ", "XL").getOptionValueId();
+		Long spacedColorId = saveOptionValue(" 색상", "화이트").getOptionValueId();
+		ProductCreateRequest request = ProductCreateRequest.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.categoryPath(categoryPath)
+			.isAvailable(true)
+			.images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+				.imageUrl("http://example.com/thumb.jpg")
+				.isThumbnail(true)
+				.build()))
+			.options(List.of(
+				ProductCreateRequest.OptionCreateRequest.builder()
+					.productPrice(BigDecimal.valueOf(15000))
+					.stockQuantity(5)
+					.optionValueIds(optionValueIds)
+					.build(),
+				ProductCreateRequest.OptionCreateRequest.builder()
+					.productPrice(BigDecimal.valueOf(8000))
+					.stockQuantity(3)
+					.optionValueIds(List.of(spacedSizeId, spacedColorId))
+					.build()
+			))
+			.build();
+
+		// when
+		Long productId = sut.createProduct(request, brandId, userId);
+		Product product = productRepository.findById(productId).orElseThrow();
+
+		// then
+		assertThat(product.getDefaultPrice()).isEqualByComparingTo("8000");
+	}
+
+	@Test
+	@DisplayName("상품 생성 시 옵션 가격이 없으면 예외가 발생한다.")
+	void createProductWithoutOptionPriceThrows() {
+		// given
+		ProductCreateRequest request = ProductCreateRequest.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.categoryPath(categoryPath)
+			.isAvailable(true)
+			.images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+				.imageUrl("http://example.com/thumb.jpg")
+				.isThumbnail(true)
+				.build()))
+			.options(List.of(
+				ProductCreateRequest.OptionCreateRequest.builder()
+					.productPrice(null)
+					.stockQuantity(5)
+					.optionValueIds(optionValueIds)
+					.build()
+			))
+			.build();
+
+		// when // then
+		assertThatThrownBy(() -> sut.createProduct(request, brandId, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.PRODUCT_PRICE_REQUIRED);
+	}
+
 
 	// ==== helper methods ==== //
 	private ProductCreateRequest createProductRequest() {
