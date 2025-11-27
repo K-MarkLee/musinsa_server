@@ -64,7 +64,7 @@ public class ProductQueryService {
 	 * 전체 카테고리를 트리 형태로 반환한다.
 	 */
 	public CategoryTreeResponse getCategoryTree() {
-		List<Category> allCategories = categoryRepository.findAll();
+		List<Category> allCategories = categoryRepository.findAllWithParent();
 
 		List<Category> parentCategories = allCategories.stream()
 			.filter(category -> category.getParent() == null)
