@@ -507,6 +507,7 @@ class CartServiceTest extends ServiceConfig {
             brand.getNameKo(),
             "상의/티셔츠",
             true,
+            BigDecimal.ZERO,
             List.of(),
             List.of()
         );
