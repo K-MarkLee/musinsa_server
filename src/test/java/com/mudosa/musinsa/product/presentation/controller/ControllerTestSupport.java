@@ -1,6 +1,9 @@
 package com.mudosa.musinsa.product.presentation.controller;
 
 import com.mudosa.musinsa.product.application.CartService;
+import com.mudosa.musinsa.product.application.ProductCommandService;
+import com.mudosa.musinsa.product.application.ProductInventoryService;
+import com.mudosa.musinsa.product.application.ProductQueryService;
 import com.mudosa.musinsa.settlement.domain.repository.SettlementDailyMapper;
 import com.mudosa.musinsa.settlement.domain.repository.SettlementMonthlyMapper;
 import com.mudosa.musinsa.settlement.domain.repository.SettlementPerTransactionMapper;
@@ -19,6 +22,12 @@ public abstract class ControllerTestSupport {
 
     @MockitoBean
     protected CartService cartService;
+    @MockitoBean
+    protected ProductQueryService productQueryService;
+    @MockitoBean
+    protected ProductCommandService productCommandService;
+    @MockitoBean
+    protected ProductInventoryService productInventoryService;
 
     /**
     * 실제로는 안 쓰지만, 프로젝트 전체에서 스캔돼서 요구하니까 임시 Mock
