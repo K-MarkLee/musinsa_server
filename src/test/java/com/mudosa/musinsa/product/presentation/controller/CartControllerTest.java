@@ -5,6 +5,8 @@ import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.application.dto.CartItemDetailResponse;
 import com.mudosa.musinsa.product.application.dto.CartItemResponse;
 import com.mudosa.musinsa.security.CustomUserDetails;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,6 +39,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("CartController 권한 테스트")
 class CartControllerTest extends ControllerTestSupport {
 
+    private Long userId;
+    private CustomUserDetails userDetails;
+
+    @BeforeEach
+    void setUp() {
+        userId = 1L;
+        userDetails = new CustomUserDetails(userId, "USER");
+    }
+
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("unauthorizedRequests")
     @DisplayName("인증 없이 장바구니 API 접근 시 401을 반환한다.")
@@ -65,9 +76,6 @@ class CartControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("인증된 사용자는 장바구니를 조회할 수 있다.")
     void authorizedAccessReturns200() throws Exception {
-        Long userId = 1L;
-        CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
-
         // given
         given(cartService.getCartItems(anyLong())).willReturn(
             List.of(
@@ -98,9 +106,6 @@ class CartControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("인증된 사용자는 장바구니에 상품을 담을 수 있다.")
     void authorizedAddReturns201() throws Exception {
-        Long userId = 1L;
-        CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
-
         // given
         given(cartService.addCartItem(eq(userId), any())).willReturn(
             CartItemResponse.builder()
@@ -126,9 +131,6 @@ class CartControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("인증된 사용자는 장바구니 수량을 변경할 수 있다.")
     void authorizedUpdateReturns200() throws Exception {
-        Long userId = 1L;
-        CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
-
         // given
         given(cartService.updateCartItemQuantity(eq(userId), eq(99L), anyInt())).willReturn(
             CartItemResponse.builder()
@@ -154,9 +156,6 @@ class CartControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("인증된 사용자는 장바구니 항목을 삭제할 수 있다.")
     void authorizedDeleteReturns204() throws Exception {
-        Long userId = 1L;
-        CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
-
         // when // then
         mockMvc.perform(delete("/api/cart/{cartItemId}", 77L)
                 .with(user(userDetails))
@@ -240,9 +239,6 @@ class CartControllerTest extends ControllerTestSupport {
     @DisplayName("장바구니 추가 요청 DTO 검증 실패 시 400을 반환한다.")
     void addCartItemValidation(String description, String body) throws Exception {
         // given
-        Long userId = 1L;
-        CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
-
         // when // then
         mockMvc.perform(post("/api/cart")
                 .with(user(userDetails))
@@ -265,10 +261,6 @@ class CartControllerTest extends ControllerTestSupport {
     @MethodSource("invalidUpdateRequests")
     @DisplayName("장바구니 수량 변경 요청 DTO 검증 실패 시 400을 반환한다.")
     void updateCartItemValidation(String description, String body) throws Exception {
-        // given
-        Long userId = 1L;
-        CustomUserDetails userDetails = new CustomUserDetails(userId, "USER");
-
         // when // then
         mockMvc.perform(patch("/api/cart/{cartItemId}", 1L)
                 .with(user(userDetails))

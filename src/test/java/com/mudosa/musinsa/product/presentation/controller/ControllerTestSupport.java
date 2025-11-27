@@ -10,7 +10,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 // product 컨트롤러 공통 WebMvc 테스트 설정
-@WebMvcTest(controllers = CartController.class)
+@WebMvcTest(controllers = {CartController.class, CategoryQueryController.class, ProductQueryController.class, 
+        ProductCommandController.class})
 public abstract class ControllerTestSupport {
 
     @Autowired
