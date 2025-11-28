@@ -19,8 +19,9 @@ import java.util.List;
 @Table(
         name = "event",
         indexes = {
-                @Index(name = "idx_event_status", columnList = "status"),
-                @Index(name = "idx_event_period", columnList = "started_at, ended_at")
+                @Index(name = "idx_event_status_started", columnList = "status, started_at"),
+                @Index(name = "idx_event_status_ended", columnList = "status, ended_at"),
+                @Index(name = "idx_event_coupon", columnList = "coupon_id")
         }
 )
 @Check(constraints = "ended_at > started_at")
