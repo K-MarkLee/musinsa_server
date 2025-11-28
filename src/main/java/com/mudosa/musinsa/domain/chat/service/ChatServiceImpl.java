@@ -23,6 +23,7 @@ import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.Tracer.SpanInScope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,9 +33,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -58,6 +59,8 @@ public class ChatServiceImpl implements ChatService {
   private final ChatRoomMapper chatRoomMapper;
   private final NotificationEventPublisher notificationEventPublisher;
 
+
+  @Qualifier("s3AsyncFileStore")
   private final FileStore fileStore;
 
   private final Tracer tracer;
@@ -86,55 +89,253 @@ public class ChatServiceImpl implements ChatService {
   @Transactional
   public MessageResponse saveMessage(Long chatId, Long userId, Long parentId, String content, List<MultipartFile> files, LocalDateTime now) {
 
-    //시작 시간으로 고정(여러번 호출시 시간이 달라지는 문제 발생 가능)
-    log.debug("[chatId={}][userId={}] 메시지 저장 시작. parentId={}, contentLength={}, fileCount={}",
-        chatId, userId, parentId,
-        (content != null ? content.length() : 0),
-        (files != null ? files.size() : 0));
+    // 전체 saveMessage용 span 시작
+    // 메시지 내용(content)은 개인정보/데이터 크기 문제로 보통 태그에 넣지 않음
+    Span span = tracer.nextSpan()
+        .name("chat.saveMessage")
+        .tag("chat.id", String.valueOf(chatId))
+        .tag("user.id", String.valueOf(userId))
+        .start();
 
-    // 0) 기본 검증(전송된 파일 & 메시지가 모두 없으면 오류)
-    validateMessageOrFiles(content, files);
-    log.debug("[chatId={}][userId={}] 메시지/파일 검증 완료", chatId, userId);
+    try (Tracer.SpanInScope ignored = tracer.withSpan(span)) {
 
-    // 1) 채팅방 확인
-    ChatRoom chatRoom = getChatRoomOrThrow(chatId);
-    log.debug("[chatId={}] 채팅방 검증 완료.", chatId);
+      log.debug("[chatId={}][userId={}] 메시지 저장 시작. parentId={}, contentLength={}, fileCount={}",
+          chatId, userId, parentId,
+          (content != null ? content.length() : 0),
+          (files != null ? files.size() : 0));
 
-    //참여자 정보 확인
-    ChatPart chatPart = getChatPartOrThrow(chatId, userId);
-    log.debug("[chatId={}][userId={}] 참가 여부 검증 완료.", chatId, userId);
+      // 0) 기본 검증
+      Span valSpan = tracer.nextSpan()
+          .name("chat.validateInput")
+          .start();
 
-    // 2) 부모 메시지 확인 (같은 방인지까지 확인)
-    Message parent = getParentMessageIfExists(parentId, chatId);
-    if (parent != null) {
-      log.debug("[chatId={}][userId={}] 부모 메시지 존재. parentMessageId={}", chatId, userId, parent.getMessageId());
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(valSpan)) {
+        validateMessageOrFiles(content, files);
+      } finally {
+        valSpan.end();
+      }
+      log.debug("[chatId={}][userId={}] 메시지/파일 검증 완료", chatId, userId);
+
+      // 1) 채팅방 확인
+      Span roomSpan = tracer.nextSpan()
+          .name("chat.loadChatRoom")
+          .start();
+
+      ChatRoom chatRoom;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(roomSpan)) {
+        chatRoom = getChatRoomOrThrow(chatId);
+      } finally {
+        roomSpan.end();
+      }
+      log.debug("[chatId={}] 채팅방 검증 완료.", chatId);
+
+      // 2) 참여자 정보 확인
+      Span partSpan = tracer.nextSpan()
+          .name("chat.loadChatPart")
+          .start();
+
+      ChatPart chatPart;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(partSpan)) {
+        chatPart = getChatPartOrThrow(chatId, userId);
+      } finally {
+        partSpan.end();
+      }
+      log.debug("[chatId={}][userId={}] 참가 여부 검증 완료.", chatId, userId);
+
+      // 3) 부모 메시지 확인
+      Message parent = null;
+      if (parentId != null) {
+        Span parentSpan = tracer.nextSpan()
+            .name("chat.checkParentMessage")
+            .tag("parent.id", String.valueOf(parentId))
+            .start();
+
+        try (Tracer.SpanInScope ignored2 = tracer.withSpan(parentSpan)) {
+          parent = getParentMessageIfExists(parentId, chatId);
+        } finally {
+          parentSpan.end();
+        }
+
+        if (parent != null) {
+          log.debug("[chatId={}][userId={}] 부모 메시지 존재. parentMessageId={}", chatId, userId, parent.getMessageId());
+        }
+      }
+
+      // 4) 메시지 엔티티 생성/저장 (DB Insert)
+      Span saveSpan = tracer.nextSpan()
+          .name("chat.saveMessageEntity")
+          .start();
+
+      Message savedMessage;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(saveSpan)) {
+        Message message = Message.createMessage(content, now, chatPart, parent);
+        savedMessage = messageRepository.save(message);
+      } finally {
+        saveSpan.end();
+      }
+      log.info("[chatId={}][userId={}] 메시지 저장 완료. messageId={}", chatId, userId, savedMessage.getMessageId());
+
+      // 5) 첨부파일 저장 (S3 업로드 등이 포함될 수 있으므로 별도 측정 중요)
+      List<MessageAttachment> savedAttachments;
+      int fileCount = (files != null) ? files.size() : 0;
+
+      if (fileCount > 0) {
+        Span fileSpan = tracer.nextSpan()
+            .name("chat.saveAttachments")
+            .tag("file.count", String.valueOf(fileCount))
+            .start();
+
+        //TODO:s3에 올리는 작업이 느리다. 그래서 해당 부분을 트랜잭션 밖으로 분리해야하고 만약에 응답값을 기다려야 한다면 비동기 completablefuture로 혹은 다른거로 응답값을 기다리게한다
+        try (Tracer.SpanInScope ignored2 = tracer.withSpan(fileSpan)) {
+          savedAttachments = saveAttachments(chatId, savedMessage.getMessageId(), files, savedMessage);
+        } finally {
+          fileSpan.end();
+        }
+        log.info("[chatId={}][userId={}] 첨부파일 {}개 저장 완료", chatId, userId, savedAttachments.size());
+      } else {
+        savedAttachments = Collections.emptyList();
+      }
+
+      // 채팅방 마지막 메시지 시간 갱신 (Dirty Checking에 의해 트랜잭션 종료 시 업데이트 쿼리 나감)
+      // 명시적인 Span은 생략하거나 필요시 추가 가능
+      chatRoom.setLastMessageAt(now);
+
+      // 6) 응답 생성 및 이벤트 발행
+      Span eventSpan = tracer.nextSpan()
+          .name("chat.publishEvent")
+          .start();
+
+      MessageResponse dto;
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(eventSpan)) {
+        dto = MessageResponse.from(savedMessage, savedAttachments);
+        // AFTER_COMMIT 리스너에서 실제 전송
+        publishMessageEvents(dto);
+      } finally {
+        eventSpan.end();
+      }
+
+      return dto;
+
+    } finally {
+      // 전체 span 종료
+      span.end();
     }
-
-    // 3) 메시지 엔티티 생성/저장
-    Message message = Message.createMessage(content, now, chatPart, parent);
-
-    Message savedMessage = messageRepository.save(message);
-
-
-    log.info("[chatId={}][userId={}] 메시지 저장 완료. messageId={}", chatId, userId, savedMessage.getMessageId());
-
-    // 4) 첨부파일 저장
-    List<MessageAttachment> savedAttachments = saveAttachments(chatId, savedMessage.getMessageId(), files, savedMessage);
-    log.info("[chatId={}][userId={}] 첨부파일 {}개 저장 완료", chatId, userId, savedAttachments.size());
-
-    // 채팅방 마지막 메시지 시간 갱신
-    chatRoom.setLastMessageAt(now);
-
-    // 5) 응답 생성
-    MessageResponse dto = MessageResponse.from(savedMessage, savedAttachments);
-
-    // 6) 이벤트 발행 (AFTER_COMMIT 리스너에서 실제 전송)
-    publishMessageEvents(dto);
-
-    return dto;
   }
 
-  private Slice<Long> getChatMessagesSlice(Long chatId, MessageCursor cursor, int size) {
+  /**
+   * 메시지 조회
+   * <p>
+   * - 조회된 정보들 매핑하여 반환
+   * </p>
+   */
+  @Override
+  public Slice<MessageResponse> getChatMessages(Long chatId, MessageCursor cursor, int size) {
+    getChatRoomOrThrow(chatId);
+
+    Span span = tracer.nextSpan()
+        .name("chat.getChatMessages")
+        .tag("chat.id", String.valueOf(chatId))
+        .start();
+
+    try (SpanInScope ignored = tracer.withSpan(span)) {
+
+      // DB + 배치 로딩
+      MessagesBundle bundle = loadMessages(chatId, cursor, size);
+
+      if (bundle.messages().isEmpty()) {
+        return new SliceImpl<>(List.of(), PageRequest.of(0, size), false);
+      }
+
+      // DTO 매핑 구간 span
+      Span dtoSpan = tracer.nextSpan().name("chat.mapMessagesToDto").start();
+      List<MessageResponse> dtoList;
+      try (SpanInScope ignored2 = tracer.withSpan(dtoSpan)) {
+
+        List<Message> messages = bundle.messages();
+        Set<Long> managerUserIds = bundle.managerUserIds();
+        Map<Long, List<AttachmentResponse>> attachmentMap = bundle.attachmentMap();
+        Map<Long, Message> parentMap = bundle.parentMap();
+
+        dtoList = messages.stream()
+            .map(msg -> {
+
+              // parent 엔티티를 parentMap에서 가져옴
+              Message parent = null;
+              if (msg.getParent() != null) {
+                Long parentId = msg.getParent().getMessageId();
+                parent = parentMap.get(parentId);
+              }
+
+              // 현재 메시지 첨부
+              List<AttachmentResponse> currentAttachments =
+                  attachmentMap.getOrDefault(msg.getMessageId(), Collections.emptyList());
+
+              // ParentMessageResponse 생성
+              ParentMessageResponse parentDto = null;
+              if (parent != null) {
+
+                List<AttachmentResponse> parentAttachments =
+                    attachmentMap.getOrDefault(parent.getMessageId(), Collections.emptyList());
+
+                var parentCp = parent.getChatPart();
+                Long parentUserId = (parentCp != null && parentCp.getUser() != null)
+                    ? parentCp.getUser().getId()
+                    : null;
+                String parentUserName = (parentCp != null && parentCp.getUser() != null)
+                    ? parentCp.getUser().getUserName()
+                    : "SYSTEM";
+
+                parentDto = ParentMessageResponse.builder()
+                    .messageId(parent.getMessageId())
+                    .userId(parentUserId)
+                    .userName(parentUserName)
+                    .content(parent.getContent())
+                    .createdAt(parent.getCreatedAt())
+                    .attachments(parentAttachments)
+                    .build();
+              }
+
+              // sender
+              var cp = msg.getChatPart();
+              Long senderUserId = (cp != null && cp.getUser() != null)
+                  ? cp.getUser().getId()
+                  : null;
+              String senderName = (cp != null && cp.getUser() != null)
+                  ? cp.getUser().getUserName()
+                  : "SYSTEM";
+
+              boolean isManager = senderUserId != null && managerUserIds.contains(senderUserId);
+
+              return MessageResponse.builder()
+                  .messageId(msg.getMessageId())
+                  .chatId(msg.getChatId())
+                  .chatPartId(cp != null ? cp.getChatPartId() : null)
+                  .userId(senderUserId)
+                  .userName(senderName)
+                  .content(msg.getContent())
+                  .attachments(currentAttachments)
+                  .createdAt(msg.getCreatedAt())
+                  .parent(parentDto)
+                  .isManager(isManager)
+                  .build();
+            })
+            .toList();
+
+      } finally {
+        dtoSpan.end();
+      }
+
+      return new SliceImpl<>(dtoList, PageRequest.of(0, size), bundle.hasNext());
+
+    } finally {
+      span.end();
+    }
+  }
+
+  /**
+   * 메시지 ID 목록 조회
+   */
+  private Slice<Long> getChatMessageIds(Long chatId, MessageCursor cursor, int size) {
     // hasNext 판단 위해 size+1
     Pageable pageable = PageRequest.of(0, size + 1);
 
@@ -148,6 +349,19 @@ public class ChatServiceImpl implements ChatService {
 
     return messageRepository.findIdSliceByChatIdAndCursor(chatId, cursor.createdAt(), cursor.messageId(), pageable);
   }
+
+  /**
+   * 실제 메시지 정보 조회
+   *
+   * <ol>
+   *   <li>메시지 ID 목록 조회</li>
+   *   <li>메시지 본문 로딩</li>
+   *   <li>부모 메시지 ID 목록 수집(중복 제거)</li>
+   *   <li>브랜드 관리자 정보 조회</li>
+   *   <li>메시지 ID + 부모 메시지 ID 병합</li>
+   *   <li>병합 ID 목록으로 첨부파일 조회</li>
+   * </ol>
+   */
 
   @Transactional(readOnly = true)
   protected MessagesBundle loadMessages(Long chatId, MessageCursor cursor, int size) {
@@ -179,7 +393,7 @@ public class ChatServiceImpl implements ChatService {
 
       Slice<Long> idSlice;
       try (Tracer.SpanInScope ignored2 = tracer.withSpan(msgPageSpan)) {
-        idSlice = getChatMessagesSlice(chatId, cursor, size);
+        idSlice = getChatMessageIds(chatId, cursor, size);
       } finally {
         msgPageSpan.end();
       }
@@ -215,10 +429,6 @@ public class ChatServiceImpl implements ChatService {
           .map(messageMap::get)
           .filter(Objects::nonNull)
           .toList();
-
-      // 🔹 더 이상 정렬 필요 없음 (pageIds는 이미 keyset 정렬 기반)
-      // messages.sort(...); 제거
-
 
       // 4) 부모 ID 수집 (중복 제거를 Set으로)
       Span parentIdSpan = tracer.nextSpan()
@@ -327,111 +537,6 @@ public class ChatServiceImpl implements ChatService {
     }
   }
 
-  @Override
-  public Slice<MessageResponse> getChatMessages(Long chatId, MessageCursor cursor, int size) {
-    getChatRoomOrThrow(chatId);
-
-    Span span = tracer.nextSpan()
-        .name("chat.getChatMessages")
-        .tag("chat.id", String.valueOf(chatId))
-        .start();
-
-    try (SpanInScope ignored = tracer.withSpan(span)) {
-
-      // DB + 배치 로딩
-      MessagesBundle bundle = loadMessages(chatId, cursor, size);
-
-      if (bundle.messages().isEmpty()) {
-        return new SliceImpl<>(List.of(), PageRequest.of(0, size), false);
-      }
-
-      // DTO 매핑 구간 span
-      Span dtoSpan = tracer.nextSpan().name("chat.mapMessagesToDto").start();
-      List<MessageResponse> dtoList;
-      try (SpanInScope ignored2 = tracer.withSpan(dtoSpan)) {
-
-        List<Message> messages = bundle.messages();
-        Set<Long> managerUserIds = bundle.managerUserIds();
-        Map<Long, List<AttachmentResponse>> attachmentMap = bundle.attachmentMap();
-        Map<Long, Message> parentMap = bundle.parentMap();
-
-        dtoList = messages.stream()
-            .map(msg -> {
-
-              // parent 엔티티를 parentMap에서 가져옴
-              Message parent = null;
-              if (msg.getParent() != null) {
-                Long parentId = msg.getParent().getMessageId();
-                parent = parentMap.get(parentId);
-              }
-
-              // 현재 메시지 첨부
-              List<AttachmentResponse> currentAttachments =
-                  attachmentMap.getOrDefault(msg.getMessageId(), Collections.emptyList());
-
-              // ParentMessageResponse 생성
-              ParentMessageResponse parentDto = null;
-              if (parent != null) {
-
-                List<AttachmentResponse> parentAttachments =
-                    attachmentMap.getOrDefault(parent.getMessageId(), Collections.emptyList());
-
-                var parentCp = parent.getChatPart();
-                Long parentUserId = (parentCp != null && parentCp.getUser() != null)
-                    ? parentCp.getUser().getId()
-                    : null;
-                String parentUserName = (parentCp != null && parentCp.getUser() != null)
-                    ? parentCp.getUser().getUserName()
-                    : "SYSTEM";
-
-                parentDto = ParentMessageResponse.builder()
-                        .messageId(parent.getMessageId())
-                        .userId(parentUserId)
-                        .userName(parentUserName)
-                        .content(parent.getContent())
-                        .createdAt(parent.getCreatedAt())
-                        .attachments(parentAttachments)
-                        .build();
-              }
-
-              // sender
-              var cp = msg.getChatPart();
-              Long senderUserId = (cp != null && cp.getUser() != null)
-                  ? cp.getUser().getId()
-                  : null;
-              String senderName = (cp != null && cp.getUser() != null)
-                  ? cp.getUser().getUserName()
-                  : "SYSTEM";
-
-              boolean isManager = senderUserId != null && managerUserIds.contains(senderUserId);
-
-              return MessageResponse.builder()
-                      .messageId(msg.getMessageId())
-                      .chatId(msg.getChatId())
-                      .chatPartId(cp != null ? cp.getChatPartId() : null)
-                      .userId(senderUserId)
-                      .userName(senderName)
-                      .content(msg.getContent())
-                      .attachments(currentAttachments)
-                      .createdAt(msg.getCreatedAt())
-                      .parent(parentDto)
-                      .isManager(isManager)
-                      .build();
-            })
-            .toList();
-
-      } finally {
-        dtoSpan.end();
-      }
-
-      return new SliceImpl<>(dtoList, PageRequest.of(0, size), bundle.hasNext());
-
-    } finally {
-      span.end();
-    }
-  }
-
-
   /**
    * 채팅방 정보 조회
    */
@@ -506,6 +611,9 @@ public class ChatServiceImpl implements ChatService {
         chatId, userId, chatPart.getChatPartId());
   }
 
+
+  /** -- helper method -- */
+
   /**
    * 채팅방 찾기 (없으면 오류)
    */
@@ -516,8 +624,6 @@ public class ChatServiceImpl implements ChatService {
           return new BusinessException(ErrorCode.CHAT_NOT_FOUND);
         });
   }
-
-  /** -- helper method -- */
 
   /**
    * 참여정보 찾기 (없으면 오류)
@@ -589,26 +695,66 @@ public class ChatServiceImpl implements ChatService {
                                                   Long messageId,
                                                   List<MultipartFile> files,
                                                   Message message) {
-    if (files == null || files.isEmpty()) {
-      return List.of();
-    }
+    if (files == null || files.isEmpty()) return List.of();
 
-    List<MessageAttachment> result = new ArrayList<>();
-    for (MultipartFile file : files) {
-      if (file == null || file.isEmpty()) continue;
+    // 1. [전체 구간] 시작
+    Span batchSpan = tracer.nextSpan()
+        .name("chat.saveAttachments.batch")
+        .tag("file.count", String.valueOf(files.size()))
+        .start();
 
-      try {
-        String storedUrl = fileStore.storeMessageFile(chatId, messageId, file);
+    try (Tracer.SpanInScope ignored = tracer.withSpan(batchSpan)) {
 
-        MessageAttachment att = MessageAttachment.create(message, file, storedUrl);
-
-        result.add(attachmentRepository.save(att));
-
-      } catch (IOException e) {
-        throw new BusinessException(ErrorCode.FILE_SAVE_FAILED);
+      // 2. [병렬 요청] S3에 일단 다 던지기 (Non-blocking)
+      Map<MultipartFile, CompletableFuture<String>> futureMap = new LinkedHashMap<>();
+      for (MultipartFile file : files) {
+        futureMap.put(file, fileStore.storeMessageFile(chatId, messageId, file));
       }
+
+      // 3. [결과 수집] S3 업로드 완료 대기 & 엔티티 생성
+      List<MessageAttachment> attachments = new ArrayList<>();
+
+      for (Map.Entry<MultipartFile, CompletableFuture<String>> entry : futureMap.entrySet()) {
+        MultipartFile file = entry.getKey();
+        CompletableFuture<String> future = entry.getValue();
+
+        // 개별 파일 대기 시간 추적 (선택 사항: 필요 없으면 생략 가능하지만 있으면 좋음)
+        Span waitSpan = tracer.nextSpan()
+            .name("chat.waitForS3")
+            .tag("file.name", file.getOriginalFilename())
+            .start();
+
+        try (Tracer.SpanInScope ignored2 = tracer.withSpan(waitSpan)) {
+          // 여기서 S3 완료될 때까지 대기
+          String storedUrl = future.join();
+          attachments.add(MessageAttachment.create(message, file, storedUrl));
+        } catch (Exception e) {
+          waitSpan.error(e);
+          throw new BusinessException(ErrorCode.FILE_SAVE_FAILED);
+        } finally {
+          waitSpan.end();
+        }
+      }
+
+      // 4. [DB 저장] ★ 요청하신 DB 저장 구간 Span 추가! ★
+      Span dbSpan = tracer.nextSpan()
+          .name("chat.saveAttachments.db") // 트레이스에 표시될 이름
+          .tag("db.batch.size", String.valueOf(attachments.size())) // 몇 개 저장했는지 태그
+          .start();
+
+      try (Tracer.SpanInScope ignored2 = tracer.withSpan(dbSpan)) {
+        // 배치 저장 (여기서 DB 쿼리 나감)
+        return attachmentRepository.saveAll(attachments);
+      } catch (Exception e) {
+        dbSpan.error(e);
+        throw e;
+      } finally {
+        dbSpan.end();
+      }
+
+    } finally {
+      batchSpan.end();
     }
-    return result;
   }
 
   //event 발행
