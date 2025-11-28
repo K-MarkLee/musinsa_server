@@ -13,8 +13,8 @@ import java.util.List;
 // 상품 목록 조회 응답을 표현하는 DTO이다.
 @Getter
 @Builder
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProductSearchResponse {
 
     private List<ProductSummary> products;
@@ -29,8 +29,8 @@ public class ProductSearchResponse {
 
     @Getter
     @Builder
-    @NoArgsConstructor(access = AccessLevel.PROTECTED)
-    @AllArgsConstructor(access = AccessLevel.PROTECTED)
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ProductSummary {
         private Long productId;
         private Long brandId;

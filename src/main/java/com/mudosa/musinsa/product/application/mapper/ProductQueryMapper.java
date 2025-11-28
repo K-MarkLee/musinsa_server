@@ -19,11 +19,7 @@ public final class ProductQueryMapper {
 	}
 
 	// 상품 목록을 응답 DTO로 변환한다.
-	public static ProductSearchResponse toSearchResponse(List<Product> products, String nextCursor, boolean hasNext, Long totalCount) {
-		List<ProductSearchResponse.ProductSummary> summaries = products.stream()
-			.map(ProductQueryMapper::toProductSummary)
-			.collect(Collectors.toList());
-
+	public static ProductSearchResponse toSearchResponse(List<ProductSearchResponse.ProductSummary> summaries, String nextCursor, boolean hasNext, Long totalCount) {
 		return ProductSearchResponse.builder()
 		        .products(summaries)
 		        .nextCursor(nextCursor)
@@ -38,16 +34,12 @@ public final class ProductQueryMapper {
             ? product.getDefaultPrice()
             : BigDecimal.ZERO;
 
-        String thumbnailUrl = product.getImages().stream()
-            .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
-            .map(image -> image.getImageUrl())
-            .findFirst()
-			.orElse(null);
+        String thumbnailUrl = product.getThumbnailImage();
 
-		return ProductSearchResponse.ProductSummary.builder()
-		        .productId(product.getProductId())
-		        .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
-		        .brandName(product.getBrandName())
+        return ProductSearchResponse.ProductSummary.builder()
+                .productId(product.getProductId())
+                .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
+                .brandName(product.getBrandName())
 		        .productName(product.getProductName())
 		        .productInfo(product.getProductInfo())
 		        .productGenderType(product.getProductGenderType() != null

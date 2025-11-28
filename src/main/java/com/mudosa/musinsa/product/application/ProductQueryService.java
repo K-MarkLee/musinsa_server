@@ -14,12 +14,14 @@ import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepositoryCustom;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class ProductQueryService {
 
@@ -40,19 +43,17 @@ public class ProductQueryService {
 		// 1. 검색 조건 파싱
 		SearchParams params = parseCondition(condition);
 
-		// 2. 키워드 유무에 따라 적절한 검색 메서드 호출
-		List<Product> products = findProducts(params);
+		// 2. 키워드 유무에 따라 적절한 검색 메서드 호출 (요약 DTO)
+		List<ProductSearchResponse.ProductSummary> fetchedProducts = findProducts(params);
 
-		boolean hasNext = products.size() > params.limit;
-		if (hasNext) {
-			products = products.subList(0, params.limit);
-		}
+		boolean hasNext = fetchedProducts.size() > params.limit;
+		List<ProductSearchResponse.ProductSummary> products = hasNext ? fetchedProducts.subList(0, params.limit) : fetchedProducts;
 
 		String nextCursor = hasNext && !products.isEmpty()
 			? buildCursor(products.get(products.size() - 1), params.priceSort)
 			: null;
 
-		// 3. 응답 DTO 변환
+		// 3. 응답 DTO 반환
 		return ProductQueryMapper.toSearchResponse(products, nextCursor, hasNext, null);
 	}
 
@@ -122,13 +123,15 @@ public class ProductQueryService {
 			safeCondition.getBrandId(),
 			safeCondition.getPriceSort(),
 			cursor,
+			safeCondition.getCursor(),
 			limit
 		);
 	}
 
 	// 검색 파라미터에 따라 적절한 상품 조회 메서드를 호출한다.
-	private List<Product> findProducts(SearchParams params) {
-		if (params.keyword != null && !params.keyword.isBlank()) {
+	private List<ProductSearchResponse.ProductSummary> findProducts(SearchParams params) {
+		boolean keywordPresent = params.keyword != null && !params.keyword.isBlank();
+		if (keywordPresent) {
 			return productRepository.searchByKeywordWithFilters(
 				params.keyword, params.categoryPaths, params.gender, params.brandId, params.priceSort, params.cursor, params.limit + 1);
 		}
@@ -157,26 +160,40 @@ public class ProductQueryService {
 		}
 	}
 
-	private String buildCursor(Product last, ProductSearchCondition.PriceSort priceSort) {
+	private String buildCursor(ProductSearchResponse.ProductSummary last, ProductSearchCondition.PriceSort priceSort) {
 		if (last == null || last.getProductId() == null) {
 			return null;
 		}
 		if (priceSort == null) {
 			return String.valueOf(last.getProductId());
 		}
-		BigDecimal price = last.getDefaultPrice();
+		BigDecimal price = last.getLowestPrice();
 		return (price != null ? price.toPlainString() : "0") + ":" + last.getProductId();
 	}
 
-	// 상품의 최저가를 계산한다.
-	private record SearchParams(
-		String keyword,
-		List<String> categoryPaths,
-		ProductGenderType gender,
-		Long brandId,
-		ProductSearchCondition.PriceSort priceSort,
-		ProductRepositoryCustom.Cursor cursor,
-		int limit
-	) {
+	// 상품 검색 파라미터를 담는 내부 클래스 (record 사용 시 IDE 호환 이슈 방지)
+	private static class SearchParams {
+		private final String keyword;
+		private final List<String> categoryPaths;
+		private final ProductGenderType gender;
+		private final Long brandId;
+		private final ProductSearchCondition.PriceSort priceSort;
+		private final ProductRepositoryCustom.Cursor cursor;
+		private final String rawCursor;
+		private final int limit;
+
+		private SearchParams(String keyword, List<String> categoryPaths, ProductGenderType gender, Long brandId,
+							 ProductSearchCondition.PriceSort priceSort, ProductRepositoryCustom.Cursor cursor,
+							 String rawCursor, int limit) {
+			this.keyword = keyword;
+			this.categoryPaths = categoryPaths;
+			this.gender = gender;
+			this.brandId = brandId;
+			this.priceSort = priceSort;
+			this.cursor = cursor;
+			this.rawCursor = rawCursor;
+			this.limit = limit;
+		}
 	}
+
 }

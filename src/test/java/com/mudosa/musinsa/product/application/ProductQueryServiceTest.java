@@ -248,26 +248,164 @@ public class ProductQueryServiceTest extends ServiceConfig {
     }
 
 	@Test
-	@DisplayName("페이징이 적용된다.")
-	void searchProductsWithPagination() {
+	@DisplayName("커서 없이 기본 정렬로 페이징된다.")
+	void searchProductsWithDefaultCursorPaging() {
 		// given
-		productCommandService.createProduct(createProductRequest("상품1", topsCategoryPath), brandId, userId);
-		productCommandService.createProduct(createProductRequest("상품2", topsCategoryPath), brandId, userId);
+		Long firstId = productCommandService.createProduct(createProductRequest("상품1", topsCategoryPath), brandId, userId);
+		Long secondId = productCommandService.createProduct(createProductRequest("상품2", topsCategoryPath), brandId, userId);
 		productCommandService.createProduct(createProductRequest("상품3", topsCategoryPath), brandId, userId);
 
-		ProductSearchCondition condition = ProductSearchCondition.builder()
+		ProductSearchCondition firstPageCondition = ProductSearchCondition.builder()
 			.limit(2)
-			.cursor(null)
 			.build();
 
 		// when
-		ProductSearchResponse response = sut.searchProducts(condition);
+		ProductSearchResponse firstPage = sut.searchProducts(firstPageCondition);
 
 		// then
-		assertThat(response.isHasNext()).isTrue();
-		assertThat(response.getProducts())
+		assertThat(firstPage.isHasNext()).isTrue();
+		assertThat(firstPage.getProducts())
+			.extracting(ProductSearchResponse.ProductSummary::getProductName)
+			.containsExactly("상품1", "상품2");
+		assertThat(firstPage.getNextCursor()).isEqualTo(String.valueOf(secondId));
+
+		// when: second page with cursor
+		ProductSearchCondition secondPageCondition = ProductSearchCondition.builder()
+			.limit(2)
+			.cursor(firstPage.getNextCursor())
+			.build();
+		ProductSearchResponse secondPage = sut.searchProducts(secondPageCondition);
+
+		assertThat(secondPage.isHasNext()).isFalse();
+		assertThat(secondPage.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductName)
 			.containsExactly("상품3");
+	}
+
+	@Test
+	@DisplayName("가격 낮은순 커서 페이징이 정상 동작한다.")
+	void searchProductsWithLowestPriceCursorPaging() {
+		// given
+		productCommandService.createProduct(
+			createProductRequest("저가 티셔츠", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(5000)), brandId, userId);
+		Long midId = productCommandService.createProduct(
+			createProductRequest("중간가 티셔츠", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(8000)), brandId, userId);
+		Long highId = productCommandService.createProduct(
+			createProductRequest("고가 티셔츠", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(15000)), brandId, userId);
+
+		ProductSearchCondition firstPageCondition = ProductSearchCondition.builder()
+			.priceSort(ProductSearchCondition.PriceSort.LOWEST)
+			.limit(2)
+			.build();
+
+		// when
+		ProductSearchResponse firstPage = sut.searchProducts(firstPageCondition);
+
+		// then
+		assertThat(firstPage.isHasNext()).isTrue();
+		assertThat(firstPage.getProducts())
+			.extracting(ProductSearchResponse.ProductSummary::getProductName)
+			.containsExactly("저가 티셔츠", "중간가 티셔츠");
+		assertThat(firstPage.getNextCursor()).isEqualTo("8000:" + midId);
+
+		// when: second page with cursor
+		ProductSearchCondition secondPageCondition = ProductSearchCondition.builder()
+			.priceSort(ProductSearchCondition.PriceSort.LOWEST)
+			.limit(2)
+			.cursor(firstPage.getNextCursor())
+			.build();
+		ProductSearchResponse secondPage = sut.searchProducts(secondPageCondition);
+
+		assertThat(secondPage.isHasNext()).isFalse();
+		assertThat(secondPage.getProducts())
+			.extracting(ProductSearchResponse.ProductSummary::getProductName)
+			.containsExactly("고가 티셔츠");
+		assertThat(secondPage.getProducts())
+			.extracting(ProductSearchResponse.ProductSummary::getProductId)
+			.containsExactly(highId);
+	}
+
+	@Test
+	@DisplayName("가격 높은순 커서 페이징이 정상 동작한다.")
+	void searchProductsWithHighestPriceCursorPaging() {
+		// given
+		Long cheapId = productCommandService.createProduct(
+			createProductRequest("저가 티셔츠", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(5000)), brandId, userId);
+		Long midId = productCommandService.createProduct(
+			createProductRequest("중간가 티셔츠", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(8000)), brandId, userId);
+		Long highId = productCommandService.createProduct(
+			createProductRequest("고가 티셔츠", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(15000)), brandId, userId);
+
+		ProductSearchCondition firstPageCondition = ProductSearchCondition.builder()
+			.priceSort(ProductSearchCondition.PriceSort.HIGHEST)
+			.limit(2)
+			.build();
+
+		// when
+		ProductSearchResponse firstPage = sut.searchProducts(firstPageCondition);
+
+		// then
+		assertThat(firstPage.isHasNext()).isTrue();
+		assertThat(firstPage.getProducts())
+			.extracting(ProductSearchResponse.ProductSummary::getProductName)
+			.containsExactly("고가 티셔츠", "중간가 티셔츠");
+		assertThat(firstPage.getNextCursor()).isEqualTo("8000:" + midId);
+
+		// when: second page with cursor
+		ProductSearchCondition secondPageCondition = ProductSearchCondition.builder()
+			.priceSort(ProductSearchCondition.PriceSort.HIGHEST)
+			.limit(2)
+			.cursor(firstPage.getNextCursor())
+			.build();
+		ProductSearchResponse secondPage = sut.searchProducts(secondPageCondition);
+
+		assertThat(secondPage.isHasNext()).isFalse();
+		assertThat(secondPage.getProducts())
+			.extracting(ProductSearchResponse.ProductSummary::getProductName)
+			.containsExactly("저가 티셔츠");
+		assertThat(secondPage.getProducts())
+			.extracting(ProductSearchResponse.ProductSummary::getProductId)
+			.containsExactly(cheapId);
+	}
+
+	@Test
+	@DisplayName("동일 가격일 때 낮은 가격 정렬 커서가 productId로 타이브레이크한다.")
+	void searchProductsWithLowestPriceCursorPagingSamePriceUsesIdOrder() {
+		// given
+		Long firstId = productCommandService.createProduct(
+			createProductRequest("동일가1", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(7000)), brandId, userId);
+		Long secondId = productCommandService.createProduct(
+			createProductRequest("동일가2", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(7000)), brandId, userId);
+		Long thirdId = productCommandService.createProduct(
+			createProductRequest("동일가3", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(7000)), brandId, userId);
+
+		ProductSearchCondition firstPageCondition = ProductSearchCondition.builder()
+			.priceSort(ProductSearchCondition.PriceSort.LOWEST)
+			.limit(2)
+			.build();
+
+		// when
+		ProductSearchResponse firstPage = sut.searchProducts(firstPageCondition);
+
+		// then
+		assertThat(firstPage.isHasNext()).isTrue();
+		assertThat(firstPage.getProducts())
+			.extracting(ProductSearchResponse.ProductSummary::getProductId)
+			.containsExactly(firstId, secondId);
+		assertThat(firstPage.getNextCursor()).isEqualTo("7000:" + secondId);
+
+		// when: cursor로 다음 페이지 요청
+		ProductSearchCondition secondPageCondition = ProductSearchCondition.builder()
+			.priceSort(ProductSearchCondition.PriceSort.LOWEST)
+			.limit(2)
+			.cursor(firstPage.getNextCursor())
+			.build();
+		ProductSearchResponse secondPage = sut.searchProducts(secondPageCondition);
+
+		assertThat(secondPage.isHasNext()).isFalse();
+		assertThat(secondPage.getProducts())
+			.extracting(ProductSearchResponse.ProductSummary::getProductId)
+			.containsExactly(thirdId);
 	}
 
 	@Test

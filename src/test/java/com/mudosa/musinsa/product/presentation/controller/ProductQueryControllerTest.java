@@ -53,8 +53,8 @@ class ProductQueryControllerTest extends ControllerTestSupport {
                     .categoryPath("상의>티셔츠")
                     .build()
             ))
-            .nextCursor(null)
-            .hasNext(false)
+            .nextCursor("cursor-10")
+            .hasNext(true)
             .build();
 
         given(productQueryService.searchProducts(any()))
@@ -66,7 +66,8 @@ class ProductQueryControllerTest extends ControllerTestSupport {
                 .with(user(userDetails)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.products[0].productId").value(10L))
-            .andExpect(jsonPath("$.hasNext").value(false));
+            .andExpect(jsonPath("$.hasNext").value(true))
+            .andExpect(jsonPath("$.nextCursor").value("cursor-10"));
     }
 
     @Test
