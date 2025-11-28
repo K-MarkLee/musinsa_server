@@ -11,7 +11,15 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "member_coupon")
+@Table(
+        name = "member_coupon",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_member_coupon_user_coupon", columnNames = {"user_id", "coupon_id"})
+        },
+        indexes = {
+                @Index(name = "idx_member_coupon_user_status", columnList = "user_id, coupon_status")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MemberCoupon extends BaseEntity {

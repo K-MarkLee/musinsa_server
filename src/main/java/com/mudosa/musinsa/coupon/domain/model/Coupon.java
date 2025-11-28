@@ -17,7 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "coupon")
+@Table(
+        name = "coupon",
+        indexes = {
+                @Index(name = "idx_coupon_active_period", columnList = "is_active, start_date, end_date")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
