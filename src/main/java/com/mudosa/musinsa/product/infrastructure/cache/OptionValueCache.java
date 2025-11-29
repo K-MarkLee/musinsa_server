@@ -24,7 +24,13 @@ public class OptionValueCache {
 		if (optionValues == null || optionValues.isEmpty()) {
 			return;
 		}
-		optionValues.forEach(this::save);
+		Map<String, Value> bulk = optionValues.stream()
+			.filter(ov -> ov != null && ov.getOptionValueId() != null)
+			.collect(Collectors.toMap(ov -> buildKey(ov.getOptionValueId()),
+				ov -> new Value(ov.getOptionName(), ov.getOptionValue())));
+		if (!bulk.isEmpty()) {
+			redisTemplate.opsForValue().multiSet(bulk);
+		}
 	}
 
 	public void save(OptionValue optionValue) {
@@ -43,18 +49,27 @@ public class OptionValueCache {
 		return cached instanceof Value ? (Value) cached : null;
 	}
 
-    public Map<Long, Value> getAll(Collection<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return Map.of();
-        }
-        return ids.stream()
-            .map(id -> {
-                Value value = get(id);
-                return value != null ? Map.entry(id, value) : null;
-            })
-            .filter(entry -> entry != null)
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
+	public Map<Long, Value> getAll(Collection<Long> ids) {
+		if (ids == null || ids.isEmpty()) {
+			return Map.of();
+		}
+		var keyList = ids.stream()
+			.filter(id -> id != null)
+			.map(id -> Map.entry(id, buildKey(id)))
+			.toList();
+
+		var values = redisTemplate.opsForValue().multiGet(
+			keyList.stream().map(Map.Entry::getValue).toList());
+
+		Map<Long, Value> result = new java.util.HashMap<>();
+		for (int i = 0; i < keyList.size(); i++) {
+			Object raw = values != null && i < values.size() ? values.get(i) : null;
+			if (raw instanceof Value value) {
+				result.put(keyList.get(i).getKey(), value);
+			}
+		}
+		return result;
+	}
 
 	private String buildKey(Long id) {
 		return KEY_PREFIX + id;
