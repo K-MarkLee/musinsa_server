@@ -168,7 +168,8 @@ public class ProductQueryService {
 			return String.valueOf(last.getProductId());
 		}
 		BigDecimal price = last.getLowestPrice();
-		return (price != null ? price.toPlainString() : "0") + ":" + last.getProductId();
+		String pricePart = price != null ? price.stripTrailingZeros().toPlainString() : "0";
+		return pricePart + ":" + last.getProductId();
 	}
 
 	// 상품 검색 파라미터를 담는 내부 클래스 (record 사용 시 IDE 호환 이슈 방지)

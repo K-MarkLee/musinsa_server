@@ -19,39 +19,39 @@ public final class ProductQueryMapper {
 	}
 
 	// 상품 목록을 응답 DTO로 변환한다.
-	public static ProductSearchResponse toSearchResponse(List<ProductSearchResponse.ProductSummary> summaries, String nextCursor, boolean hasNext, Long totalCount) {
-		return ProductSearchResponse.builder()
-		        .products(summaries)
-		        .nextCursor(nextCursor)
-		        .hasNext(hasNext)
-		        .totalCount(totalCount)
-		        .build();
-	}
-
-    // 상품 목록 조회 응답의 요약 정보를 변환한다.
-    public static ProductSearchResponse.ProductSummary toProductSummary(Product product) {
-        BigDecimal lowestPrice = product.getDefaultPrice() != null
-            ? product.getDefaultPrice()
-            : BigDecimal.ZERO;
-
-        String thumbnailUrl = product.getThumbnailImage();
-
-        return ProductSearchResponse.ProductSummary.builder()
-                .productId(product.getProductId())
-                .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
-                .brandName(product.getBrandName())
-		        .productName(product.getProductName())
-		        .productInfo(product.getProductInfo())
-		        .productGenderType(product.getProductGenderType() != null
-				? product.getProductGenderType().name()
-                : null)
-            .isAvailable(product.getIsAvailable())
-            .hasStock(null) // 목록에서 옵션 재고를 계산하지 않는다.
-            .lowestPrice(lowestPrice)
-            .thumbnailUrl(thumbnailUrl)
-            .categoryPath(product.getCategoryPath())
-            .build();
+    public static ProductSearchResponse toSearchResponse(List<ProductSearchResponse.ProductSummary> summaries, String nextCursor, boolean hasNext, Long totalCount) {
+        return ProductSearchResponse.builder()
+                .products(summaries)
+                .nextCursor(nextCursor)
+                .hasNext(hasNext)
+                .totalCount(totalCount)
+                .build();
     }
+
+//    // 상품 목록 조회 응답의 요약 정보를 변환한다. (QueryDSL 프로젝션을 사용 중이라 현재 미사용)
+//    public static ProductSearchResponse.ProductSummary toProductSummary(Product product) {
+//        BigDecimal lowestPrice = product.getDefaultPrice() != null
+//            ? product.getDefaultPrice()
+//            : BigDecimal.ZERO;
+//
+//        String thumbnailUrl = product.getThumbnailImage();
+//
+//        return ProductSearchResponse.ProductSummary.builder()
+//                .productId(product.getProductId())
+//                .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
+//                .brandName(product.getBrandName())
+//		        .productName(product.getProductName())
+//		        .productInfo(product.getProductInfo())
+//		        .productGenderType(product.getProductGenderType() != null
+//				? product.getProductGenderType().name()
+//                : null)
+//            .isAvailable(product.getIsAvailable())
+//            .hasStock(null) // 목록에서 옵션 재고를 계산하지 않는다.
+//            .lowestPrice(lowestPrice)
+//            .thumbnailUrl(thumbnailUrl)
+//            .categoryPath(product.getCategoryPath())
+//            .build();
+//    }
 
     // 상품 상세 조회 응답으로 변환한다.
 	public static ProductDetailResponse toProductDetail(Product product) {
