@@ -7,6 +7,7 @@ import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchCondition;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.application.mapper.ProductQueryMapper;
+import com.mudosa.musinsa.product.infrastructure.cache.CategoryCache;
 import com.mudosa.musinsa.product.domain.model.Category;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
@@ -19,9 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.Queue;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +37,7 @@ public class ProductQueryService {
 
 	private final ProductRepository productRepository;
 	private final CategoryRepository categoryRepository;
+	private final CategoryCache categoryCache;
 
 	/**
 	 * 검색 조건에 맞는 상품을 조회해 페이지 형태로 반환한다.
@@ -73,6 +76,11 @@ public class ProductQueryService {
 	 * 전체 카테고리를 트리 형태로 반환한다.
 	 */
 	public CategoryTreeResponse getCategoryTree() {
+		CategoryTreeResponse cached = categoryCache.getTree();
+		if (cached != null) {
+			return cached;
+		}
+
 		List<Category> allCategories = categoryRepository.findAllWithParent();
 
 		List<Category> parentCategories = allCategories.stream()
@@ -87,7 +95,10 @@ public class ProductQueryService {
 			.map(parent -> toNode(parent, childrenMap.getOrDefault(parent.getCategoryId(), List.of())))
 			.collect(Collectors.toList());
 
-		return new CategoryTreeResponse(categoryNodes);
+		CategoryTreeResponse tree = new CategoryTreeResponse(categoryNodes);
+		categoryCache.saveTree(tree);
+		categoryCache.saveAll(flatten(tree));
+		return tree;
 	}
 
 	// 카테고리와 그 자식 카테고리들을 CategoryNode로 변환한다.
@@ -109,6 +120,22 @@ public class ProductQueryService {
 			category.getImageUrl(),
 			childNodes
 		);
+	}
+
+	private Map<Long, CategoryTreeResponse.CategoryNode> flatten(CategoryTreeResponse tree) {
+		if (tree == null || tree.getCategories() == null || tree.getCategories().isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, CategoryTreeResponse.CategoryNode> result = new java.util.HashMap<>();
+		Queue<CategoryTreeResponse.CategoryNode> queue = new LinkedList<>(tree.getCategories());
+		while (!queue.isEmpty()) {
+			CategoryTreeResponse.CategoryNode node = queue.poll();
+			result.put(node.getCategoryId(), node);
+			if (node.getChildren() != null) {
+				queue.addAll(node.getChildren());
+			}
+		}
+		return result;
 	}
 
 	// 검색 조건을 안전하게 파싱해 내부용 검색 파라미터 객체로 변환한다.

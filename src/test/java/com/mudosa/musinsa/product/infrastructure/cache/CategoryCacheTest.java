@@ -88,4 +88,18 @@ class CategoryCacheTest {
 		assertThat(cached.get(1L).getCategoryName()).isEqualTo("A");
 		assertThat(cached).doesNotContainKey(3L);
 	}
+
+	@Test
+	void get_singleNode() {
+		CategoryTreeResponse.CategoryNode node1 = new CategoryTreeResponse.CategoryNode(1L, "A", "A", null, List.of());
+		Map<Long, CategoryTreeResponse.CategoryNode> map = Map.of(1L, node1);
+		categoryCache.saveAll(map);
+
+		CategoryTreeResponse.CategoryNode cachedNode = categoryCache.get(1L);
+		CategoryTreeResponse.CategoryNode nonExistentNode = categoryCache.get(99L);
+
+		assertThat(cachedNode).isNotNull();
+		assertThat(cachedNode.getCategoryName()).isEqualTo("A");
+		assertThat(nonExistentNode).isNull();
+	}
 }

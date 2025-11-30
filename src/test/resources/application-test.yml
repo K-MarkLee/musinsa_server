@@ -49,3 +49,8 @@ aws:
     bucket: test
     accessKey: s3_access_key
     secretKey: s3_secret_key
+
+# redis test 
+cache:
+  preload:
+    enabled: false # 테스트 하고싶으면 true

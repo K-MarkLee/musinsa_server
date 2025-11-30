@@ -1,19 +1,28 @@
 package com.mudosa.musinsa.product.application.dto;
 
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-@Value
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class CategoryTreeResponse {
-    List<CategoryNode> categories;
+	List<CategoryNode> categories;
 
-    @Value
-    public static class CategoryNode {
-        Long categoryId;
-        String categoryName;
-        String categoryPath;
-        String imageUrl;
+	@Data
+	@NoArgsConstructor
+	@AllArgsConstructor
+	@Builder
+	public static class CategoryNode {
+		Long categoryId;
+		String categoryName;
+		String categoryPath;
+		String imageUrl;
         List<CategoryNode> children;
     }
 }

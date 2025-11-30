@@ -7,6 +7,7 @@ import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ import java.util.Queue;
  * 애플리케이션 기동 시 카테고리/옵션 값을 Redis에 적재한다.
  */
 @Component
+@ConditionalOnProperty(name = "cache.preload.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class CacheInitializer {
