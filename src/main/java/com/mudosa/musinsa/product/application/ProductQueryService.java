@@ -20,10 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.stream.Collectors;
 
 /**
@@ -99,7 +97,7 @@ public class ProductQueryService {
 			.categories(categoryNodes)
 			.build();
 		categoryCache.saveTree(tree);
-		categoryCache.saveAll(flatten(tree));
+		categoryCache.saveAll(CategoryTreeResponse.flatten(tree));
 		return tree;
 	}
 
@@ -124,21 +122,7 @@ public class ProductQueryService {
 			.build();
 	}
 
-	private Map<Long, CategoryTreeResponse.CategoryNode> flatten(CategoryTreeResponse tree) {
-		if (tree == null || tree.getCategories() == null || tree.getCategories().isEmpty()) {
-			return Map.of();
-		}
-		Map<Long, CategoryTreeResponse.CategoryNode> result = new java.util.HashMap<>();
-		Queue<CategoryTreeResponse.CategoryNode> queue = new LinkedList<>(tree.getCategories());
-		while (!queue.isEmpty()) {
-			CategoryTreeResponse.CategoryNode node = queue.poll();
-			result.put(node.getCategoryId(), node);
-			if (node.getChildren() != null) {
-				queue.addAll(node.getChildren());
-			}
-		}
-		return result;
-	}
+    
 
 	// 검색 조건을 안전하게 파싱해 내부용 검색 파라미터 객체로 변환한다.
 	private SearchParams parseCondition(ProductSearchCondition condition) {
