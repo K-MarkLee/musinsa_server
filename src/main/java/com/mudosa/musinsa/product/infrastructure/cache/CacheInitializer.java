@@ -7,19 +7,18 @@ import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 /**
  * 애플리케이션 기동 시 카테고리/옵션 값을 Redis에 적재한다.
  */
 @Component
+@ConditionalOnProperty(name = "cache.preload.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class CacheInitializer {
@@ -45,25 +44,11 @@ public class CacheInitializer {
 		CategoryTreeResponse tree = productQueryService.getCategoryTree();
 		categoryCache.saveTree(tree);
 
-		Map<Long, CategoryTreeResponse.CategoryNode> flatMap = flatten(tree);
+		Map<Long, CategoryTreeResponse.CategoryNode> flatMap = CategoryTreeResponse.flatten(tree);
 		categoryCache.saveAll(flatMap);
 
 		log.info("Preloaded categories into Redis cache. totalNodes={}", flatMap.size());
 	}
 
-	private Map<Long, CategoryTreeResponse.CategoryNode> flatten(CategoryTreeResponse tree) {
-		Map<Long, CategoryTreeResponse.CategoryNode> result = new HashMap<>();
-		if (tree == null || tree.getCategories().isEmpty()) {
-			return result;
-		}
-		Queue<CategoryTreeResponse.CategoryNode> queue = new LinkedList<>(tree.getCategories());
-		while (!queue.isEmpty()) {
-			CategoryTreeResponse.CategoryNode node = queue.poll();
-			result.put(node.getCategoryId(), node);
-			if (node.getChildren() != null) {
-				queue.addAll(node.getChildren());
-			}
-		}
-		return result;
-	}
+
 }

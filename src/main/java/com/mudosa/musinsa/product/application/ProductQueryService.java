@@ -7,6 +7,7 @@ import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchCondition;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.application.mapper.ProductQueryMapper;
+import com.mudosa.musinsa.product.infrastructure.cache.CategoryCache;
 import com.mudosa.musinsa.product.domain.model.Category;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +35,7 @@ public class ProductQueryService {
 
 	private final ProductRepository productRepository;
 	private final CategoryRepository categoryRepository;
+	private final CategoryCache categoryCache;
 
 	/**
 	 * 검색 조건에 맞는 상품을 조회해 페이지 형태로 반환한다.
@@ -73,6 +74,11 @@ public class ProductQueryService {
 	 * 전체 카테고리를 트리 형태로 반환한다.
 	 */
 	public CategoryTreeResponse getCategoryTree() {
+		CategoryTreeResponse cached = categoryCache.getTree();
+		if (cached != null) {
+			return cached;
+		}
+
 		List<Category> allCategories = categoryRepository.findAllWithParent();
 
 		List<Category> parentCategories = allCategories.stream()
@@ -85,31 +91,38 @@ public class ProductQueryService {
 
 		List<CategoryTreeResponse.CategoryNode> categoryNodes = parentCategories.stream()
 			.map(parent -> toNode(parent, childrenMap.getOrDefault(parent.getCategoryId(), List.of())))
-			.collect(Collectors.toList());
+			.collect(Collectors.toUnmodifiableList());
 
-		return new CategoryTreeResponse(categoryNodes);
+		CategoryTreeResponse tree = CategoryTreeResponse.builder()
+			.categories(categoryNodes)
+			.build();
+		categoryCache.saveTree(tree);
+		categoryCache.saveAll(CategoryTreeResponse.flatten(tree));
+		return tree;
 	}
 
 	// 카테고리와 그 자식 카테고리들을 CategoryNode로 변환한다.
 	private CategoryTreeResponse.CategoryNode toNode(Category category, List<Category> children) {
 		List<CategoryTreeResponse.CategoryNode> childNodes = children.stream()
-			.map(child -> new CategoryTreeResponse.CategoryNode(
-				child.getCategoryId(),
-				child.getCategoryName(),
-				child.buildPath(),
-				child.getImageUrl(),
-				List.of() // 손주는 없으므로 빈 리스트
-			))
-			.collect(Collectors.toList());
+			.map(child -> CategoryTreeResponse.CategoryNode.builder()
+				.categoryId(child.getCategoryId())
+				.categoryName(child.getCategoryName())
+				.categoryPath(child.buildPath())
+				.imageUrl(child.getImageUrl())
+				.children(List.of()) // 손주는 없으므로 빈 리스트
+				.build())
+			.collect(Collectors.toUnmodifiableList());
 
-		return new CategoryTreeResponse.CategoryNode(
-			category.getCategoryId(),
-			category.getCategoryName(),
-			category.buildPath(),
-			category.getImageUrl(),
-			childNodes
-		);
+		return CategoryTreeResponse.CategoryNode.builder()
+			.categoryId(category.getCategoryId())
+			.categoryName(category.getCategoryName())
+			.categoryPath(category.buildPath())
+			.imageUrl(category.getImageUrl())
+			.children(childNodes)
+			.build();
 	}
+
+    
 
 	// 검색 조건을 안전하게 파싱해 내부용 검색 파라미터 객체로 변환한다.
 	private SearchParams parseCondition(ProductSearchCondition condition) {
