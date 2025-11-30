@@ -432,26 +432,26 @@ public class ProductCommandService {
 
 	// 썸네일 URL을 결정한다. 명시적 썸네일이 없으면 첫 번째 이미지를 사용한다.
 	private String resolveThumbnailUrl(List<ProductCreateRequest.ImageCreateRequest> images) {
-		if (images == null || images.isEmpty()) {
-			throw new BusinessException(ErrorCode.IMAGE_REQUIRED);
-		}
-		return images.stream()
-			.filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
-			.map(ProductCreateRequest.ImageCreateRequest::getImageUrl)
-			.findFirst()
-			.orElseGet(() -> images.get(0).getImageUrl());
+		return resolveThumbnailUrl(images, ProductCreateRequest.ImageCreateRequest::getIsThumbnail,
+			ProductCreateRequest.ImageCreateRequest::getImageUrl);
 	}
 
 	// 상품 수정 시 썸네일 URL을 결정한다. 명시적 썸네일이 없으면 첫 번째 이미지를 사용한다.
 	private String resolveThumbnailUrlForUpdate(List<ProductUpdateRequest.ImageUpdateRequest> images) {
+		return resolveThumbnailUrl(images, ProductUpdateRequest.ImageUpdateRequest::getIsThumbnail,
+			ProductUpdateRequest.ImageUpdateRequest::getImageUrl);
+	}
+
+	private <T> String resolveThumbnailUrl(List<T> images, Function<T, Boolean> isThumbnailGetter,
+										   Function<T, String> imageUrlGetter) {
 		if (images == null || images.isEmpty()) {
 			throw new BusinessException(ErrorCode.IMAGE_REQUIRED);
 		}
 		return images.stream()
-			.filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
-			.map(ProductUpdateRequest.ImageUpdateRequest::getImageUrl)
+			.filter(img -> Boolean.TRUE.equals(isThumbnailGetter.apply(img)))
+			.map(imageUrlGetter)
 			.findFirst()
-			.orElseGet(() -> images.get(0).getImageUrl());
+			.orElseGet(() -> imageUrlGetter.apply(images.get(0)));
 	}
 
 }

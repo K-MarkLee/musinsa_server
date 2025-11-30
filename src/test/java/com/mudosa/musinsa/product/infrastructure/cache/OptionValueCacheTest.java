@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -17,11 +19,16 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
+import java.util.stream.StreamSupport;
+
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class OptionValueCacheTest {
 
     @Mock
@@ -38,13 +45,24 @@ class OptionValueCacheTest {
     @BeforeEach
     void setUp() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        doAnswer(invocation -> {
-            String key = invocation.getArgument(0);
-            Object value = invocation.getArgument(1);
-            store.put(key, value);
-            return null;
-        }).when(valueOperations).set(anyString(), any());
-        when(valueOperations.get(anyString())).thenAnswer(invocation -> store.get(invocation.getArgument(0)));
+		doAnswer(invocation -> {
+			String key = invocation.getArgument(0);
+			Object value = invocation.getArgument(1);
+			store.put(key, value);
+			return null;
+		}).when(valueOperations).set(anyString(), any());
+		doAnswer(invocation -> {
+			Map<String, Object> map = invocation.getArgument(0);
+			store.putAll(map);
+			return null;
+		}).when(valueOperations).multiSet(anyMap());
+        lenient().when(valueOperations.get(anyString())).thenAnswer(invocation -> store.get(invocation.getArgument(0)));
+        when(valueOperations.multiGet(any())).thenAnswer(invocation -> {
+            Iterable<String> keys = invocation.getArgument(0);
+            return StreamSupport.stream(keys.spliterator(), false)
+                .map(store::get)
+                .toList();
+        });
         store.clear();
     }
 
