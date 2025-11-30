@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -39,6 +40,8 @@ public class ProductQueryServiceTest extends ServiceConfig {
 	private CategoryRepository categoryRepository;
 	@Autowired
 	private OptionValueRepository optionValueRepository;
+	@Autowired
+	private RedisTemplate<String, Object> redisTemplate;
 
 	private Long userId;
 	private Long brandId;
@@ -48,6 +51,9 @@ public class ProductQueryServiceTest extends ServiceConfig {
 
 	@BeforeEach
 	void setUp() {
+		if (redisTemplate != null && redisTemplate.getConnectionFactory() != null) {
+			redisTemplate.getConnectionFactory().getConnection().flushDb();
+		}
 		userId = 1L;
 		brandId = saveBrandWithMember(userId).getBrandId();
 		topsCategoryPath = saveCategoryPath("상의", "티셔츠").buildPath();

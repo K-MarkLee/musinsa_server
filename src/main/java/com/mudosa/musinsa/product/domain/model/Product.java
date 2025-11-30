@@ -49,7 +49,7 @@ public class Product extends BaseEntity {
     @Column(name = "default_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal defaultPrice;
 
-    @Column(name = "thumbnail_image", nullable = false, length = 2048)
+    @Column(name = "thumbnail_image", length = 2048)
     private String thumbnailImage;
 
     @Enumerated(EnumType.STRING)

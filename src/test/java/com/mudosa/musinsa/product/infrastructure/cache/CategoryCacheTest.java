@@ -66,7 +66,7 @@ class CategoryCacheTest {
 
 	@Test
 	void saveAndGetTree() {
-		CategoryTreeResponse tree = new CategoryTreeResponse(List.of());
+		CategoryTreeResponse tree = CategoryTreeResponse.builder().categories(List.of()).build();
 		categoryCache.saveTree(tree);
 
 		assertThat(categoryCache.getTree()).isNotNull();
@@ -74,8 +74,20 @@ class CategoryCacheTest {
 
 	@Test
 	void saveAll_andGetAll() {
-		CategoryTreeResponse.CategoryNode node1 = new CategoryTreeResponse.CategoryNode(1L, "A", "A", null, List.of());
-		CategoryTreeResponse.CategoryNode node2 = new CategoryTreeResponse.CategoryNode(2L, "B", "B", null, List.of());
+		CategoryTreeResponse.CategoryNode node1 = CategoryTreeResponse.CategoryNode.builder()
+			.categoryId(1L)
+			.categoryName("A")
+			.categoryPath("A")
+			.imageUrl(null)
+			.children(List.of())
+			.build();
+		CategoryTreeResponse.CategoryNode node2 = CategoryTreeResponse.CategoryNode.builder()
+			.categoryId(2L)
+			.categoryName("B")
+			.categoryPath("B")
+			.imageUrl(null)
+			.children(List.of())
+			.build();
 		Map<Long, CategoryTreeResponse.CategoryNode> map = Map.of(
 			1L, node1,
 			2L, node2
@@ -91,7 +103,13 @@ class CategoryCacheTest {
 
 	@Test
 	void get_singleNode() {
-		CategoryTreeResponse.CategoryNode node1 = new CategoryTreeResponse.CategoryNode(1L, "A", "A", null, List.of());
+		CategoryTreeResponse.CategoryNode node1 = CategoryTreeResponse.CategoryNode.builder()
+			.categoryId(1L)
+			.categoryName("A")
+			.categoryPath("A")
+			.imageUrl(null)
+			.children(List.of())
+			.build();
 		Map<Long, CategoryTreeResponse.CategoryNode> map = Map.of(1L, node1);
 		categoryCache.saveAll(map);
 

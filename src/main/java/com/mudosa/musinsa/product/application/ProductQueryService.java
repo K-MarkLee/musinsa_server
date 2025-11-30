@@ -93,9 +93,11 @@ public class ProductQueryService {
 
 		List<CategoryTreeResponse.CategoryNode> categoryNodes = parentCategories.stream()
 			.map(parent -> toNode(parent, childrenMap.getOrDefault(parent.getCategoryId(), List.of())))
-			.collect(Collectors.toList());
+			.collect(Collectors.toUnmodifiableList());
 
-		CategoryTreeResponse tree = new CategoryTreeResponse(categoryNodes);
+		CategoryTreeResponse tree = CategoryTreeResponse.builder()
+			.categories(categoryNodes)
+			.build();
 		categoryCache.saveTree(tree);
 		categoryCache.saveAll(flatten(tree));
 		return tree;
@@ -104,22 +106,22 @@ public class ProductQueryService {
 	// 카테고리와 그 자식 카테고리들을 CategoryNode로 변환한다.
 	private CategoryTreeResponse.CategoryNode toNode(Category category, List<Category> children) {
 		List<CategoryTreeResponse.CategoryNode> childNodes = children.stream()
-			.map(child -> new CategoryTreeResponse.CategoryNode(
-				child.getCategoryId(),
-				child.getCategoryName(),
-				child.buildPath(),
-				child.getImageUrl(),
-				List.of() // 손주는 없으므로 빈 리스트
-			))
-			.collect(Collectors.toList());
+			.map(child -> CategoryTreeResponse.CategoryNode.builder()
+				.categoryId(child.getCategoryId())
+				.categoryName(child.getCategoryName())
+				.categoryPath(child.buildPath())
+				.imageUrl(child.getImageUrl())
+				.children(List.of()) // 손주는 없으므로 빈 리스트
+				.build())
+			.collect(Collectors.toUnmodifiableList());
 
-		return new CategoryTreeResponse.CategoryNode(
-			category.getCategoryId(),
-			category.getCategoryName(),
-			category.buildPath(),
-			category.getImageUrl(),
-			childNodes
-		);
+		return CategoryTreeResponse.CategoryNode.builder()
+			.categoryId(category.getCategoryId())
+			.categoryName(category.getCategoryName())
+			.categoryPath(category.buildPath())
+			.imageUrl(category.getImageUrl())
+			.children(childNodes)
+			.build();
 	}
 
 	private Map<Long, CategoryTreeResponse.CategoryNode> flatten(CategoryTreeResponse tree) {

@@ -1,28 +1,34 @@
 package com.mudosa.musinsa.product.application.dto;
 
-import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Value;
 
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Value
+@Builder(toBuilder = true)
+@JsonDeserialize(builder = CategoryTreeResponse.CategoryTreeResponseBuilder.class)
 public class CategoryTreeResponse {
 	List<CategoryNode> categories;
 
-	@Data
-	@NoArgsConstructor
-	@AllArgsConstructor
-	@Builder
+	@Value
+	@Builder(toBuilder = true)
+	@JsonDeserialize(builder = CategoryNode.CategoryNodeBuilder.class)
 	public static class CategoryNode {
 		Long categoryId;
 		String categoryName;
 		String categoryPath;
 		String imageUrl;
-        List<CategoryNode> children;
-    }
+		List<CategoryNode> children;
+
+		@JsonPOJOBuilder(withPrefix = "")
+		public static class CategoryNodeBuilder {
+		}
+	}
+
+	@JsonPOJOBuilder(withPrefix = "")
+	public static class CategoryTreeResponseBuilder {
+	}
 }
