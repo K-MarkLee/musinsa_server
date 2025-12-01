@@ -1,7 +1,7 @@
-package com.mudosa.musinsa.notification.domain.controller;
+package com.mudosa.musinsa.notification.controller;
 
-import com.mudosa.musinsa.notification.domain.dto.NotificationDTO;
-import com.mudosa.musinsa.notification.domain.service.NotificationService;
+import com.mudosa.musinsa.notification.dto.NotificationDTO;
+import com.mudosa.musinsa.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

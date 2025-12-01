@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.notification.domain.repository;
+package com.mudosa.musinsa.notification.repository;
 
-import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
+import com.mudosa.musinsa.notification.model.NotificationMetadata;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

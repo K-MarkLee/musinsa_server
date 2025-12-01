@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.notification.domain.event;
+package com.mudosa.musinsa.notification.event;
 
-import com.mudosa.musinsa.notification.domain.service.NotificationService;
+import com.mudosa.musinsa.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

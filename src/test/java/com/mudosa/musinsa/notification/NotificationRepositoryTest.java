@@ -1,8 +1,9 @@
-package com.mudosa.musinsa.notification.domain;
+package com.mudosa.musinsa.notification;
 
 import com.mudosa.musinsa.ServiceConfig;
-import com.mudosa.musinsa.notification.domain.model.Notification;
-import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
+import com.mudosa.musinsa.notification.dto.NotificationDTO;
+import com.mudosa.musinsa.notification.model.Notification;
+import com.mudosa.musinsa.notification.model.NotificationMetadata;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.model.UserRole;
 import org.junit.jupiter.api.AfterEach;
@@ -51,7 +52,7 @@ class NotificationRepositoryTest extends ServiceConfig {
             saveNotification(user2, notificationMetadata);
             saveNotification(user2, notificationMetadata);
         // when
-            List<Notification> notifications = notificationRepository.findByUserId(user1.getId());
+            List<NotificationDTO> notifications = notificationRepository.findNotificationDTOsByUserId(user1.getId());
         // then
             assertThat(notifications).hasSize(3);
 

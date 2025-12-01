@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.notification.domain.model;
+package com.mudosa.musinsa.notification.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.user.domain.model.User;

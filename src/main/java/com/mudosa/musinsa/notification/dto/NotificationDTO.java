@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.notification.domain.dto;
+package com.mudosa.musinsa.notification.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

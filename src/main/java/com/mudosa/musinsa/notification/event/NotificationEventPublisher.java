@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.notification.domain.event;
+package com.mudosa.musinsa.notification.event;
 
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
 
