@@ -4,11 +4,14 @@ import com.mudosa.musinsa.brand.domain.model.Brand;
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
+import org.springframework.util.StringUtils;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 
 // 상품 애그리거트 루트 엔티티로 연관된 하위 요소를 함께 관리한다.
 @Entity
@@ -43,6 +46,12 @@ public class Product extends BaseEntity {
     @Column(name = "is_available", nullable = false)
     private Boolean isAvailable;
 
+    @Column(name = "default_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal defaultPrice;
+
+    @Column(name = "thumbnail_image", length = 2048)
+    private String thumbnailImage;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "product_gender_type", nullable = false)
     private ProductGenderType productGenderType;
@@ -63,6 +72,8 @@ public class Product extends BaseEntity {
                                  String brandName,
                                  String categoryPath,
                                  Boolean isAvailable,
+                                 BigDecimal defaultPrice,
+                                 String thumbnailImage,
                                  java.util.List<Image> images,
                                  java.util.List<ProductOption> productOptions) {
         if (productName == null || productName.trim().isEmpty()) {
@@ -74,16 +85,21 @@ public class Product extends BaseEntity {
         if (productGenderType == null) {
             throw new BusinessException(ErrorCode.PRODUCT_GENDER_TYPE_REQUIRED);
         }
+        if (!StringUtils.hasText(thumbnailImage)) {
+            throw new BusinessException(ErrorCode.IMAGE_REQUIRED, "대표 썸네일 이미지를 지정해야 합니다.");
+        }
 
         return new Product(brand, productName, productInfo, productGenderType, brandName, categoryPath,
-                isAvailable, images, productOptions);
+                isAvailable, images, productOptions, defaultPrice, thumbnailImage);
     }
  
     @Builder
     private Product(Brand brand, String productName, String productInfo,
                    ProductGenderType productGenderType, String brandName, String categoryPath, Boolean isAvailable,
                    java.util.List<Image> images,
-                   java.util.List<ProductOption> productOptions) {
+                   java.util.List<ProductOption> productOptions,
+                   BigDecimal defaultPrice,
+                   String thumbnailImage) {
 
         this.brand = brand;
         this.productName = productName;
@@ -92,6 +108,8 @@ public class Product extends BaseEntity {
         this.brandName = brandName;
         this.categoryPath = categoryPath;
         this.isAvailable = isAvailable != null ? isAvailable : true;
+        this.defaultPrice = defaultPrice != null ? defaultPrice : BigDecimal.ZERO;
+        this.thumbnailImage = thumbnailImage;
 
         if (images != null) {
             images.forEach(this::addImage);
@@ -100,6 +118,14 @@ public class Product extends BaseEntity {
         if (productOptions != null) {
             productOptions.forEach(this::addProductOption);
         }
+    }
+
+    // 썸네일 이미지를 교체한다.
+    public void changeThumbnailImage(String thumbnailImage) {
+        if (!StringUtils.hasText(thumbnailImage)) {
+            throw new BusinessException(ErrorCode.IMAGE_REQUIRED, "대표 썸네일 이미지를 지정해야 합니다.");
+        }
+        this.thumbnailImage = thumbnailImage;
     }
 
     // 이미지 엔티티를 상품과 연결하고 컬렉션에 추가한다.
@@ -112,6 +138,16 @@ public class Product extends BaseEntity {
     public void addProductOption(ProductOption productOption) {
         productOption.setProduct(this);
         this.productOptions.add(productOption);
+    }
+
+    // 새로운 옵션 가격이 더 낮으면 대표 가격을 갱신한다.
+    public void applyLowerDefaultPrice(BigDecimal candidatePrice) {
+        if (candidatePrice == null) {
+            return;
+        }
+        if (this.defaultPrice == null || candidatePrice.compareTo(this.defaultPrice) < 0) {
+            this.defaultPrice = candidatePrice;
+        }
     }
 
     // 상품 판매 가능 여부를 직접 전환한다.

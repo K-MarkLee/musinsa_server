@@ -72,6 +72,8 @@ class ProductTest {
 			brand.getNameKo(),
 			categoryPath,
 			true,
+			BigDecimal.ZERO,
+			"http://example.com/thumb.jpg",
 			images,
 			options
 		);
@@ -103,6 +105,8 @@ class ProductTest {
 			brand.getNameKo(),
 			categoryPath,
 			true,
+			BigDecimal.ZERO,
+			"http://example.com/thumb.jpg",
 			images,
 			options
 		))
@@ -139,6 +143,8 @@ class ProductTest {
 			brand.getNameKo(),
 			categoryPath,
 			true,
+			BigDecimal.ZERO,
+			"http://example.com/thumb.jpg",
 			images,
 			options
 		))
@@ -192,6 +198,46 @@ class ProductTest {
 
 		// then
 		assertThat(product.getProductOptions()).contains(option);
+	}
+
+	@Test
+	@DisplayName("대표 가격보다 낮은 옵션 가격이 들어오면 defaultPrice가 갱신된다.")
+	void applyLowerDefaultPrice_updatesWhenLower() {
+		// given
+		Product product = Product.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.brandName(brand.getNameKo())
+			.categoryPath("상의>티셔츠")
+			.defaultPrice(BigDecimal.valueOf(10000))
+			.build();
+
+		// when
+		product.applyLowerDefaultPrice(BigDecimal.valueOf(8000));
+
+		// then
+		assertThat(product.getDefaultPrice()).isEqualByComparingTo(BigDecimal.valueOf(8000));
+	}
+
+	@Test
+	@DisplayName("대표 가격보다 높은 옵션 가격이 들어오면 defaultPrice는 유지된다.")
+	void applyLowerDefaultPrice_ignoresWhenHigher() {
+		// given
+		Product product = Product.builder()
+			.productName("상품명")
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.brandName(brand.getNameKo())
+			.categoryPath("상의>티셔츠")
+			.defaultPrice(BigDecimal.valueOf(10000))
+			.build();
+
+		// when
+		product.applyLowerDefaultPrice(BigDecimal.valueOf(12000));
+
+		// then
+		assertThat(product.getDefaultPrice()).isEqualByComparingTo(BigDecimal.valueOf(10000));
 	}
 
 	@ParameterizedTest
@@ -258,7 +304,7 @@ class ProductTest {
 	}
 
 	@ParameterizedTest
-	@MethodSource("UpdateValuesEmpty")
+	@MethodSource("updateValuesEmpty")
 	@DisplayName("상품의 수정가능한 정보에 빈값을 넣고 수정하면 BusinessException이 발생한다.")
 	void updateProductWithEmptyValue(String productName,
 									 String productInfo,
@@ -279,7 +325,7 @@ class ProductTest {
 			.isEqualTo(expectedCode);
 	}
 
-	private static Stream<Arguments> UpdateValuesEmpty() {
+	private static Stream<Arguments> updateValuesEmpty() {
 		return Stream.of(
 			Arguments.of(" ", "상품 정보", ErrorCode.PRODUCT_NAME_REQUIRED),
 			Arguments.of("상품명", " ", ErrorCode.PRODUCT_INFO_REQUIRED)

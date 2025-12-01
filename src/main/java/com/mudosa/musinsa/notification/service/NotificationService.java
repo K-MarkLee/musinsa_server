@@ -57,7 +57,7 @@ public class NotificationService {
                         .notificationMessage(Objects.isNull(message)?ATTACHED_FILE:message)
                         .notificationUrl(CHAT_URL + chatPart.getChatRoom().getChatId()+"/")
                         .build())
-                .toList();
+                        .toList();
 
         List<Notification> notifications = notificationRepository.saveAll(notificationList);
 
