@@ -44,6 +44,7 @@ public class ProductDetailObservationSupport {
     @Observed(name = "product.detail.group-option-values", contextualName = "product.detail.group-option-values")
     public Map<Long, List<ProductOptionValue>> groupOptionValuesByOptionId(List<ProductOptionValue> optionValues) {
         return optionValues.stream()
+            .filter(pov -> pov.getId() != null && pov.getId().getProductOptionId() != null)
             .collect(Collectors.groupingBy(pov -> pov.getId() != null ? pov.getId().getProductOptionId() : null));
     }
 

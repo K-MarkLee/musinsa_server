@@ -68,7 +68,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
                 .leftJoin(product.brand).fetchJoin()
                 .leftJoin(product.productOptions, productOption).fetchJoin()
                 .leftJoin(productOption.inventory, inventory).fetchJoin()
-                .where(product.productId.eq(productId))
+                .where(product.productId.eq(productId), product.isAvailable.isTrue())
                 .fetchOne());
     }
 

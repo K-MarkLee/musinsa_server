@@ -86,7 +86,7 @@ public class ProductQueryService {
 		Map<Long, ProductQueryMapper.OptionValueInfo> optionValueInfoMap =
 			productDetailObservationSupport.buildOptionValueInfoMap(optionValues);
 
-		// 6. 최종 응답 DTO 구성
+		// 5. 최종 응답 DTO 구성
 		List<ProductDetailResponse.OptionDetail> options = product.getProductOptions().stream()
 			.map(option -> ProductQueryMapper.toOptionDetail(
 				option,
