@@ -21,6 +21,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -52,8 +55,9 @@ class NotificationServiceTest extends ServiceConfig {
     class ReadNotification {
         @DisplayName("사용자1의 알림 내역을 조회한다.")
         @Test
-        void ReadNotificationTest(){
+        void readNotificationTest(){
         // given
+            // given
             User user1 = saveUser("user1");
             User user2 = saveUser("user2");
 
@@ -65,11 +69,19 @@ class NotificationServiceTest extends ServiceConfig {
             saveNotification(user2,notificationMetadata);
             saveNotification(user2,notificationMetadata);
 
-        // when
-            List<NotificationDTO> notificationDTOS = notificationService.readNotification(user1.getId());
-        // then
-            assertThat(notificationDTOS).hasSize(3);
+            // Pageable 객체를 생성합니다. (예: 첫 페이지, 10개 항목)
+            Pageable pageable = PageRequest.of(0, 10);
 
+            // when
+            // 변경된 서비스 메서드를 Pageable 인자와 함께 호출합니다.
+            Page<NotificationDTO> notificationPage = notificationService.readNotification(user1.getId(), pageable);
+
+            // then
+            // 반환된 Page 객체의 내용을 검증합니다.
+            // getContent()는 해당 페이지의 NotificationDTO 리스트를 반환합니다.
+            assertThat(notificationPage.getContent()).hasSize(3);
+            // getTotalElements()는 조건을 만족하는 전체 항목 수를 반환합니다.
+            assertThat(notificationPage.getTotalElements()).isEqualTo(3);
         }
     }
 

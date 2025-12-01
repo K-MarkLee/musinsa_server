@@ -3,6 +3,8 @@ package com.mudosa.musinsa.notification.controller;
 import com.mudosa.musinsa.notification.dto.NotificationDTO;
 import com.mudosa.musinsa.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,8 +26,8 @@ public class NotificationController {
      * @return NotificationDTO List Object
      */
     @GetMapping("/{userId}")
-    public List<NotificationDTO> readNotification(@PathVariable Long userId) {
-        return notificationService.readNotification(userId);
+    public Page<NotificationDTO> readNotification(@PathVariable Long userId, Pageable pageable) {
+        return notificationService.readNotification(userId, pageable);
     }
 
     /**

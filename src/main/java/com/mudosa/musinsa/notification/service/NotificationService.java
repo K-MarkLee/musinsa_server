@@ -11,6 +11,8 @@ import com.mudosa.musinsa.notification.repository.NotificationMetadataRepository
 import com.mudosa.musinsa.notification.repository.NotificationRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,8 +35,8 @@ public class NotificationService {
     private final String ATTACHED_FILE = "첨부파일이 있습니다";
     private final String CHAT_URL = "/chat/";
 
-    public List<NotificationDTO> readNotification(Long userId){
-        return notificationRepository.findNotificationDTOsByUserId(userId);
+    public Page<NotificationDTO> readNotification(Long userId, Pageable pageable){
+        return notificationRepository.findNotificationDTOsByUserId(userId, pageable);
     }
 
     public List<Notification> createChatNotification(ChatNotificationCreatedEvent chatNotificationCreatedEvent){
