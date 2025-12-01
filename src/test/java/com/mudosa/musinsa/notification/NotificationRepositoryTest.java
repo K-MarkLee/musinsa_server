@@ -10,6 +10,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -51,8 +54,9 @@ class NotificationRepositoryTest extends ServiceConfig {
             saveNotification(user1, notificationMetadata);
             saveNotification(user2, notificationMetadata);
             saveNotification(user2, notificationMetadata);
+            Pageable pageable = PageRequest.of(0, 10);
         // when
-            List<NotificationDTO> notifications = notificationRepository.findNotificationDTOsByUserId(user1.getId());
+            Page<NotificationDTO> notifications = notificationRepository.findNotificationDTOsByUserId(user1.getId(),pageable);
         // then
             assertThat(notifications).hasSize(3);
 

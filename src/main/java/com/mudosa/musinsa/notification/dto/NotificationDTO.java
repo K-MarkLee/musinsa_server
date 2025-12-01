@@ -20,4 +20,6 @@ public class NotificationDTO {
     private String notificationUrl;
     private Boolean notificationStatus;
     private LocalDateTime readAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
