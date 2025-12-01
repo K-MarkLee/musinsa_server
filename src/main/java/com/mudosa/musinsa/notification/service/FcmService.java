@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.notification.domain.service;
+package com.mudosa.musinsa.notification.service;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;

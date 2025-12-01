@@ -1,7 +1,7 @@
-package com.mudosa.musinsa.notification.domain;
+package com.mudosa.musinsa.notification;
 
 import com.mudosa.musinsa.ServiceConfig;
-import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
+import com.mudosa.musinsa.notification.model.NotificationMetadata;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

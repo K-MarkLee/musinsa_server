@@ -1,7 +1,7 @@
 package com.mudosa.musinsa.notification.api.controller;
 
 
-import com.mudosa.musinsa.notification.domain.dto.NotificationDTO;
+import com.mudosa.musinsa.notification.dto.NotificationDTO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

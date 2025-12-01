@@ -1,32 +1,22 @@
-package com.mudosa.musinsa.notification.domain.service;
+package com.mudosa.musinsa.notification.service;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.domain.chat.entity.ChatPart;
 import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.fbtoken.service.FirebaseTokenService;
-import com.mudosa.musinsa.notification.domain.dto.NotificationDTO;
-import com.mudosa.musinsa.notification.domain.event.ChatNotificationCreatedEvent;
-import com.mudosa.musinsa.notification.domain.model.Notification;
-import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
-import com.mudosa.musinsa.notification.domain.repository.NotificationMetadataRepository;
-import com.mudosa.musinsa.notification.domain.repository.NotificationRepository;
-import com.mudosa.musinsa.user.domain.model.User;
-import com.mudosa.musinsa.user.domain.repository.UserRepository;
+import com.mudosa.musinsa.notification.dto.NotificationDTO;
+import com.mudosa.musinsa.notification.event.ChatNotificationCreatedEvent;
+import com.mudosa.musinsa.notification.model.Notification;
+import com.mudosa.musinsa.notification.model.NotificationMetadata;
+import com.mudosa.musinsa.notification.repository.NotificationMetadataRepository;
+import com.mudosa.musinsa.notification.repository.NotificationRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-
-/**
- * 필요한 기능
- * 1. 어떤 사용자의 알림 목록 열람
- * 2. 어떤
- */
 
 @Slf4j
 @Service
@@ -44,18 +34,7 @@ public class NotificationService {
     private final String CHAT_URL = "/chat/";
 
     public List<NotificationDTO> readNotification(Long userId){
-        return notificationRepository.findByUserId(userId).stream()
-                .map(notification -> NotificationDTO.builder()
-                        .notificationId(notification.getNotificationId())
-                        .userId(notification.getUser().getId())
-                        .nMetadataId(notification.getNotificationMetadata().getNMetadataId())
-                        .notificationTitle(notification.getNotificationTitle())
-                        .notificationMessage(notification.getNotificationMessage())
-                        .notificationUrl(notification.getNotificationUrl())
-                        .notificationStatus(notification.getNotificationStatus())
-                        .readAt(notification.getReadAt())
-                        .build())
-                        .toList();
+        return notificationRepository.findNotificationDTOsByUserId(userId);
     }
 
     public List<Notification> createChatNotification(ChatNotificationCreatedEvent chatNotificationCreatedEvent){
