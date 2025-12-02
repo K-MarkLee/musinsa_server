@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.domain.chat.file;
 
+import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import org.springframework.stereotype.Component;
@@ -23,15 +24,20 @@ public class S3SyncFileStore extends AbstractS3Store implements FileStore {
     this.s3Client = s3Client;
   }
 
+  /**
+   * 채팅 메시지 첨부용 - TempUploadedFile 기반
+   */
   @Override
-  public CompletableFuture<String> storeMessageFile(Long chatId, Long messageId, MultipartFile file) {
+  public CompletableFuture<String> storeMessageFile(Long chatId, Long messageId, TempUploadedFile file) {
     String key = generateMessageKey(chatId, messageId, file);
-    String url = uploadInternal(key, file); // 기존 동기 업로드 로직 실행
+    String url = uploadInternal(key, file);
 
-    // ★ 핵심: 결과를 Future로 감싸서 즉시 반환
     return CompletableFuture.completedFuture(url);
   }
 
+  /**
+   * 브랜드 로고 업로드 - 기존 MultipartFile 그대로 사용
+   */
   @Override
   public CompletableFuture<String> storeBrandLogo(Long brandId, MultipartFile file) {
     String key = generateBrandKey(brandId, file);
@@ -39,29 +45,77 @@ public class S3SyncFileStore extends AbstractS3Store implements FileStore {
     return CompletableFuture.completedFuture(url);
   }
 
-  // 내부 실제 업로드 로직
-  private String uploadInternal(String key, MultipartFile file) {
+  /**
+   * TempUploadedFile 기반 업로드 (비동기 처리용, 이미 메모리에 로딩된 데이터)
+   */
+  private String uploadInternal(String key, TempUploadedFile file) {
+    long size = file.bytes().length;
+
     Span span = tracer.nextSpan().name("s3.upload")
         .tag("type", "sync")
-        .tag("file.size", String.valueOf(file.getSize()))
+        .tag("file.size", String.valueOf(size))
+        .start();
+
+    try (Tracer.SpanInScope ignored = tracer.withSpan(span)) {
+
+      PutObjectRequest request = PutObjectRequest.builder()
+          .bucket(bucketName)
+          .key(key)
+          .contentType(file.contentType())
+          .contentLength(size)
+          .build();
+
+      // 메모리에 이미 올라온 byte[] 를 그대로 사용
+      s3Client.putObject(request, RequestBody.fromBytes(file.bytes()));
+
+      return s3Client.utilities().getUrl(
+          GetUrlRequest.builder()
+              .bucket(bucketName)
+              .key(key)
+              .build()
+      ).toString();
+
+    } catch (Exception e) {
+      span.error(e);
+      throw new RuntimeException("S3 upload failed (TempUploadedFile). key=" + key, e);
+    } finally {
+      span.end();
+    }
+  }
+
+  /**
+   * 기존 MultipartFile 기반 업로드 (브랜드 로고 등 동기 업로드용)
+   */
+  private String uploadInternal(String key, MultipartFile file) {
+    long size = file.getSize();
+
+    Span span = tracer.nextSpan().name("s3.upload")
+        .tag("type", "sync")
+        .tag("file.size", String.valueOf(size))
         .start();
 
     try (Tracer.SpanInScope ignored = tracer.withSpan(span)) {
       try (InputStream inputStream = file.getInputStream()) {
+
         PutObjectRequest request = PutObjectRequest.builder()
             .bucket(bucketName)
             .key(key)
             .contentType(file.getContentType())
-            .contentLength(file.getSize())
+            .contentLength(size)
             .build();
 
-        s3Client.putObject(request, RequestBody.fromInputStream(inputStream, file.getSize()));
+        s3Client.putObject(request, RequestBody.fromInputStream(inputStream, size));
 
-        return s3Client.utilities().getUrl(GetUrlRequest.builder()
-            .bucket(bucketName).key(key).build()).toString();
+        return s3Client.utilities().getUrl(
+            GetUrlRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .build()
+        ).toString();
+
       } catch (IOException e) {
         span.error(e);
-        throw new RuntimeException(e);
+        throw new RuntimeException("S3 upload failed (MultipartFile). key=" + key, e);
       }
     } finally {
       span.end();

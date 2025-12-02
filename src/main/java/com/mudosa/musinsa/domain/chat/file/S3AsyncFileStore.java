@@ -1,7 +1,9 @@
 package com.mudosa.musinsa.domain.chat.file;
 
+import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
@@ -12,6 +14,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @Component
 public class S3AsyncFileStore extends AbstractS3Store implements FileStore {
 
@@ -22,19 +25,64 @@ public class S3AsyncFileStore extends AbstractS3Store implements FileStore {
     this.s3AsyncClient = s3AsyncClient;
   }
 
+  /**
+   * 채팅 메시지 첨부용 - TempUploadedFile 기반
+   */
   @Override
-  public CompletableFuture<String> storeMessageFile(Long chatId, Long messageId, MultipartFile file) {
+  public CompletableFuture<String> storeMessageFile(Long chatId, Long messageId, TempUploadedFile file) {
     String key = generateMessageKey(chatId, messageId, file);
     return uploadInternal(key, file);
   }
 
-  // 2. 브랜드 로고 저장 (요청하신 부분)
+  /**
+   * 브랜드 로고 업로드 - 기존 MultipartFile 기반 유지
+   */
   @Override
   public CompletableFuture<String> storeBrandLogo(Long brandId, MultipartFile file) {
     String key = generateBrandKey(brandId, file);
     return uploadInternal(key, file);
   }
 
+  /**
+   * TempUploadedFile 기반 비동기 업로드
+   * - 이미 메모리에 로딩된 byte[] 사용
+   */
+  private CompletableFuture<String> uploadInternal(String key, TempUploadedFile file) {
+    long size = file.bytes().length;
+
+    Span span = tracer.nextSpan().name("s3.upload")
+        .tag("type", "async")
+        .tag("file.size", String.valueOf(size))
+        .start();
+
+    PutObjectRequest request = PutObjectRequest.builder()
+        .bucket(bucketName)
+        .key(key)
+        .contentType(file.contentType())
+        .contentLength(size)
+        .build();
+
+    return s3AsyncClient.putObject(request, AsyncRequestBody.fromBytes(file.bytes()))
+        .thenApply(resp ->
+            s3AsyncClient.utilities()
+                .getUrl(GetUrlRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build())
+                .toString()
+        )
+        .whenComplete((url, ex) -> {
+          if (ex != null) {
+            span.error(ex);
+            log.error("S3 async upload failed (TempUploadedFile). key={}", key, ex);
+          }
+          span.end();
+        });
+  }
+
+  /**
+   * 기존 MultipartFile 기반 비동기 업로드 (브랜드 로고 등)
+   */
   private CompletableFuture<String> uploadInternal(String key, MultipartFile file) {
     Span span = tracer.nextSpan().name("s3.upload")
         .tag("type", "async")
@@ -54,14 +102,23 @@ public class S3AsyncFileStore extends AbstractS3Store implements FileStore {
         .bucket(bucketName)
         .key(key)
         .contentType(file.getContentType())
-        .contentLength(file.getSize())
+        .contentLength((long) bytes.length)
         .build();
 
     return s3AsyncClient.putObject(request, AsyncRequestBody.fromBytes(bytes))
-        .thenApply(resp -> s3AsyncClient.utilities().getUrl(GetUrlRequest.builder()
-            .bucket(bucketName).key(key).build()).toString())
+        .thenApply(resp ->
+            s3AsyncClient.utilities()
+                .getUrl(GetUrlRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build())
+                .toString()
+        )
         .whenComplete((url, ex) -> {
-          if (ex != null) span.error(ex);
+          if (ex != null) {
+            span.error(ex);
+            log.error("S3 async upload failed (MultipartFile). key={}", key, ex);
+          }
           span.end();
         });
   }
