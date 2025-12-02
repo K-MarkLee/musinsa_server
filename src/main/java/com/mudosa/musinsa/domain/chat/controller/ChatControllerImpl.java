@@ -1,17 +1,20 @@
 package com.mudosa.musinsa.domain.chat.controller;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
 import com.mudosa.musinsa.common.dto.ApiResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
 import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
 import com.mudosa.musinsa.domain.chat.dto.MessageCursor;
 import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
-import com.mudosa.musinsa.domain.chat.service.ChatService;
+import com.mudosa.musinsa.domain.chat.facade.ChatMessageFacade;
+import com.mudosa.musinsa.domain.chat.service.AttachmentUploadService;
+import com.mudosa.musinsa.domain.chat.service.ChatRoomService;
+import com.mudosa.musinsa.domain.chat.service.MessageQueryService;
 import com.mudosa.musinsa.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,7 +38,10 @@ import java.util.List;
 @RequestMapping("/api/chat")
 public class ChatControllerImpl implements ChatController {
 
-  private final ChatService chatService;
+  private final ChatMessageFacade chatMessageFacade;
+  private final ChatRoomService chatRoomService;
+  private final MessageQueryService messageQueryService;
+  private final AttachmentUploadService attachmentUploadService;
 
   /**
    * 채팅 메시지 전송
@@ -46,25 +52,43 @@ public class ChatControllerImpl implements ChatController {
       consumes = MediaType.MULTIPART_FORM_DATA_VALUE
   )
   @Override
-  public ApiResponse<MessageResponse> sendMessage(
+  public ResponseEntity<Void> sendMessage(
       @PathVariable Long chatId,
       @AuthenticationPrincipal CustomUserDetails userDetails,
       @RequestParam(value = "parentId", required = false) Long parentId,
       @RequestPart(value = "message", required = false) String message,
+      @RequestPart(required = false) String clientMessageId,
       @RequestPart(value = "files", required = false) List<MultipartFile> files
-  ) throws FirebaseMessagingException {
+  ) {
     Long userId = userDetails.getUserId();
-    log.info("[API][POST] /api/chat/{}/send userId={} parentId={} hasMessage={} fileCount={}",
-        chatId,
-        userId,
-        parentId,
-        (message != null && !message.isBlank()),
-        (files != null ? files.size() : 0)
-    );
-
     LocalDateTime now = LocalDateTime.now();
-    MessageResponse savedMessage = chatService.saveMessage(chatId, userId, parentId, message, files, now);
-    return ApiResponse.success(savedMessage, "메시지를 성공적으로 전송했습니다.");
+
+    chatMessageFacade.saveMessage(chatId, userId, parentId, message, files, now, clientMessageId);
+
+    return ResponseEntity.accepted().build();
+  }
+
+  /**
+   * 첨부파일 재전송
+   * POST /api/chat/{chatId}/message/{messageId}/retry
+   */
+  @PostMapping(
+      path = "/{chatId}/message/{messageId}/retry",
+      consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+  )
+  public ResponseEntity<Void> resendAttachment(
+      @PathVariable Long chatId,
+      @PathVariable Long messageId,
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @RequestPart(required = false) String clientMessageId,
+      @RequestPart(value = "files", required = false) List<MultipartFile> files
+  ) {
+    Long userId = userDetails.getUserId();
+    LocalDateTime now = LocalDateTime.now();
+
+    chatMessageFacade.resaveAttachment(chatId, userId, messageId, files, now, clientMessageId);
+
+    return ResponseEntity.accepted().build();
   }
 
 
@@ -98,12 +122,12 @@ public class ChatControllerImpl implements ChatController {
         throw new IllegalArgumentException("cursorCreatedAt는 yyyy-MM-dd'T'HH:mm:ss 형식이어야 합니다.");
       }
     }
- 
+
     MessageCursor cursor = (cursorCreatedAtDt != null && cursorMessageId != null)
         ? new MessageCursor(cursorCreatedAtDt, cursorMessageId)
         : null;
 
-    Slice<MessageResponse> messages = chatService.getChatMessages(chatId, cursor, size);
+    Slice<MessageResponse> messages = messageQueryService.getChatMessages(chatId, cursor, size);
 
     return ApiResponse.success(
         messages,
@@ -123,7 +147,7 @@ public class ChatControllerImpl implements ChatController {
     Long userId = userDetails.getUserId();
     log.info("[API][GET] /api/chat/{}/info userId={}", chatId, userId);
 
-    return ApiResponse.success(chatService.getChatRoomInfoByChatId(chatId, userId), "채팅방의 정보를 성공적으로 조회했습니다.");
+    return ApiResponse.success(chatRoomService.getChatRoomInfoByChatId(chatId, userId), "채팅방의 정보를 성공적으로 조회했습니다.");
   }
 
 
@@ -139,7 +163,7 @@ public class ChatControllerImpl implements ChatController {
     Long userId = userDetails.getUserId();
     log.info("[API][POST] /api/chat/{}/participants userId={}", chatId, userId);
 
-    return ApiResponse.success(chatService.addParticipant(chatId, userId), "채팅방에 성공적으로 참여했습니다.");
+    return ApiResponse.success(chatRoomService.addParticipant(chatId, userId), "채팅방에 성공적으로 참여했습니다.");
   }
 
   /**
@@ -152,8 +176,8 @@ public class ChatControllerImpl implements ChatController {
     Long userId = userDetails.getUserId();
     log.info("[API][PATCH] /api/chat/{}/leave userId={}", chatId, userId);
 
-    chatService.leaveChat(chatId, userId);
-    return ApiResponse.success(chatService.getChatRoomByUserId(userId), "채팅방에서 성공적으로 퇴장하셨습니다.");
+    chatRoomService.leaveChat(chatId, userId);
+    return ApiResponse.success(chatRoomService.getChatRoomByUserId(userId), "채팅방에서 성공적으로 퇴장하셨습니다.");
   }
 
   /**
@@ -166,7 +190,7 @@ public class ChatControllerImpl implements ChatController {
     Long userId = userDetails.getUserId();
     log.info("[API][GET] /api/chat/my userId={}", userId);
 
-    return ApiResponse.success(chatService.getChatRoomByUserId(userId), "나의 참여 채팅방 목록이 성공적으로 조회되었습니다.");
+    return ApiResponse.success(chatRoomService.getChatRoomByUserId(userId), "나의 참여 채팅방 목록이 성공적으로 조회되었습니다.");
   }
 
 

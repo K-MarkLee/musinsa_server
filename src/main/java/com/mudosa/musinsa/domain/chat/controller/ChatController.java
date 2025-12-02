@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Slice;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,7 +41,7 @@ public interface ChatController {
       description = "특정 채팅방에 텍스트 또는 이미지를 전송합니다. "
           + "텍스트 메시지(`message`)와 이미지 파일(`files`)은 모두 선택적으로 포함 가능합니다."
   )
-  ApiResponse<MessageResponse> sendMessage(
+  ResponseEntity<Void> sendMessage(
       @Parameter(description = "채팅방 ID", example = "1", required = true)
       @PathVariable Long chatId,
 
@@ -53,7 +54,7 @@ public interface ChatController {
           description = "텍스트 메시지",
           schema = @Schema(example = "오늘도 좋은 하루입니다 😊"))
       @RequestPart(value = "message", required = false) String message,
-
+      @RequestPart(required = false) String clientMessageId,
       @Parameter(description = "전송할 이미지 파일 리스트")
       @RequestPart(value = "files", required = false) List<MultipartFile> files) throws FirebaseMessagingException;
 

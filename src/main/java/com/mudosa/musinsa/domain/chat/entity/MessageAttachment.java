@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.domain.chat.entity;
 
+import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,12 +32,29 @@ public class MessageAttachment {
   @Column(name = "size_bytes")
   private Long sizeBytes;
 
+
+  /**
+   * MultipartFile 기반 팩토리 – 필요하면 유지
+   */
   public static MessageAttachment create(Message message, MultipartFile file, String storedUrl) {
     return MessageAttachment.builder()
-            .attachmentUrl(storedUrl)
-            .message(message)
-            .mimeType(file.getContentType())
-            .sizeBytes(file.getSize())
-            .build();
+        .attachmentUrl(storedUrl)
+        .message(message)
+        .mimeType(file.getContentType())
+        .sizeBytes(file.getSize())
+        .build();
+  }
+
+  /**
+   * TempUploadedFile 기반 팩토리
+   * - 비동기 파일 처리에서 사용
+   */
+  public static MessageAttachment create(Message message, TempUploadedFile file, String storedUrl) {
+    return MessageAttachment.builder()
+        .attachmentUrl(storedUrl)
+        .message(message)
+        .mimeType(file.contentType())
+        .sizeBytes((long) file.bytes().length)
+        .build();
   }
 }

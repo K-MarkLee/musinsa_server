@@ -27,17 +27,18 @@ import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @Slf4j
@@ -47,9 +48,12 @@ public class BrandService {
   private final BrandRepository brandRepository;
   private final ChatRoomRepository chatRoomRepository;
   private final ProductRepository productRepository;
-  private final FileStore fileStore;
+
   private final BrandMemberRepository brandMemberRepository;
   private final UserRepository userRepository;
+
+  @Qualifier("s3AsyncFileStore")
+  private final FileStore fileStore;
 
   @Transactional
   public BrandResponseDTO createBrand(Long userId, BrandRequestDTO request, MultipartFile logoFile) {
@@ -76,9 +80,9 @@ public class BrandService {
     // 2. 로고 파일이 있으면 S3에 업로드
     if (logoFile != null && !logoFile.isEmpty()) {
       try {
-        String logoUrl = fileStore.storeBrandLogo(savedBrand.getBrandId(), logoFile);
-        savedBrand.changeLogoUrl(logoUrl);
-      } catch (IOException e) {
+        CompletableFuture<String> logoUrl = fileStore.storeBrandLogo(savedBrand.getBrandId(), logoFile);
+        savedBrand.changeLogoUrl(logoUrl.join());
+      } catch (Exception e) {
         throw new BusinessException(ErrorCode.FILE_SAVE_FAILED, e);
       }
     }

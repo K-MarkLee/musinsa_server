@@ -11,16 +11,16 @@ public record MessagesBundle(
     boolean hasNext,
     Set<Long> managerUserIds,
     Map<Long, List<AttachmentResponse>> attachmentMap,
-    Map<Long, Message> parentMap       // ← 새 필드 추가!
+    Map<Long, Message> parentMap
 ) {
 
-  public static MessagesBundle empty(int size) {
+  public static MessagesBundle empty() {
     return new MessagesBundle(
         List.of(),
         false,
         Set.of(),
         Map.of(),
-        Map.of()    // ← 빈 parentMap 추가
+        Map.of()
     );
   }
 }

@@ -1,27 +1,13 @@
 package com.mudosa.musinsa.domain.chat.file;
 
+import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 public interface FileStore {
+  // 동기든 비동기든 모두 Future를 반환하도록 약속
+  CompletableFuture<String> storeMessageFile(Long chatId, Long messageId, TempUploadedFile file);
 
-  /**
-   * 채팅 메시지 첨부파일처럼 경로 패턴이 정해진 파일 저장
-   *
-   * @param chatId    채팅방 ID
-   * @param messageId 메시지 ID
-   * @param file      업로드 파일
-   * @return 공개용(or 상대) URL
-   */
-  String storeMessageFile(Long chatId, Long messageId, MultipartFile file) throws IOException;
-
-  /**
-   * 채팅 메시지 첨부파일처럼 경로 패턴이 정해진 파일 저장
-   *
-   * @param brandId 브랜드 ID
-   * @param file    업로드 파일
-   * @return 공개용(or 상대) URL
-   */
-  String storeBrandLogo(Long brandId, MultipartFile file) throws IOException;
+  CompletableFuture<String> storeBrandLogo(Long brandId, MultipartFile file);
 }
