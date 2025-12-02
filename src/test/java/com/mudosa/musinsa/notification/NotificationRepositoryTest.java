@@ -1,14 +1,18 @@
-package com.mudosa.musinsa.notification.domain;
+package com.mudosa.musinsa.notification;
 
 import com.mudosa.musinsa.ServiceConfig;
-import com.mudosa.musinsa.notification.domain.model.Notification;
-import com.mudosa.musinsa.notification.domain.model.NotificationMetadata;
+import com.mudosa.musinsa.notification.dto.NotificationDTO;
+import com.mudosa.musinsa.notification.model.Notification;
+import com.mudosa.musinsa.notification.model.NotificationMetadata;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.model.UserRole;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -50,8 +54,9 @@ class NotificationRepositoryTest extends ServiceConfig {
             saveNotification(user1, notificationMetadata);
             saveNotification(user2, notificationMetadata);
             saveNotification(user2, notificationMetadata);
+            Pageable pageable = PageRequest.of(0, 10);
         // when
-            List<Notification> notifications = notificationRepository.findByUserId(user1.getId());
+            Page<NotificationDTO> notifications = notificationRepository.findNotificationDTOsByUserId(user1.getId(),pageable);
         // then
             assertThat(notifications).hasSize(3);
 

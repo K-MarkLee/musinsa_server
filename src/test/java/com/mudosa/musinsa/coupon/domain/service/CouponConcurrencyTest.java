@@ -5,7 +5,6 @@ import com.mudosa.musinsa.coupon.domain.model.DiscountType;
 import com.mudosa.musinsa.coupon.domain.model.MemberCoupon;
 import com.mudosa.musinsa.coupon.domain.repository.CouponRepository;
 import com.mudosa.musinsa.coupon.domain.repository.MemberCouponRepository;
-import com.mudosa.musinsa.notification.domain.service.FcmService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
