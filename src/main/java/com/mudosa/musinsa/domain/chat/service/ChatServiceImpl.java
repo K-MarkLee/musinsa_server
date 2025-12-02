@@ -15,7 +15,7 @@ import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
 import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.notification.domain.event.NotificationEventPublisher;
+import com.mudosa.musinsa.notification.event.NotificationEventPublisher;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.repository.UserRepository;
 import io.micrometer.tracing.Span;

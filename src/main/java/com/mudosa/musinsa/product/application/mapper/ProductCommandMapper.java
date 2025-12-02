@@ -2,7 +2,9 @@ package com.mudosa.musinsa.product.application.mapper;
 
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductManagerResponse;
+import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
+import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
@@ -67,13 +69,62 @@ public final class ProductCommandMapper {
                 .build();
     }
 
+    public static ProductOptionStockResponse toOptionStockResponse(ProductOption productOption) {
+        return toOptionStockResponse(productOption, productOption.getInventory());
+    }
+
+    public static ProductOptionStockResponse toOptionStockResponse(ProductOption productOption,
+                                                                   Inventory inventory) {
+        Inventory effectiveInventory = inventory != null ? inventory : productOption.getInventory();
+        Integer stockQuantity = null;
+        boolean hasStock = false;
+
+        if (effectiveInventory != null && effectiveInventory.getStockQuantity() != null) {
+            stockQuantity = effectiveInventory.getStockQuantity().getValue();
+            hasStock = stockQuantity > 0;
+        }
+
+        java.math.BigDecimal productPrice = productOption.getProductPrice() != null
+            ? productOption.getProductPrice().getAmount()
+            : null;
+
+        List<ProductOptionStockResponse.OptionValueSummary> optionValueSummaries = productOption.getProductOptionValues().stream()
+            .map(ProductCommandMapper::toOptionValueSummary)
+            .collect(Collectors.toList());
+
+        Product product = productOption.getProduct();
+        String productName = product != null ? product.getProductName() : null;
+
+        return ProductOptionStockResponse.builder()
+            .productOptionId(productOption.getProductOptionId())
+            .productName(productName)
+            .productPrice(productPrice)
+            .stockQuantity(stockQuantity)
+            .hasStock(hasStock)
+            .optionValues(optionValueSummaries)
+            .build();
+    }
+
+    private static ProductOptionStockResponse.OptionValueSummary toOptionValueSummary(ProductOptionValue productOptionValue) {
+        OptionValue optionValue = productOptionValue.getOptionValue();
+        return ProductOptionStockResponse.OptionValueSummary.builder()
+            .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
+            .optionName(optionValue != null ? optionValue.getOptionName() : null)
+            .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+            .build();
+    }
+
     private static ProductDetailResponse.OptionDetail.OptionValueDetail toOptionValueDetail(ProductOptionValue mapping) {
         OptionValue optionValue = mapping.getOptionValue();
+        String optionName = optionValue != null ? optionValue.getOptionName() : null;
+        if (optionName != null) {
+            optionName = optionName.trim();
+        }
         return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
-                .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-                .optionName(optionValue != null ? optionValue.getOptionName() : null)
-                .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
-                .build();
+            .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
+            .optionName(optionName)
+            .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+            .build();
     }
 
     public static ProductManagerResponse toManagerResponse(Product product) {

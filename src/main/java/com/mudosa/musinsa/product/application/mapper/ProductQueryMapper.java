@@ -1,16 +1,14 @@
 package com.mudosa.musinsa.product.application.mapper;
 
-import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
-import com.mudosa.musinsa.product.domain.model.Inventory;
-import com.mudosa.musinsa.product.domain.model.OptionValue;
+import com.mudosa.musinsa.product.domain.model.Image;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -21,80 +19,63 @@ public final class ProductQueryMapper {
 	private ProductQueryMapper() {
 	}
 
-    // 상품 목록 조회 응답의 요약 정보를 변환한다.
-	public static ProductSearchResponse.ProductSummary toProductSummary(Product product) {
-		BigDecimal lowestPrice = calculateLowestPrice(product);
-        
-		boolean hasStock = product.getProductOptions().stream()
-			.map(ProductOption::getInventory)
-			.filter(Objects::nonNull)
-			.anyMatch(inventory -> inventory.getStockQuantity() != null
-				&& inventory.getStockQuantity().getValue() > 0);
-
-		String thumbnailUrl = product.getImages().stream()
-			.filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
-			.map(image -> image.getImageUrl())
-			.findFirst()
-			.orElse(null);
-
-		return ProductSearchResponse.ProductSummary.builder()
-		        .productId(product.getProductId())
-		        .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
-		        .brandName(product.getBrandName())
-		        .productName(product.getProductName())
-		        .productInfo(product.getProductInfo())
-		        .productGenderType(product.getProductGenderType() != null
-				? product.getProductGenderType().name()
-				: null)
-			.isAvailable(product.getIsAvailable())
-			.hasStock(hasStock)
-			.lowestPrice(lowestPrice)
-			.thumbnailUrl(thumbnailUrl)
-			.categoryPath(product.getCategoryPath())
-			.build();
+	// 상품 목록을 응답 DTO로 변환한다.
+	public static ProductSearchResponse toSearchResponse(List<ProductSearchResponse.ProductSummary> summaries,
+			String nextCursor, boolean hasNext, Long totalCount) {
+		return ProductSearchResponse.builder()
+				.products(summaries)
+				.nextCursor(nextCursor)
+				.hasNext(hasNext)
+				.totalCount(totalCount)
+				.build();
 	}
 
-    // 상품 상세 조회 응답으로 변환한다.
-	public static ProductDetailResponse toProductDetail(Product product) {
-		List<ProductDetailResponse.ImageResponse> imageResponses = product.getImages().stream()
-			.map(image -> ProductDetailResponse.ImageResponse.builder()
-			        .imageId(image.getImageId())
-			        .imageUrl(image.getImageUrl())
-			        .isThumbnail(Boolean.TRUE.equals(image.getIsThumbnail()))
-			        .build())
-			        .collect(Collectors.toList());
-
-		List<ProductDetailResponse.OptionDetail> optionDetails = product.getProductOptions().stream()
-			.map(ProductQueryMapper::toOptionDetail)
-			.collect(Collectors.toList());
-
+	// 상품 상세 조회 응답으로 변환한다.
+	public static ProductDetailResponse toProductDetail(Product product,
+			List<ProductDetailResponse.ImageResponse> images,
+			List<ProductDetailResponse.OptionDetail> options) {
 		return ProductDetailResponse.builder()
-		        .productId(product.getProductId())
-		        .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
-		        .brandName(product.getBrandName())
-		        .productName(product.getProductName())
-		        .productInfo(product.getProductInfo())
-		        .productGenderType(product.getProductGenderType() != null
-				? product.getProductGenderType().name()
-				: null)
-			.isAvailable(product.getIsAvailable())
-			.categoryPath(product.getCategoryPath())
-			.images(imageResponses)
-			.options(optionDetails)
-			.build();
+				.productId(product.getProductId())
+				.brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
+				.brandName(product.getBrandName())
+				.productName(product.getProductName())
+				.productInfo(product.getProductInfo())
+				.productGenderType(product.getProductGenderType() != null
+						? product.getProductGenderType().name()
+						: null)
+				.isAvailable(product.getIsAvailable())
+				.categoryPath(product.getCategoryPath())
+				.images(images)
+				.options(options)
+				.build();
 	}
 
-	public static ProductDetailResponse.OptionDetail toOptionDetail(ProductOption option) {
-		List<ProductDetailResponse.OptionDetail.OptionValueDetail> optionValueDetails = option.getProductOptionValues().stream()
-			.map(mapping -> {
-				OptionValue optionValue = mapping.getOptionValue();
-				return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
-				        .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-				        .optionName(optionValue != null ? optionValue.getOptionName() : null)
-				        .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
-				        .build();
-			})
-			.collect(Collectors.toList());
+	// 이미지 엔티티를 응답 DTO로 변환한다.
+	public static ProductDetailResponse.ImageResponse toImageResponse(Image image) {
+		return ProductDetailResponse.ImageResponse.builder()
+				.imageId(image.getImageId())
+				.imageUrl(image.getImageUrl())
+				.isThumbnail(Boolean.TRUE.equals(image.getIsThumbnail()))
+				.build();
+	}
+
+	// 상품 옵션 엔티티를 응답 DTO로 변환한다.
+	public static ProductDetailResponse.OptionDetail toOptionDetail(ProductOption option,
+			List<ProductOptionValue> optionValues,
+			Map<Long, OptionValueInfo> optionValueInfoMap) {
+		List<ProductDetailResponse.OptionDetail.OptionValueDetail> optionValueDetails = optionValues.stream()
+				.map(mapping -> {
+					Long optionValueId = mapping.getId() != null ? mapping.getId().getOptionValueId() : null;
+					OptionValueInfo cached = optionValueId != null && optionValueInfoMap != null
+							? optionValueInfoMap.get(optionValueId)
+							: null;
+					return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
+							.optionValueId(optionValueId)
+							.optionName(cached != null ? cached.optionName() : null)
+							.optionValue(cached != null ? cached.optionValue() : null)
+							.build();
+				})
+				.collect(Collectors.toList());
 
 		Integer stockQuantity = null;
 		Boolean hasStock = null;
@@ -104,37 +85,13 @@ public final class ProductQueryMapper {
 		}
 
 		return ProductDetailResponse.OptionDetail.builder()
-		        .optionId(option.getProductOptionId())
-		        .productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
-		        .stockQuantity(stockQuantity)
-		        .hasStock(hasStock)
-		        .optionValues(optionValueDetails)
-		        .build();
+				.optionId(option.getProductOptionId())
+				.productPrice(option.getProductPrice() != null ? option.getProductPrice().getAmount() : null)
+				.stockQuantity(stockQuantity)
+				.hasStock(hasStock)
+				.optionValues(optionValueDetails)
+				.build();
 	}
 
-	public static BigDecimal calculateLowestPrice(Product product) {
-		BigDecimal lowestAvailablePrice = product.getProductOptions().stream()
-			.filter(option -> {
-				Inventory inventory = option.getInventory();
-				return inventory != null
-					&& inventory.getStockQuantity() != null
-					&& inventory.getStockQuantity().getValue() > 0;
-			})
-			.map(ProductOption::getProductPrice)
-			.filter(Objects::nonNull)
-			.map(Money::getAmount)
-			.min(BigDecimal::compareTo)
-			.orElse(null);
-
-		if (lowestAvailablePrice != null) {
-			return lowestAvailablePrice;
-		}
-
-		return product.getProductOptions().stream()
-			.map(ProductOption::getProductPrice)
-			.filter(Objects::nonNull)
-			.map(Money::getAmount)
-			.min(BigDecimal::compareTo)
-			.orElse(BigDecimal.ZERO);
-	}
+	public static record OptionValueInfo(Long optionValueId, String optionName, String optionValue) {}
 }
