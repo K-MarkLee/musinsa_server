@@ -10,16 +10,18 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class MessageCreatedEventListener {
-
+public class ChatWebSocketEventListener {
   private final SimpMessagingTemplate messagingTemplate;
 
-  // 트랜잭션 커밋 후 실행 (DB 롤백 시 실행되지 않음)
+  /**
+   * DB 트랜잭션이 안전하게 커밋된 후에만 클라이언트에게 전송
+   */
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  public void handle(MessageCreatedEvent event) {
-    //확인
-    log.info("WebSocket broadcast -> chatId={}, message={}", event.messageResponse().getChatId(), event.messageResponse());
-    //websocket으로 전송
-    messagingTemplate.convertAndSend("/topic/chat/" + event.messageResponse().getChatId(), event.messageResponse());
+  public void handleBroadcast(ChatBroadcastEvent event) {
+    String destination = "/topic/chat/" + event.chatId();
+
+    log.debug("[WSEvent] 브로드캐스트 전송 -> dest={}, payload={}", destination, event.payload());
+
+    messagingTemplate.convertAndSend(destination, event.payload());
   }
 }
