@@ -14,7 +14,7 @@ public class FileStoreConfig {
   @Bean
   @Primary // ★ 핵심: @Qualifier가 없을 때 이 빈을 최우선으로 주입합니다.
   public FileStore fileStore(
-      @Value("${app.file-store.mode:sync}") String mode,
+      @Value("${app.file-store.mode:async}") String mode,
       S3SyncFileStore syncStore,
       S3AsyncFileStore asyncStore) {
 
