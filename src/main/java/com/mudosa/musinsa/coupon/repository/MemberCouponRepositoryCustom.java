@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.coupon.domain.repository;
+package com.mudosa.musinsa.coupon.repository;
 
 import com.mudosa.musinsa.order.application.dto.OrderMemberCoupon;
 

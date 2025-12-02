@@ -1,10 +1,9 @@
-package com.mudosa.musinsa.coupon.domain.service;
+package com.mudosa.musinsa.coupon.service;
 
-import com.mudosa.musinsa.coupon.domain.model.CouponProduct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.mudosa.musinsa.coupon.domain.repository.CouponProductRepository;
+import com.mudosa.musinsa.coupon.repository.CouponProductRepository;
 
 @Service
 @RequiredArgsConstructor

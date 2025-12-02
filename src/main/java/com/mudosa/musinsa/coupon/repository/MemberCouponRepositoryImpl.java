@@ -1,7 +1,8 @@
-package com.mudosa.musinsa.coupon.domain.repository;
+package com.mudosa.musinsa.coupon.repository;
 
 import com.mudosa.musinsa.order.application.dto.OrderMemberCoupon;
 import com.mudosa.musinsa.order.application.dto.QOrderMemberCoupon;
+import com
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 
