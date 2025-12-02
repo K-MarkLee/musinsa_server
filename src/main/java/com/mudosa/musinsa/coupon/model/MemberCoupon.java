@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.coupon.domain.model;
+package com.mudosa.musinsa.coupon.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.exception.BusinessException;

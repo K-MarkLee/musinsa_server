@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.coupon.domain.repository;
+package com.mudosa.musinsa.coupon.repository;
 
-import com.mudosa.musinsa.coupon.domain.model.CouponProduct;
+import com.mudosa.musinsa.coupon.model.CouponProduct;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CouponProductRepository extends JpaRepository<CouponProduct, Long> {

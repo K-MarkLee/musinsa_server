@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.coupon.domain.model;
+package com.mudosa.musinsa.coupon.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import com.mudosa.musinsa.exception.BusinessException;
@@ -18,10 +18,9 @@ import java.util.List;
 
 @Entity
 @Table(
-        name = "coupon",
-        indexes = {
+        name = "coupon",indexes = {
                 @Index(name = "idx_coupon_active_period", columnList = "is_active, start_date, end_date")
-        }
+         }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

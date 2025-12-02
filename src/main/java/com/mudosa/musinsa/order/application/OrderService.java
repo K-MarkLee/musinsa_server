@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.order.application;
 
-import com.mudosa.musinsa.coupon.domain.repository.MemberCouponRepository;
+import com.mudosa.musinsa.coupon.repository.MemberCouponRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.dto.*;

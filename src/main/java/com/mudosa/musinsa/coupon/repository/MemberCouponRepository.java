@@ -1,7 +1,6 @@
-package com.mudosa.musinsa.coupon.domain.repository;
+package com.mudosa.musinsa.coupon.repository;
 
-import com.mudosa.musinsa.coupon.domain.model.MemberCoupon;
-import com.mudosa.musinsa.order.application.dto.OrderMemberCoupon;
+import com.mudosa.musinsa.coupon.model.MemberCoupon;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

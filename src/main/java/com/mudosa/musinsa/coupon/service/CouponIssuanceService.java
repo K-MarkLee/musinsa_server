@@ -1,11 +1,9 @@
-package com.mudosa.musinsa.coupon.domain.service;
+package com.mudosa.musinsa.coupon.service;
 
-import com.mudosa.musinsa.coupon.domain.model.Coupon;
-import com.mudosa.musinsa.coupon.domain.model.CouponProduct;
-import com.mudosa.musinsa.coupon.domain.model.MemberCoupon;
-import com.mudosa.musinsa.coupon.domain.repository.CouponRepository;
-import com.mudosa.musinsa.coupon.domain.repository.MemberCouponRepository;
-import com.mudosa.musinsa.coupon.domain.service.CouponProductService;
+import com.mudosa.musinsa.coupon.model.Coupon;
+import com.mudosa.musinsa.coupon.model.MemberCoupon;
+import com.mudosa.musinsa.coupon.repository.CouponRepository;
+import com.mudosa.musinsa.coupon.repository.MemberCouponRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -50,18 +48,12 @@ public class CouponIssuanceService {
     @Transactional
     public CouponIssuanceResult issueCoupon(Long userId, Long couponId,Long productId){
 
-        // 1. 쿠폰 조회 + 비관적 락 (동시성 제어)
-        Coupon coupon = couponRepository.findByIdForUpdate(couponId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
 
-        // 2. 발급 가능 상태 검증 (활성화, 기간, 재고 확인)
-        LocalDateTime now = LocalDateTime.now();
-        coupon.validateIssuable(now);
+        // 0. 중복 발급 체크
 
-
-        // 3. 중복 발급 체크
         Optional<MemberCoupon> existing = memberCouponRepository
                 .findByUserIdAndCouponId(userId, couponId);
+
 
         if (existing.isPresent()) {
             MemberCoupon mc = existing.get();
@@ -71,7 +63,16 @@ public class CouponIssuanceService {
             );
         }
 
-        // ✅ 4. 신규 발급
+        // 1. 쿠폰 조회 + 비관적 락 (동시성 제어)
+        Coupon coupon = couponRepository.findByIdForUpdate(couponId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
+
+        // 2. 발급 가능 상태 검증 (활성화, 기간, 재고 확인)
+        LocalDateTime now = LocalDateTime.now();
+        coupon.validateIssuable(now);
+
+
+        // ✅ 3. 신규 발급
         try {
             return createMemberCoupon(userId, coupon);
         } catch (DataIntegrityViolationException e) {
@@ -93,17 +94,6 @@ public class CouponIssuanceService {
         }
 
 
-
-
-//        return memberCouponRepository.findByUserIdAndCouponId(userId, couponId)
-//                .map(mc -> {
-//                    log.info("기존 발급 재사용 - userId: {}, couponId: {}", userId, couponId);
-//                    return CouponIssuanceResult.duplicate(
-//                            mc.getId(), couponId, mc.getExpiredAt(), mc.getCreatedAt()
-//                    );
-//                })
-//                .orElseGet(() -> createMemberCoupon(userId,coupon));
-
     }
 
     // 신규 쿠폰 발급 로직
@@ -118,7 +108,7 @@ public class CouponIssuanceService {
         log.info("쿠폰 발급 완료 - userId: {}, couponId: {}, 남은 재고: {}",
                 userId, coupon.getId(),
                 coupon.getRemainingQuantity() != null ?
-                    coupon.getRemainingQuantity() : "무제한");
+                        coupon.getRemainingQuantity() : "무제한");
 
         return CouponIssuanceResult.issued(
                 // 흠 saved? 비동기?
@@ -137,15 +127,15 @@ public class CouponIssuanceService {
                                        LocalDateTime issuedAt,
                                        boolean duplicate) {
         public static CouponIssuanceResult issued(Long memberCouponId,
-                                               Long couponId,
-                                               LocalDateTime expiredAt,
-                                               LocalDateTime issuedAt) {
+                                                  Long couponId,
+                                                  LocalDateTime expiredAt,
+                                                  LocalDateTime issuedAt) {
             return new CouponIssuanceResult(memberCouponId, couponId, expiredAt, issuedAt,false);
         }
         public static CouponIssuanceResult duplicate(Long memberCouponId,
-                                                      Long couponId,
-                                                      LocalDateTime expiredAt,
-                                                      LocalDateTime issuedAt) {
+                                                     Long couponId,
+                                                     LocalDateTime expiredAt,
+                                                     LocalDateTime issuedAt) {
             return new CouponIssuanceResult(memberCouponId, couponId, expiredAt, issuedAt, true);
         }
     }

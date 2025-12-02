@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.coupon.domain.model;
+package com.mudosa.musinsa.coupon.model;
 
 
 public enum DiscountType {
