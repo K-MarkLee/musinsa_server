@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.domain.chat.dto;
 
+import com.mudosa.musinsa.domain.chat.entity.Message;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -25,4 +26,16 @@ public class ParentMessageResponse {
   private List<AttachmentResponse> attachments; // 첨부파일 정보
   @Schema(description = "보낸 시간", example = "2025-11-04T13:56:25.623Z")
   private LocalDateTime createdAt;
+
+  public static ParentMessageResponse of(Message parent, List<AttachmentResponse> parentAttachments) {
+    return ParentMessageResponse.builder()
+        .messageId(parent.getMessageId())
+        .userId(parent.getChatPart().getUser().getId())
+        .userName(parent.getChatPart().getUser().getUserName())
+        .content(parent.getContent())
+        .createdAt(parent.getCreatedAt())
+        .attachments(parentAttachments)
+        .build();
+  }
+
 }
