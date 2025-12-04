@@ -1,8 +1,8 @@
 package com.mudosa.musinsa.config;
 
-import com.mudosa.musinsa.domain.chat.file.FileStore;
-import com.mudosa.musinsa.domain.chat.file.S3AsyncFileStore;
-import com.mudosa.musinsa.domain.chat.file.S3SyncFileStore;
+import com.mudosa.musinsa.chat.file.FileStore;
+import com.mudosa.musinsa.chat.file.S3AsyncFileStore;
+import com.mudosa.musinsa.chat.file.S3SyncFileStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
