@@ -1,6 +1,6 @@
 package com.mudosa.musinsa.chat.service;
 
-import com.mudosa.musinsa.brand.repository.BrandMemberRepository;
+import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
 import com.mudosa.musinsa.chat.dto.*;
 import com.mudosa.musinsa.chat.entity.ChatRoom;
 import com.mudosa.musinsa.chat.entity.Message;
