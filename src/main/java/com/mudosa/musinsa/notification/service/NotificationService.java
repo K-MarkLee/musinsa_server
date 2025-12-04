@@ -1,7 +1,7 @@
 package com.mudosa.musinsa.notification.service;
 
-import com.mudosa.musinsa.domain.chat.entity.ChatPart;
-import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
+import com.mudosa.musinsa.chat.entity.ChatPart;
+import com.mudosa.musinsa.chat.repository.ChatPartRepository;
 import com.mudosa.musinsa.fbtoken.service.FirebaseTokenService;
 import com.mudosa.musinsa.notification.dto.NotificationDTO;
 import com.mudosa.musinsa.notification.event.ChatNotificationCreatedEvent;
@@ -25,59 +25,59 @@ import java.util.Objects;
 @Service
 @AllArgsConstructor
 public class NotificationService {
-    private final NotificationRepository notificationRepository;
-    private final NotificationMetadataRepository notificationMetadataRepository;
-    private final FcmService fcmService;
-    private final FirebaseTokenService firebaseTokenService;
-    private final ChatPartRepository chatPartRepository;
+  private final NotificationRepository notificationRepository;
+  private final NotificationMetadataRepository notificationMetadataRepository;
+  private final FcmService fcmService;
+  private final FirebaseTokenService firebaseTokenService;
+  private final ChatPartRepository chatPartRepository;
 
-    private final String CHAT_METADATA_CATEGORY = "CHAT";
-    private final String MESSAGE_FROM_CHAT_ROOM = "채팅방에서 메세지가 왔습니다.";
-    private final String ATTACHED_FILE = "첨부파일이 있습니다";
-    private final String CHAT_URL = "/chat/";
+  private final String CHAT_METADATA_CATEGORY = "CHAT";
+  private final String MESSAGE_FROM_CHAT_ROOM = "채팅방에서 메세지가 왔습니다.";
+  private final String ATTACHED_FILE = "첨부파일이 있습니다";
+  private final String CHAT_URL = "/chat/";
 
-    @Cacheable(value = "notifications", key = "#userId.toString() + '::' + #pageable.toString()")
-    public Page<NotificationDTO> readNotification(Long userId, Pageable pageable){
-        return notificationRepository.findNotificationDTOsByUserId(userId, pageable);
+  @Cacheable(value = "notifications", key = "#userId.toString() + '::' + #pageable.toString()")
+  public Page<NotificationDTO> readNotification(Long userId, Pageable pageable) {
+    return notificationRepository.findNotificationDTOsByUserId(userId, pageable);
+  }
+
+  public List<Notification> createChatNotification(ChatNotificationCreatedEvent chatNotificationCreatedEvent) {
+
+    List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(chatNotificationCreatedEvent.getUserId(), chatNotificationCreatedEvent.getChatId());
+    NotificationMetadata chatNotificationMetadata = notificationMetadataRepository.findByNotificationCategory(CHAT_METADATA_CATEGORY).orElseThrow(
+        () -> new NoSuchElementException("Notification Metadata not found")
+    );
+
+    List<Long> userIds = chatPartList.stream()
+        .map(chatPart -> chatPart.getUser().getId())
+        .toList();
+
+    String message = chatNotificationCreatedEvent.getContent();
+    List<Notification> notificationList = chatPartList.stream()
+        .map(chatPart -> Notification.builder()
+            .user(chatPart.getUser())
+            .notificationMetadata(chatNotificationMetadata)
+            .notificationTitle(chatPart.getChatRoom().getBrand().getNameKo() + MESSAGE_FROM_CHAT_ROOM)
+            .notificationMessage(Objects.isNull(message) ? ATTACHED_FILE : message)
+            .notificationUrl(CHAT_URL + chatPart.getChatRoom().getChatId() + "/")
+            .build())
+        .toList();
+
+    List<Notification> notifications = notificationRepository.saveAll(notificationList);
+
+    if (fcmService != null && !notificationList.isEmpty()) {
+      fcmService.sendMessageByToken(notificationList.getFirst().getNotificationTitle(), message, firebaseTokenService.readFirebaseTokens(userIds));
+    } else {
+      log.info("알림 생성 중 문제가 발생했습니다.");
+      return null;
     }
+    return notifications;
+  }
 
-    public List<Notification> createChatNotification(ChatNotificationCreatedEvent chatNotificationCreatedEvent){
-
-        List<ChatPart> chatPartList = chatPartRepository.findChatPartsExcludingUser(chatNotificationCreatedEvent.getUserId(), chatNotificationCreatedEvent.getChatId());
-        NotificationMetadata chatNotificationMetadata = notificationMetadataRepository.findByNotificationCategory(CHAT_METADATA_CATEGORY).orElseThrow(
-                ()->new NoSuchElementException("Notification Metadata not found")
-        );
-
-        List<Long> userIds = chatPartList.stream()
-                .map(chatPart -> chatPart.getUser().getId())
-                .toList();
-
-        String message = chatNotificationCreatedEvent.getContent();
-        List<Notification> notificationList = chatPartList.stream()
-                .map(chatPart->Notification.builder()
-                        .user(chatPart.getUser())
-                        .notificationMetadata(chatNotificationMetadata)
-                        .notificationTitle(chatPart.getChatRoom().getBrand().getNameKo() + MESSAGE_FROM_CHAT_ROOM)
-                        .notificationMessage(Objects.isNull(message)?ATTACHED_FILE:message)
-                        .notificationUrl(CHAT_URL + chatPart.getChatRoom().getChatId()+"/")
-                        .build())
-                        .toList();
-
-        List<Notification> notifications = notificationRepository.saveAll(notificationList);
-
-        if (fcmService != null && !notificationList.isEmpty()) {
-            fcmService.sendMessageByToken(notificationList.getFirst().getNotificationTitle(), message,firebaseTokenService.readFirebaseTokens(userIds));
-        } else {
-            log.info("알림 생성 중 문제가 발생했습니다.");
-            return null;
-        }
-        return notifications;
-    }
-
-    @Transactional
-    public int updateNotificationState(Long notificationId){
-        return notificationRepository.updateNotificationStatus(notificationId);
-    }
+  @Transactional
+  public int updateNotificationState(Long notificationId) {
+    return notificationRepository.updateNotificationStatus(notificationId);
+  }
 
 //    public void createNotification(Long userId,String notificationCategory) throws FirebaseMessagingException {
 //
