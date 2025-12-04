@@ -2,19 +2,24 @@ package com.mudosa.musinsa.coupon.service;
 
 import com.mudosa.musinsa.coupon.model.Coupon;
 import com.mudosa.musinsa.coupon.model.MemberCoupon;
+import com.mudosa.musinsa.coupon.presentation.dto.res.CouponIssuanceResDto;
 import com.mudosa.musinsa.coupon.repository.CouponRepository;
 import com.mudosa.musinsa.coupon.repository.MemberCouponRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -24,13 +29,18 @@ public class CouponIssuanceService {
 
     private final CouponRepository couponRepository;
     private final MemberCouponRepository memberCouponRepository;
-    private final CouponProductService couponProductService;
+    private final RedissonClient redissonClient;
+    private final StringRedisTemplate redisTemplate;
 
-    // 조회 전용
+    // redis에서 쿠폰발급 처리할 때 사용하는 중복 발급 방지용 redis set key prefix
+    private static final String ISSUED_SET_PREFIX = "coupon:issued:";
+    private static final String LOCK_PREFIX = "coupon:issue:lock:";
+
+    // 조회 전용 메서드
     @Transactional(readOnly = true)
-    public Optional<CouponIssuanceResult> findIssuedCoupon(Long userId, Long couponId) {
+    public Optional<CouponIssuanceResDto> findIssuedCoupon(Long userId, Long couponId) {
         return memberCouponRepository.findByUserIdAndCouponId(userId, couponId)
-                .map(existing -> CouponIssuanceResult.duplicate(
+                .map(existing -> CouponIssuanceResDto.duplicate(
                         existing.getId(),
                         couponId,
                         existing.getExpiredAt(),
@@ -43,25 +53,87 @@ public class CouponIssuanceService {
         return memberCouponRepository.countByUserIdAndCouponId(userId, couponId);
     }
 
-    // 실제 발급 로직 전용
+
+
+    /*=======================================
+                   쿠폰 발급 로직
+     - 쿠폰 발급 진입점 (트랜잭션 없음)
+     - 3단계 방어전략
+      1. Redis Set으로 초고속 중복체크
+      2. 유저별 분산락으로 동시 클릭 방지
+      3. DB비관적 락으로 재고 보호
+     ========================================*/
+
+    public CouponIssuanceResDto issueCoupon(Long userId, Long couponId) {
+
+        // 1. Redis로 초고속 중복 체크
+        String issueKey = ISSUED_SET_PREFIX + couponId;
+        String userIdStr = userId.toString();
+
+        Boolean isIssued = redisTemplate.opsForSet().isMember(issueKey, userIdStr);
+        if (Boolean.TRUE.equals(isIssued)) {
+            log.info("중복 발급 감지 (Redis 빠른 체크) - userId: {}, couponId: {}", userIdStr, couponId);
+            return findIssuedCoupon(userId, couponId)
+                    .orElseThrow(() -> new BusinessException(
+                            ErrorCode.COUPON_NOT_FOUND,
+                            "발급된 쿠폰을 찾을 수 없습니다."
+                    ));
+        }
+
+        // 2 . 유저별 분산 락 (같은 유저의 연속 클릭 방지)
+        String lockKey = LOCK_PREFIX + userId + ":" + couponId;
+        RLock userLock = redissonClient.getLock(lockKey);
+
+
+        try{
+            // 락 획득 시도
+            boolean acquired = userLock.tryLock(3,10, TimeUnit.SECONDS);
+
+            // 만약 락을 얻지 못했다면
+            if(!acquired){
+                log.info("락 획득 실패 - userId: {}, couponId: {} " , userId, couponId);
+                throw new BusinessException(
+                        ErrorCode.COUPON_APPLIED_FALIED,
+                        "쿠폰 발급 요청이 많습니다. 잠시 후 다시 시도해주세요."
+                );
+            }
+
+            //락 획득 후 Redis 재체크
+            Boolean recheckIssued = redisTemplate.opsForSet().isMember(issueKey, userIdStr);
+            if (Boolean.TRUE.equals(recheckIssued)) {
+                log.info("중복 발급 감지 (락 후 재체크) - userId: {}, couponId: {}", userId, couponId);
+
+
+                // 기존 메서드 재사용
+                return findIssuedCoupon(userId, couponId)
+                        .orElseThrow(() -> new BusinessException(
+                                ErrorCode.COUPON_NOT_FOUND,
+                                "발급된 쿠폰을 찾을 수 없습니다."
+                        ));
+            }
+
+            return issueCouponWithLock(userId, couponId,issueKey,userIdStr);
+
+        }catch ( InterruptedException e){
+
+            // 자바 멀티 스레딩
+            Thread.currentThread().interrupt();
+            log.error("락 대기 중 인터럽트 발생 - userId: {}, couponId: {}", userId, couponId,e);
+            throw new BusinessException(
+                    ErrorCode.COUPON_APPLIED_FALIED,
+                    "쿠폰 발급이 중단되었습니다."
+            );
+        }finally {
+            if (userLock.isHeldByCurrentThread()){
+                userLock.unlock();
+            }
+        }
+
+    }
 
     @Transactional
-    public CouponIssuanceResult issueCoupon(Long userId, Long couponId,Long productId){
+    public CouponIssuanceResDto issueCouponWithLock(Long userId, Long couponId, String issueKey, String userIdStr) {
 
-
-        // 0. 중복 발급 체크
-
-        Optional<MemberCoupon> existing = memberCouponRepository
-                .findByUserIdAndCouponId(userId, couponId);
-
-
-        if (existing.isPresent()) {
-            MemberCoupon mc = existing.get();
-            log.info("기존 발급 재사용 - userId: {}, couponId: {}", userId, couponId);
-            return CouponIssuanceResult.duplicate(
-                    mc.getId(), couponId, mc.getExpiredAt(), mc.getCreatedAt()
-            );
-        }
 
         // 1. 쿠폰 조회 + 비관적 락 (동시성 제어)
         Coupon coupon = couponRepository.findByIdForUpdate(couponId)
@@ -71,11 +143,35 @@ public class CouponIssuanceService {
         LocalDateTime now = LocalDateTime.now();
         coupon.validateIssuable(now);
 
+        // 3.DB에서 최종 중복 발급 체크
 
-        // ✅ 3. 신규 발급
+        Optional<MemberCoupon> existing = memberCouponRepository
+                .findByUserIdAndCouponId(userId, couponId);
+
+
+        if (existing.isPresent()) {
+            MemberCoupon mc = existing.get();
+
+            //redis에도 동기화
+            addToRedisSet(issueKey,userIdStr,coupon);
+            log.info("기존 발급 재사용 - userId: {}, couponId: {}", userId, couponId);
+            return CouponIssuanceResDto.duplicate(
+                    mc.getId(), couponId, mc.getExpiredAt(), mc.getCreatedAt()
+            );
+        }
+
+
+        // ✅ 4. 신규 발급
         try {
-            return createMemberCoupon(userId, coupon);
+            CouponIssuanceResDto result = createMemberCoupon(userId, coupon);
+
+            //Redis에 발급 기록 ( 빠른 중복 체크용 )
+            addToRedisSet(issueKey,userIdStr,coupon);
+
+            return result;
+
         } catch (DataIntegrityViolationException e) {
+
             // unique 제약 위반 시 (동시 발급 충돌)
             // 이미 발급된 쿠폰을 조회해서 반환
             log.warn("중복 발급 시도 감지 (Unique 제약 위반) - userId: {}, couponId: {}",
@@ -88,16 +184,18 @@ public class CouponIssuanceService {
                             "쿠폰 발급 중 오류가 발생했습니다"
                     ));
 
-            return CouponIssuanceResult.duplicate(
+            // redis 동기화
+            addToRedisSet(issueKey,userIdStr,coupon);
+
+            return CouponIssuanceResDto.duplicate(
                     mc.getId(), couponId, mc.getExpiredAt(), mc.getCreatedAt()
             );
         }
 
-
     }
 
     // 신규 쿠폰 발급 로직
-    private CouponIssuanceResult createMemberCoupon(Long userId, Coupon coupon) {
+    private CouponIssuanceResDto createMemberCoupon(Long userId, Coupon coupon) {
         // 발급 수량 증가 (재고 차감 효과: totalQuantity - issuedQuantity = 남은 재고)
         coupon.increaseIssuedQuantity();
 
@@ -110,7 +208,7 @@ public class CouponIssuanceService {
                 coupon.getRemainingQuantity() != null ?
                         coupon.getRemainingQuantity() : "무제한");
 
-        return CouponIssuanceResult.issued(
+        return CouponIssuanceResDto.issued(
                 // 흠 saved? 비동기?
                 saved.getId(),
                 coupon.getId(),
@@ -119,25 +217,27 @@ public class CouponIssuanceService {
         );
     }
 
+     /*
+     * Redis Set에 발급 기록 추가 (TTL 설정) (새로 추가)
+     */
 
-    // 결과 DTO ? => 따로 빼야 하나 ? => 서비스 내부에서만 쓰임
-    public record CouponIssuanceResult(Long memberCouponId,
-                                       Long couponId,
-                                       LocalDateTime expiredAt,
-                                       LocalDateTime issuedAt,
-                                       boolean duplicate) {
-        public static CouponIssuanceResult issued(Long memberCouponId,
-                                                  Long couponId,
-                                                  LocalDateTime expiredAt,
-                                                  LocalDateTime issuedAt) {
-            return new CouponIssuanceResult(memberCouponId, couponId, expiredAt, issuedAt,false);
-        }
-        public static CouponIssuanceResult duplicate(Long memberCouponId,
-                                                     Long couponId,
-                                                     LocalDateTime expiredAt,
-                                                     LocalDateTime issuedAt) {
-            return new CouponIssuanceResult(memberCouponId, couponId, expiredAt, issuedAt, true);
+    private void addToRedisSet(String issueKey,String userIdStr,Coupon coupon){
+        redisTemplate.opsForSet().add(issueKey,userIdStr);
+
+        if (coupon.getEndDate() != null) {
+            long daysUntilExpired = ChronoUnit.DAYS.between(
+                    LocalDateTime.now(),
+                    coupon.getEndDate()
+            ) + 1;
+
+
+            if (daysUntilExpired >0) {
+                redisTemplate.expire(issueKey, daysUntilExpired, TimeUnit.DAYS);
+            }
         }
     }
+
+
+
 }
 

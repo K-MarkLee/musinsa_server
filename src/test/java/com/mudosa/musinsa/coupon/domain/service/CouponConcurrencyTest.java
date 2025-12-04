@@ -116,7 +116,7 @@ class CouponConcurrencyTest {
 
             executorService.submit(() -> {
                 try {
-                    couponIssuanceService.issueCoupon(userId, testCoupon.getId(), null);
+                    couponIssuanceService.issueCouponWithLock(userId, testCoupon.getId(), , );
                     successCount.incrementAndGet();
                     log.debug("Thread {} (User {}) - 발급 성공", threadNumber, userId);
 
@@ -235,7 +235,7 @@ class CouponConcurrencyTest {
             final int threadNumber = i + 1;
             executorService.submit(() -> {
                 try {
-                    var result = couponIssuanceService.issueCoupon(sameUserId, testCoupon.getId(), null);
+                    var result = couponIssuanceService.issueCouponWithLock(sameUserId, testCoupon.getId(), , );
                     if (result.duplicate()) {
                         duplicateCount.incrementAndGet();
                         log.debug("Thread {} - 기존 발급 재사용", threadNumber);

@@ -1,5 +1,8 @@
 package com.mudosa.musinsa.config;
 
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,6 +10,7 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -52,4 +56,44 @@ public class RedisConfig {
     template.afterPropertiesSet();
     return template;
   }
+
+
+    /*
+     * StringRedisTemplate 추가 (쿠폰 발급용), set연산 최적화
+     */
+
+    @Bean
+    public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+        return  new StringRedisTemplate(connectionFactory);
+    }
+
+    /*
+     * Redisson 클라이언트 추가 (분산 락용)
+     */
+
+    @Bean
+    public RedissonClient redissonClient(){
+
+        Config config = new Config();
+
+        String address = "redis://" + redisHost + ":" + redisPort;
+
+        config.useSingleServer()
+                .setAddress(address)
+                .setDatabase(redisDatabase)
+                .setConnectionPoolSize(50)
+                .setConnectionMinimumIdleSize(10)
+                .setRetryAttempts(3)
+                .setRetryInterval(1500)
+                .setTimeout(3000);
+
+        // 패스워드가 있으면 설정
+        if (redisPassword != null && !redisPassword.isEmpty()) {
+            config.useSingleServer().setPassword(redisPassword);
+        }
+
+        return Redisson.create(config);
+    }
+
 }
+
