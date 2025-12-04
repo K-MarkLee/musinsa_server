@@ -1,9 +1,10 @@
-package com.mudosa.musinsa.domain.chat.dto;
+package com.mudosa.musinsa.chat.dto;
+
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.mudosa.musinsa.domain.chat.entity.Message;
-import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
-import com.mudosa.musinsa.domain.chat.enums.MessageStatus;
+import com.mudosa.musinsa.chat.entity.Message;
+import com.mudosa.musinsa.chat.entity.MessageAttachment;
+import com.mudosa.musinsa.chat.enums.MessageStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -32,8 +33,6 @@ public class WSMessageResponseDTO {
   private String content;
   @Schema(description = "보낸 시간", example = "2025-11-04T13:56:25.623Z")
   private LocalDateTime createdAt;
-  @Schema(description = "삭제 여부", example = "false")
-  private boolean isDeleted;
 
   @Schema(description = "답장 메시지")
   private ParentMessageResponse parent;
@@ -63,10 +62,8 @@ public class WSMessageResponseDTO {
 
       parentDto = ParentMessageResponse.builder()
           .messageId(parent.getMessageId())
-          .userId(parent.getChatPart().getUser().getId())
           .userName(parent.getChatPart().getUser().getUserName())
           .content(parent.getContent())
-          .createdAt(parent.getCreatedAt())
           .attachments(parentAttachmentDtos)
           .build();
     }
@@ -83,7 +80,6 @@ public class WSMessageResponseDTO {
         .userName(userName)
         .content(message.getContent())
         .createdAt(message.getCreatedAt())
-        .isDeleted(message.getDeletedAt() != null)
         .parent(parentDto)
         .status(message.getStatus())
         .build();
@@ -106,10 +102,8 @@ public class WSMessageResponseDTO {
 
       parentDto = ParentMessageResponse.builder()
           .messageId(parent.getMessageId())
-          .userId(parent.getChatPart().getUser().getId())
           .userName(parent.getChatPart().getUser().getUserName())
           .content(parent.getContent())
-          .createdAt(parent.getCreatedAt())
           .attachments(parentAttachmentDtos)
           .build();
     }
@@ -120,14 +114,13 @@ public class WSMessageResponseDTO {
     String userName = message.getChatPart().getUser().getUserName();
 
     return WSMessageResponseDTO.builder()
-        .type("MESSAGE")
+        .type("M")
         .messageId(message.getMessageId())
         .chatId(chatId)
         .userId(userId)
         .userName(userName)
         .content(message.getContent())
         .createdAt(message.getCreatedAt())
-        .isDeleted(message.getDeletedAt() != null)
         .parent(parentDto)
         .status(message.getStatus())
         .clientMessageId(clientMessageId)
