@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.entity;
+package com.mudosa.musinsa.chat.entity;
 
-import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
+import com.mudosa.musinsa.chat.event.TempUploadedFile;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -54,7 +54,7 @@ public class MessageAttachment {
         .attachmentUrl(storedUrl)
         .message(message)
         .mimeType(file.contentType())
-        .sizeBytes((long) file.bytes().length)
+        .sizeBytes(file.size())
         .build();
   }
 }

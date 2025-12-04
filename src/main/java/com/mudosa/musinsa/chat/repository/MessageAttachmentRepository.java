@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.repository;
+package com.mudosa.musinsa.chat.repository;
 
-import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
+import com.mudosa.musinsa.chat.entity.MessageAttachment;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

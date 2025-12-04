@@ -1,8 +1,9 @@
-package com.mudosa.musinsa.domain.chat.file;
+package com.mudosa.musinsa.chat.file;
 
-import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
+import com.mudosa.musinsa.chat.event.TempUploadedFile;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -12,9 +13,11 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.concurrent.CompletableFuture;
 
 @Component
+@Slf4j
 public class S3SyncFileStore extends AbstractS3Store implements FileStore {
 
   private final S3Client s3Client;
@@ -49,7 +52,7 @@ public class S3SyncFileStore extends AbstractS3Store implements FileStore {
    * TempUploadedFile 기반 업로드 (비동기 처리용, 이미 메모리에 로딩된 데이터)
    */
   private String uploadInternal(String key, TempUploadedFile file) {
-    long size = file.bytes().length;
+    long size = file.size();
 
     Span span = tracer.nextSpan().name("s3.upload")
         .tag("type", "sync")
@@ -66,7 +69,19 @@ public class S3SyncFileStore extends AbstractS3Store implements FileStore {
           .build();
 
       // 메모리에 이미 올라온 byte[] 를 그대로 사용
-      s3Client.putObject(request, RequestBody.fromBytes(file.bytes()));
+      try {
+        s3Client.putObject(request, RequestBody.fromFile(file.tempPath()));
+      } catch (Exception e) {
+        span.error(e);
+        throw e;
+      } finally {
+        try {
+          Files.deleteIfExists(file.tempPath());
+        } catch (IOException ioe) {
+          log.warn("임시 파일 삭제 실패. path={}", file.tempPath(), ioe);
+        }
+        span.end();
+      }
 
       return s3Client.utilities().getUrl(
           GetUrlRequest.builder()

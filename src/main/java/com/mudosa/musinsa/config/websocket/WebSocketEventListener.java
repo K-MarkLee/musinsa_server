@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.global.config.websocket;
+package com.mudosa.musinsa.config.websocket;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

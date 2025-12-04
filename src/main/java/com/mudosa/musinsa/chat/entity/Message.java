@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.entity;
+package com.mudosa.musinsa.chat.entity;
 
-import com.mudosa.musinsa.domain.chat.enums.MessageStatus;
+import com.mudosa.musinsa.chat.enums.MessageStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;

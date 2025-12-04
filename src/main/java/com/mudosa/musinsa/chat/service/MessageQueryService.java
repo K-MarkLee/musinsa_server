@@ -1,12 +1,12 @@
-package com.mudosa.musinsa.domain.chat.service;
+package com.mudosa.musinsa.chat.service;
 
-import com.mudosa.musinsa.brand.domain.repository.BrandMemberRepository;
-import com.mudosa.musinsa.domain.chat.dto.*;
-import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
-import com.mudosa.musinsa.domain.chat.entity.Message;
-import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
-import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
-import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
+import com.mudosa.musinsa.brand.repository.BrandMemberRepository;
+import com.mudosa.musinsa.chat.dto.*;
+import com.mudosa.musinsa.chat.entity.ChatRoom;
+import com.mudosa.musinsa.chat.entity.Message;
+import com.mudosa.musinsa.chat.repository.ChatRoomRepository;
+import com.mudosa.musinsa.chat.repository.MessageAttachmentRepository;
+import com.mudosa.musinsa.chat.repository.MessageRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;

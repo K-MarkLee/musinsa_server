@@ -1,9 +1,9 @@
-package com.mudosa.musinsa.domain.chat.service;
+package com.mudosa.musinsa.chat.service;
 
-import com.mudosa.musinsa.domain.chat.dto.WSMessageResponseDTO;
-import com.mudosa.musinsa.domain.chat.entity.Message;
-import com.mudosa.musinsa.domain.chat.event.ChatEventPublisher;
-import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
+import com.mudosa.musinsa.chat.dto.WSMessageResponseDTO;
+import com.mudosa.musinsa.chat.entity.Message;
+import com.mudosa.musinsa.chat.event.ChatEventPublisher;
+import com.mudosa.musinsa.chat.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

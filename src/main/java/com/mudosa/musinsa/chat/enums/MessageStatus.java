@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.domain.chat.enums;
+package com.mudosa.musinsa.chat.enums;
 
 public enum MessageStatus {
   NORMAL, UPLOADING, FAILED, DELETED

@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.file;
+package com.mudosa.musinsa.chat.file;
 
-import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
+import com.mudosa.musinsa.chat.event.TempUploadedFile;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.s3.model.GetUrlRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -48,7 +49,7 @@ public class S3AsyncFileStore extends AbstractS3Store implements FileStore {
    * - 이미 메모리에 로딩된 byte[] 사용
    */
   private CompletableFuture<String> uploadInternal(String key, TempUploadedFile file) {
-    long size = file.bytes().length;
+    long size = file.size();
 
     Span span = tracer.nextSpan().name("s3.upload")
         .tag("type", "async")
@@ -62,7 +63,7 @@ public class S3AsyncFileStore extends AbstractS3Store implements FileStore {
         .contentLength(size)
         .build();
 
-    return s3AsyncClient.putObject(request, AsyncRequestBody.fromBytes(file.bytes()))
+    return s3AsyncClient.putObject(request, AsyncRequestBody.fromFile(file.tempPath()))
         .thenApply(resp ->
             s3AsyncClient.utilities()
                 .getUrl(GetUrlRequest.builder()
@@ -72,6 +73,13 @@ public class S3AsyncFileStore extends AbstractS3Store implements FileStore {
                 .toString()
         )
         .whenComplete((url, ex) -> {
+          try {
+            log.debug("임시 파일 삭제. path={}", file.tempPath());
+            Files.deleteIfExists(file.tempPath());
+          } catch (IOException ioe) {
+            log.warn("임시 파일 삭제 실패. path={}", file.tempPath(), ioe);
+          }
+
           if (ex != null) {
             span.error(ex);
             log.error("S3 async upload failed (TempUploadedFile). key={}", key, ex);

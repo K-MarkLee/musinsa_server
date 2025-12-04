@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.dto;
+package com.mudosa.musinsa.chat.dto;
 
-import com.mudosa.musinsa.domain.chat.entity.Message;
+import com.mudosa.musinsa.chat.entity.Message;
 
 import java.util.List;
 import java.util.Map;

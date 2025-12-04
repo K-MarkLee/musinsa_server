@@ -1,7 +1,7 @@
-package com.mudosa.musinsa.domain.chat.dto;
+package com.mudosa.musinsa.chat.dto;
 
-import com.mudosa.musinsa.domain.chat.entity.Message;
-import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
+import com.mudosa.musinsa.chat.entity.Message;
+import com.mudosa.musinsa.chat.entity.MessageAttachment;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -55,14 +55,7 @@ public class MessageResponse {
           .map(AttachmentResponse::of)
           .toList();
 
-      parentDto = ParentMessageResponse.builder()
-          .messageId(parent.getMessageId())
-          .userId(parent.getChatPart().getUser().getId())
-          .userName(parent.getChatPart().getUser().getUserName())
-          .content(parent.getContent())
-          .createdAt(parent.getCreatedAt())
-          .attachments(parentAttachmentDtos)
-          .build();
+      parentDto = ParentMessageResponse.of(parent, parentAttachmentDtos);
     }
 
     // 2) 현재 메시지 첨부 → DTO 변환

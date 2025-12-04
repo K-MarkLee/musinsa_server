@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.repository;
+package com.mudosa.musinsa.chat.repository;
 
-import com.mudosa.musinsa.domain.chat.entity.Message;
+import com.mudosa.musinsa.chat.entity.Message;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
