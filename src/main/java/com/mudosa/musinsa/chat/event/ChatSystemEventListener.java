@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.event;
+package com.mudosa.musinsa.chat.event;
 
-import com.mudosa.musinsa.domain.chat.service.AttachmentUploadService;
+import com.mudosa.musinsa.chat.service.AttachmentUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;

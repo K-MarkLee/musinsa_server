@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.file;
+package com.mudosa.musinsa.chat.file;
 
-import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
+import com.mudosa.musinsa.chat.event.TempUploadedFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.concurrent.CompletableFuture;

@@ -1,6 +1,7 @@
-package com.mudosa.musinsa.domain.chat.entity;
+package com.mudosa.musinsa.chat.entity;
 
-import com.mudosa.musinsa.domain.chat.enums.ChatPartRole;
+
+import com.mudosa.musinsa.chat.enums.ChatPartRole;
 import com.mudosa.musinsa.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -48,10 +49,10 @@ public class ChatPart {
 
   public static ChatPart create(ChatRoom chatRoom, User user) {
     return ChatPart.builder()
-            .chatRoom(chatRoom)
-            .user(user)
-            .role(ChatPartRole.USER)
-            .build();
+        .chatRoom(chatRoom)
+        .user(user)
+        .role(ChatPartRole.USER)
+        .build();
   }
 
 }

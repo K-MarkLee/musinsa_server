@@ -1,7 +1,7 @@
-package com.mudosa.musinsa.domain.chat.dto;
+package com.mudosa.musinsa.chat.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.mudosa.musinsa.domain.chat.entity.ChatPart;
+import com.mudosa.musinsa.chat.entity.ChatPart;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -38,11 +38,11 @@ public class ChatPartResponse {
    */
   public static ChatPartResponse of(ChatPart chatPart) {
     return ChatPartResponse.builder()
-            .chatPartId(chatPart.getChatPartId())
-            .userId(chatPart.getUser().getId())
-            .chatId(chatPart.getChatRoom().getChatId())
-            .userName(chatPart.getUser().getUserName())
-            .createdAt(chatPart.getCreatedAt())
-            .build();
+        .chatPartId(chatPart.getChatPartId())
+        .userId(chatPart.getUser().getId())
+        .chatId(chatPart.getChatRoom().getChatId())
+        .userName(chatPart.getUser().getUserName())
+        .createdAt(chatPart.getCreatedAt())
+        .build();
   }
 }

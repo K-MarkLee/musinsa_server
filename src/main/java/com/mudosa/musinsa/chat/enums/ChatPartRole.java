@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.domain.chat.enums;
+package com.mudosa.musinsa.chat.enums;
 
 //채팅방 역할
 public enum ChatPartRole {

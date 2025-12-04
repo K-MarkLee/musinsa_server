@@ -1,11 +1,11 @@
-package com.mudosa.musinsa.domain.chat.service;
+package com.mudosa.musinsa.chat.service;
 
-import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
-import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
-import com.mudosa.musinsa.domain.chat.entity.ChatPart;
-import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
-import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
-import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
+import com.mudosa.musinsa.chat.dto.ChatPartResponse;
+import com.mudosa.musinsa.chat.dto.ChatRoomInfoResponse;
+import com.mudosa.musinsa.chat.entity.ChatPart;
+import com.mudosa.musinsa.chat.entity.ChatRoom;
+import com.mudosa.musinsa.chat.repository.ChatPartRepository;
+import com.mudosa.musinsa.chat.repository.ChatRoomRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.user.domain.model.User;

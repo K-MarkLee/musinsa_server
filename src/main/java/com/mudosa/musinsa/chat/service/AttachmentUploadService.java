@@ -1,14 +1,14 @@
-package com.mudosa.musinsa.domain.chat.service;
+package com.mudosa.musinsa.chat.service;
 
-import com.mudosa.musinsa.domain.chat.dto.AttachmentResponse;
-import com.mudosa.musinsa.domain.chat.dto.WSFileUploadSuccessDTO;
-import com.mudosa.musinsa.domain.chat.entity.Message;
-import com.mudosa.musinsa.domain.chat.entity.MessageAttachment;
-import com.mudosa.musinsa.domain.chat.event.ChatEventPublisher;
-import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
-import com.mudosa.musinsa.domain.chat.file.FileStore;
-import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
-import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
+import com.mudosa.musinsa.chat.dto.AttachmentResponse;
+import com.mudosa.musinsa.chat.dto.WSFileUploadSuccessDTO;
+import com.mudosa.musinsa.chat.entity.Message;
+import com.mudosa.musinsa.chat.entity.MessageAttachment;
+import com.mudosa.musinsa.chat.event.ChatEventPublisher;
+import com.mudosa.musinsa.chat.event.TempUploadedFile;
+import com.mudosa.musinsa.chat.file.FileStore;
+import com.mudosa.musinsa.chat.repository.MessageAttachmentRepository;
+import com.mudosa.musinsa.chat.repository.MessageRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -53,17 +53,16 @@ public class AttachmentUploadService {
         uploadFilesToS3AndBuildEntities(message, files);
 
     // 2. 결과 처리
-    if (successAttachments.isEmpty()) {
-      // 2-1) 전부 실패한 경우 -> 메시지 상태 FAILED
-      transactionTemplate.executeWithoutResult(status -> {
+    transactionTemplate.executeWithoutResult(status -> {
+      // DB 저장 및 상태 변경 작업은 하나의 트랜잭션으로 묶여 실행됩니다.
+      if (successAttachments.isEmpty()) {
+        // 2-1) 전부 실패한 경우 -> 메시지 상태 FAILED
         markMessageFailed(message, clientMessageId);
-      });
-    } else {
-      // 2-2) 하나라도 성공한 경우 -> 성공한 것만 저장 및 알림 발송
-      transactionTemplate.executeWithoutResult(status -> {
+      } else {
+        // 2-2) 하나라도 성공한 경우 -> 성공한 것만 저장 및 알림 발송
         saveAttachmentsAndUpdateStatusToNormal(message, successAttachments, clientMessageId);
-      });
-    }
+      }
+    });
   }
 
   /**
@@ -118,7 +117,7 @@ public class AttachmentUploadService {
         .toList();
 
     // 4. 저장된 파일 목록 dto로 변경
-    WSFileUploadSuccessDTO dto = WSFileUploadSuccessDTO.of(message, clientMessageId, responses);
+    WSFileUploadSuccessDTO dto = WSFileUploadSuccessDTO.of(message, responses);
 
     // 5. 웹소켓 전송 (성공한 파일 목록)
     chatEventPublisher.publishBroadcastEvent(dto.getChatId(), dto);
@@ -138,7 +137,7 @@ public class AttachmentUploadService {
     messageRepository.save(message);
 
     // 2. 저장된 파일 목록 dto로 변경
-    WSFileUploadSuccessDTO dto = WSFileUploadSuccessDTO.of(message, clientMessageId, List.of());
+    WSFileUploadSuccessDTO dto = WSFileUploadSuccessDTO.of(message, List.of());
 
     // 3. 웹소켓 전송 (빈 배열)
     chatEventPublisher.publishBroadcastEvent(dto.getChatId(), dto);

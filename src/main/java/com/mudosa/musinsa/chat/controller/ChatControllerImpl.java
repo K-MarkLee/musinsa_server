@@ -1,14 +1,14 @@
-package com.mudosa.musinsa.domain.chat.controller;
+package com.mudosa.musinsa.chat.controller;
 
+import com.mudosa.musinsa.chat.dto.ChatPartResponse;
+import com.mudosa.musinsa.chat.dto.ChatRoomInfoResponse;
+import com.mudosa.musinsa.chat.dto.MessageCursor;
+import com.mudosa.musinsa.chat.dto.MessageResponse;
+import com.mudosa.musinsa.chat.facade.ChatMessageFacade;
+import com.mudosa.musinsa.chat.service.AttachmentUploadService;
+import com.mudosa.musinsa.chat.service.ChatRoomService;
+import com.mudosa.musinsa.chat.service.MessageQueryService;
 import com.mudosa.musinsa.common.dto.ApiResponse;
-import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
-import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
-import com.mudosa.musinsa.domain.chat.dto.MessageCursor;
-import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
-import com.mudosa.musinsa.domain.chat.facade.ChatMessageFacade;
-import com.mudosa.musinsa.domain.chat.service.AttachmentUploadService;
-import com.mudosa.musinsa.domain.chat.service.ChatRoomService;
-import com.mudosa.musinsa.domain.chat.service.MessageQueryService;
 import com.mudosa.musinsa.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

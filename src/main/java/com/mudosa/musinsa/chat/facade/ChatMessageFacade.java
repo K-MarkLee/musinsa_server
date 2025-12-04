@@ -1,13 +1,13 @@
-package com.mudosa.musinsa.domain.chat.facade;
+package com.mudosa.musinsa.chat.facade;
 
-import com.mudosa.musinsa.domain.chat.entity.ChatPart;
-import com.mudosa.musinsa.domain.chat.entity.Message;
-import com.mudosa.musinsa.domain.chat.enums.MessageStatus;
-import com.mudosa.musinsa.domain.chat.event.ChatEventPublisher;
-import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
-import com.mudosa.musinsa.domain.chat.service.ChatRoomService;
-import com.mudosa.musinsa.domain.chat.service.MessageCommandService;
-import com.mudosa.musinsa.domain.chat.service.MessageQueryService;
+import com.mudosa.musinsa.chat.entity.ChatPart;
+import com.mudosa.musinsa.chat.entity.Message;
+import com.mudosa.musinsa.chat.enums.MessageStatus;
+import com.mudosa.musinsa.chat.event.ChatEventPublisher;
+import com.mudosa.musinsa.chat.event.TempUploadedFile;
+import com.mudosa.musinsa.chat.service.ChatRoomService;
+import com.mudosa.musinsa.chat.service.MessageCommandService;
+import com.mudosa.musinsa.chat.service.MessageQueryService;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -63,8 +68,8 @@ public class ChatMessageFacade {
     Message parent = messageQueryService.getParentMessageIfExists(parentId, chatId);
 
     // 2. 파일 존재 여부에 따라 메시지 상태 결정
-    int fileCount = (files != null) ? files.size() : 0;
-    MessageStatus status = (fileCount == 0) ? MessageStatus.NORMAL : MessageStatus.UPLOADING;
+    boolean hasRealFile = files != null && files.stream().anyMatch(f -> !f.isEmpty());
+    MessageStatus status = (!hasRealFile) ? MessageStatus.NORMAL : MessageStatus.UPLOADING;
 
     // 3. 메시지 저장(파일 제외)
     // 3-1) 메시지 엔티티 생성
@@ -73,18 +78,31 @@ public class ChatMessageFacade {
     Long savedMessageId = messageCommandService.saveContentMessage(message, clientMessageId);
 
     // 4. 파일 비동기 처리(파일 존재 시)
-    if (fileCount > 0) {
-      // 4-1) MultiPart 파일은 Http 응답시 사라지므로 복사
+    if (hasRealFile) {
       List<TempUploadedFile> tempFiles = files.stream()
           .map(f -> {
             try {
+              String suffix = Optional.ofNullable(f.getOriginalFilename())
+                  .filter(name -> name.contains("."))
+                  .map(name -> name.substring(name.lastIndexOf('.')))
+                  .orElse("");
+
+              Path tempPath = Files.createTempFile("chat-upload-", suffix);
+              log.debug("임시 파일 경로: " + tempPath.toAbsolutePath());
+              try (InputStream in = f.getInputStream();
+                   OutputStream out = Files.newOutputStream(tempPath)) {
+
+                in.transferTo(out); // 내부적으로 버퍼링, 전체를 힙에 안 올림
+              }
+
               return new TempUploadedFile(
                   f.getOriginalFilename(),
                   f.getContentType(),
-                  f.getBytes()
+                  tempPath,
+                  Files.size(tempPath)
               );
             } catch (IOException e) {
-              throw new IllegalStateException("파일 복사 실패: " + f.getOriginalFilename(), e);
+              throw new IllegalStateException("파일 임시 저장 실패: " + f.getOriginalFilename(), e);
             }
           })
           .toList();
@@ -106,23 +124,37 @@ public class ChatMessageFacade {
 
     // 1-4) 메시지, 작성자 일치 검증
 
-    // 2. 파일 존재 여부에 따라 메시지 상태 결정
-    int fileCount = (files != null) ? files.size() : 0;
-    MessageStatus status = MessageStatus.UPLOADING;
+    // 2. 파일 존재 여부 검증
+    boolean hasRealFile = files != null && files.stream().anyMatch(f -> !f.isEmpty());
 
     // 4. 파일 비동기 처리(파일 존재 시)
-    if (fileCount > 0) {
+    if (hasRealFile) {
       // 4-1) MultiPart 파일은 Http 응답시 사라지므로 복사
       List<TempUploadedFile> tempFiles = files.stream()
           .map(f -> {
             try {
+              String suffix = Optional.ofNullable(f.getOriginalFilename())
+                  .filter(name -> name.contains("."))
+                  .map(name -> name.substring(name.lastIndexOf('.')))
+                  .orElse("");
+
+              Path tempPath = Files.createTempFile("chat-upload-", suffix);
+//              log.error("임시 파일 경로: " + tempPath.toAbsolutePath());
+
+              try (InputStream in = f.getInputStream();
+                   OutputStream out = Files.newOutputStream(tempPath)) {
+
+                in.transferTo(out); // 내부적으로 버퍼링, 전체를 힙에 안 올림
+              }
+
               return new TempUploadedFile(
                   f.getOriginalFilename(),
                   f.getContentType(),
-                  f.getBytes()
+                  tempPath,
+                  Files.size(tempPath)
               );
             } catch (IOException e) {
-              throw new IllegalStateException("파일 복사 실패: " + f.getOriginalFilename(), e);
+              throw new IllegalStateException("파일 임시 저장 실패: " + f.getOriginalFilename(), e);
             }
           })
           .toList();

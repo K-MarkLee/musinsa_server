@@ -1,10 +1,10 @@
-package com.mudosa.musinsa.domain.chat.controller;
+package com.mudosa.musinsa.chat.controller;
 
 import com.google.firebase.messaging.FirebaseMessagingException;
+import com.mudosa.musinsa.chat.dto.ChatPartResponse;
+import com.mudosa.musinsa.chat.dto.ChatRoomInfoResponse;
+import com.mudosa.musinsa.chat.dto.MessageResponse;
 import com.mudosa.musinsa.common.dto.ApiResponse;
-import com.mudosa.musinsa.domain.chat.dto.ChatPartResponse;
-import com.mudosa.musinsa.domain.chat.dto.ChatRoomInfoResponse;
-import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
 import com.mudosa.musinsa.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

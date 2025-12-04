@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.file;
+package com.mudosa.musinsa.chat.file;
 
-import com.mudosa.musinsa.domain.chat.event.TempUploadedFile;
+import com.mudosa.musinsa.chat.event.TempUploadedFile;
 import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

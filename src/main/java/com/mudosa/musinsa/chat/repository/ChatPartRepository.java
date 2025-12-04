@@ -1,6 +1,6 @@
-package com.mudosa.musinsa.domain.chat.repository;
+package com.mudosa.musinsa.chat.repository;
 
-import com.mudosa.musinsa.domain.chat.entity.ChatPart;
+import com.mudosa.musinsa.chat.entity.ChatPart;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

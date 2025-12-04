@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.domain.chat.event;
+package com.mudosa.musinsa.chat.event;
 
 // [외부용] 웹소켓 브로드캐스트 이벤트
 // "채팅방에 보낼 데이터"

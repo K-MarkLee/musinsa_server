@@ -1,4 +1,4 @@
-package com.mudosa.musinsa.domain.chat.event;
+package com.mudosa.musinsa.chat.event;
 
 import java.util.List;
 

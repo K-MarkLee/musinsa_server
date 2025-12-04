@@ -1,7 +1,7 @@
-package com.mudosa.musinsa.domain.chat;
+package com.mudosa.musinsa.chat;
 
+import com.mudosa.musinsa.chat.controller.ChatController;
 import com.mudosa.musinsa.common.dto.ApiResponse;
-import com.mudosa.musinsa.domain.chat.controller.ChatController;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,10 +22,10 @@ public class ChatApiControllerAdvice {
     );
 
     ApiResponse body = ApiResponse.builder()
-            .success(false)
-            .errorCode("400")
-            .message(message)
-            .build();
+        .success(false)
+        .errorCode("400")
+        .message(message)
+        .build();
 
     return ResponseEntity.badRequest().body(body);
   }

@@ -1,7 +1,8 @@
-package com.mudosa.musinsa.domain.chat.entity;
+package com.mudosa.musinsa.chat.entity;
+
 
 import com.mudosa.musinsa.brand.domain.model.Brand;
-import com.mudosa.musinsa.domain.chat.enums.ChatRoomType;
+import com.mudosa.musinsa.chat.enums.ChatRoomType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Where;

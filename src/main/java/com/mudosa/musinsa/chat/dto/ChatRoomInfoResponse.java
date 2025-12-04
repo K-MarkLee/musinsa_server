@@ -1,8 +1,8 @@
-package com.mudosa.musinsa.domain.chat.dto;
+package com.mudosa.musinsa.chat.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.mudosa.musinsa.domain.chat.entity.ChatRoom;
-import com.mudosa.musinsa.domain.chat.enums.ChatRoomType;
+import com.mudosa.musinsa.chat.entity.ChatRoom;
+import com.mudosa.musinsa.chat.enums.ChatRoomType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
