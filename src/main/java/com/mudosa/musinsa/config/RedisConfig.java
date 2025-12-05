@@ -78,7 +78,10 @@ public class RedisConfig {
 
         String address = "redis://" + redisHost + ":" + redisPort;
 
-        config.useSingleServer()
+        // useSingleServer()를 한 번만 호출하고 객체를 변수에 저장
+        org.redisson.config.SingleServerConfig singleServerConfig = config.useSingleServer();
+
+        singleServerConfig
                 .setAddress(address)
                 .setDatabase(redisDatabase)
                 .setConnectionPoolSize(50)
@@ -89,7 +92,7 @@ public class RedisConfig {
 
         // 패스워드가 있으면 설정
         if (redisPassword != null && !redisPassword.isEmpty()) {
-            config.useSingleServer().setPassword(redisPassword);
+            singleServerConfig.setPassword(redisPassword);
         }
 
         return Redisson.create(config);
