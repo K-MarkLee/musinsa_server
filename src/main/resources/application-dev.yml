@@ -4,10 +4,28 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  kafka:
+    bootstrap-servers: localhost:9092
+  rabbitmq:
+    host: ${RABBIT_HOST}
+    port: 61613
+    username: guest
+    password: guest
+    listener:
+      simple:
+        concurrency: 4     # 기본 1
+        max-concurrency: 16
+        prefetch: 20
+  hikari:
+    maximum-pool-size: 70
+    minimum-idle: 10
+    idle-timeout: 600000
+    max-lifetime: 1800000
+    connection-timeout: 30000
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     properties:
       hibernate:
         format_sql: true
@@ -34,8 +52,6 @@ server:
   address: 0.0.0.0
 
 management:
-  server:
-    port: 8082
   endpoints:
     web:
       exposure:
@@ -46,10 +62,10 @@ management:
     sampling:
       probability: 1.0
 
-  otlp:
-    tracing:
-      endpoint: http://172.16.24.21:4318/v1/traces #21 대신 본인 포트로
-
+#  otlp:
+#    tracing:
+#      endpoint: http://localhost:4318/v1/traces #21 대신 본인 포트로
+#      timeout=30000:
 
 logging:
   level:

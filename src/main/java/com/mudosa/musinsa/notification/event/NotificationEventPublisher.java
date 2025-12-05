@@ -1,7 +1,8 @@
 package com.mudosa.musinsa.notification.event;
 
-import com.mudosa.musinsa.domain.chat.dto.MessageResponse;
+
+import com.mudosa.musinsa.chat.dto.MessageResponse;
 
 public interface NotificationEventPublisher {
-    void publishChatNotificationCreatedEvent(MessageResponse dto);
+  void publishChatNotificationCreatedEvent(MessageResponse dto);
 }
