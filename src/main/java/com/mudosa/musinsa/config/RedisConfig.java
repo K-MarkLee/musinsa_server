@@ -3,9 +3,11 @@ package com.mudosa.musinsa.config;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
+import org.redisson.config.SingleServerConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -79,7 +81,7 @@ public class RedisConfig {
         String address = "redis://" + redisHost + ":" + redisPort;
 
         // useSingleServer()를 한 번만 호출하고 객체를 변수에 저장
-        org.redisson.config.SingleServerConfig singleServerConfig = config.useSingleServer();
+        SingleServerConfig singleServerConfig = config.useSingleServer();
 
         singleServerConfig
                 .setAddress(address)
