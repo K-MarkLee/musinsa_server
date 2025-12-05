@@ -19,7 +19,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -28,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 @Slf4j
 public class CouponIssuanceService {
 
@@ -142,6 +140,7 @@ public class CouponIssuanceService {
 
     }
 
+    // 여기서 트랜잭션 시작 ( DB 커넥션 사용 ) 
     @Transactional
     public CouponIssuanceResDto issueCouponWithLock(Long userId, Long couponId, String issueKey, String userIdStr) {
 
