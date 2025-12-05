@@ -96,6 +96,10 @@ dependencies {
     implementation 'org.springframework.kafka:spring-kafka'               // KafkaTemplate
     implementation 'org.springframework.boot:spring-boot-starter-amqp'    // AmqpTemplate (RabbitMQ)
     implementation 'org.springframework.boot:spring-boot-starter-reactor-netty'
+
+    // redission (분산락)
+
+    implementation 'org.redisson:redisson-spring-boot-starter:3.23.5'
 }
 
 
