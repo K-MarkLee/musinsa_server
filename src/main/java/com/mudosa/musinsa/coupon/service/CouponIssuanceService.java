@@ -11,10 +11,15 @@ import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
+
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -73,11 +78,16 @@ public class CouponIssuanceService {
         Boolean isIssued = redisTemplate.opsForSet().isMember(issueKey, userIdStr);
         if (Boolean.TRUE.equals(isIssued)) {
             log.info("중복 발급 감지 (Redis 빠른 체크) - userId: {}, couponId: {}", userIdStr, couponId);
-            return findIssuedCoupon(userId, couponId)
-                    .orElseThrow(() -> new BusinessException(
-                            ErrorCode.COUPON_NOT_FOUND,
-                            "발급된 쿠폰을 찾을 수 없습니다."
-                    ));
+
+            // DB에서 확인 (있으면 반환, 없으면 계속 진행)
+            Optional<CouponIssuanceResDto> existing = findIssuedCoupon(userId, couponId);
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+
+            // Redis에는 있는데 DB에 없음 → Redis-DB 불일치 (트랜잭션 타이밍 이슈)
+            log.warn("Redis-DB 불일치 감지. 발급 진행 - userId: {}, couponId: {}", userId, couponId);
+
         }
 
         // 2 . 유저별 분산 락 (같은 유저의 연속 클릭 방지)
@@ -103,18 +113,19 @@ public class CouponIssuanceService {
             if (Boolean.TRUE.equals(recheckIssued)) {
                 log.info("중복 발급 감지 (락 후 재체크) - userId: {}, couponId: {}", userId, couponId);
 
+                // DB 확인
+                Optional<CouponIssuanceResDto> existing = findIssuedCoupon(userId, couponId);
+                if (existing.isPresent()) {
+                    return existing.get();
+                }
 
-                // 기존 메서드 재사용
-                return findIssuedCoupon(userId, couponId)
-                        .orElseThrow(() -> new BusinessException(
-                                ErrorCode.COUPON_NOT_FOUND,
-                                "발급된 쿠폰을 찾을 수 없습니다."
-                        ));
+                log.warn("Redis-DB 불일치 감지 (재체크). 발급 진행 - userId: {}, couponId: {}", userId, couponId);
+
             }
 
             return issueCouponWithLock(userId, couponId,issueKey,userIdStr);
 
-        }catch ( InterruptedException e){
+        }catch (InterruptedException e){
 
             // 자바 멀티 스레딩
             Thread.currentThread().interrupt();
@@ -165,8 +176,10 @@ public class CouponIssuanceService {
         try {
             CouponIssuanceResDto result = createMemberCoupon(userId, coupon);
 
-            //Redis에 발급 기록 ( 빠른 중복 체크용 )
-            addToRedisSet(issueKey,userIdStr,coupon);
+
+            //트랜잭션 커밋 후 redis 추가
+            registerRedisUpdateAfterCommit(issueKey, userIdStr, couponId);
+
 
             return result;
 
@@ -183,7 +196,6 @@ public class CouponIssuanceService {
                             ErrorCode.COUPON_APPLIED_FALIED,
                             "쿠폰 발급 중 오류가 발생했습니다"
                     ));
-
             // redis 동기화
             addToRedisSet(issueKey,userIdStr,coupon);
 
@@ -192,6 +204,38 @@ public class CouponIssuanceService {
             );
         }
 
+    }
+
+    /**
+     * 트랜잭션 커밋 후 Redis 업데이트 등록
+     *
+     * 🎯 핵심 로직:
+     * - afterCommit(): 트랜잭션 커밋 성공 후 실행
+     * - afterCompletion(): 커밋 or 롤백 후 실행 (상태 확인 가능)
+     */
+    private void registerRedisUpdateAfterCommit(String issueKey, String userIdStr, Long couponId) {
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            // 커밋 성공 후 쿠폰 조회 (이제 다른 트랜잭션에서도 보임)
+                            Coupon coupon = couponRepository.findById(couponId)
+                                    .orElseThrow(() -> new BusinessException(ErrorCode.COUPON_NOT_FOUND));
+
+                            // Redis에 추가
+                            addToRedisSet(issueKey, userIdStr, coupon);
+
+                            log.info("Redis 동기화 완료 (커밋 후) - userId: {}, couponId: {}",
+                                    userIdStr, couponId);
+                        } catch (Exception e) {
+                            // Redis 추가 실패해도 DB는 이미 저장됨
+                            log.error("Redis 동기화 실패 (커밋 후) - userId: {}, couponId: {}",
+                                    userIdStr, couponId, e);
+                        }
+                    }
+                }
+        );
     }
 
     // 신규 쿠폰 발급 로직

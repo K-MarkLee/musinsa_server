@@ -53,7 +53,7 @@ class CouponIssuanceServiceTest extends ServiceConfig {
         Coupon savedCoupon = couponRepository.save(coupon);
 
         // when
-        CouponIssuanceResDto result = couponIssuanceService.issueCouponWithLock(userId, savedCoupon.getId(), , );
+        CouponIssuanceResDto result = couponIssuanceService.issueCoupon(userId, savedCoupon.getId());
 
         // then
         assertThat(result).isNotNull();
@@ -81,11 +81,11 @@ class CouponIssuanceServiceTest extends ServiceConfig {
         Coupon savedCoupon = couponRepository.save(coupon);
 
         // 첫 번째 발급
-        couponIssuanceService.issueCouponWithLock(userId, savedCoupon.getId(), , );
+        couponIssuanceService.issueCoupon(userId, savedCoupon.getId());
 
         // when
         // 두 번째 발급 시도
-        CouponIssuanceResDto result = couponIssuanceService.issueCouponWithLock(userId, savedCoupon.getId(), , );
+        CouponIssuanceResDto result = couponIssuanceService.issueCoupon(userId, savedCoupon.getId());
 
         // then
         assertThat(result).isNotNull();
@@ -101,7 +101,7 @@ class CouponIssuanceServiceTest extends ServiceConfig {
         Long nonExistentCouponId = 999999L;
 
         // when & then
-        assertThatThrownBy(() -> couponIssuanceService.issueCouponWithLock(userId, nonExistentCouponId, , ))
+        assertThatThrownBy(() -> couponIssuanceService.issueCoupon(userId, nonExistentCouponId))
                 .isInstanceOf(BusinessException.class);
     }
 
@@ -124,7 +124,7 @@ class CouponIssuanceServiceTest extends ServiceConfig {
         Coupon savedCoupon = couponRepository.save(coupon);
 
         // when & then
-        assertThatThrownBy(() -> couponIssuanceService.issueCouponWithLock(userId, savedCoupon.getId(), , ))
+        assertThatThrownBy(() -> couponIssuanceService.issueCoupon(userId, savedCoupon.getId()))
                 .isInstanceOf(BusinessException.class);
     }
 
@@ -145,7 +145,7 @@ class CouponIssuanceServiceTest extends ServiceConfig {
                 .totalQuantity(100)
                 .build();
         Coupon savedCoupon = couponRepository.save(coupon);
-        couponIssuanceService.issueCouponWithLock(userId, savedCoupon.getId(), , );
+        couponIssuanceService.issueCoupon(userId, savedCoupon.getId());
 
         // when
         Optional<CouponIssuanceResDto> result = couponIssuanceService.findIssuedCoupon(userId, savedCoupon.getId());
@@ -172,7 +172,7 @@ class CouponIssuanceServiceTest extends ServiceConfig {
                 .totalQuantity(100)
                 .build();
         Coupon savedCoupon = couponRepository.save(coupon);
-        couponIssuanceService.issueCouponWithLock(userId, savedCoupon.getId(), , );
+        couponIssuanceService.issueCoupon(userId, savedCoupon.getId());
 
         // when
         long count = couponIssuanceService.countIssuedByUser(userId, savedCoupon.getId());

@@ -86,7 +86,7 @@ public class EventCouponService {
             */
 
             CouponIssuanceResDto issuanceResult =
-                    couponIssuanceService.issueCouponWithLock(userId, couponId, , );
+                    couponIssuanceService.issueCoupon(userId, couponId);
 
 
             // 10. 중복 발급 감지 ( 재진입 케이스 )

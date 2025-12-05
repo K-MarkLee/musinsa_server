@@ -131,7 +131,7 @@ class CouponIssuanceOrderTest {
 
                     // 4️⃣ 쿠폰 발급 (비관적 락) , result는 issueCoupon api 호출을 위해 선언 debug시 사용
                     CouponIssuanceResDto result =
-                            couponIssuanceService.issueCouponWithLock(finalUserId, couponId, couponNames);
+                            couponIssuanceService.issueCoupon(finalUserId, couponId);
 
                     logEntry.issueCompleteTime = System.nanoTime() - testStartTime;
                     logEntry.issueOrder = (int) issueCounter.incrementAndGet();
@@ -221,7 +221,7 @@ class CouponIssuanceOrderTest {
                 log.info("🚀 User1 - 요청 도착 ({}ms)", logEntry.requestStartTime / 1_000_000);
 
                 CouponIssuanceResDto result =
-                        couponIssuanceService.issueCouponWithLock(1L, couponId, couponNames);
+                        couponIssuanceService.issueCoupon(1L, couponId);
 
                 logEntry.issueCompleteTime = System.nanoTime() - testStartTime;
                 logEntry.issueOrder = (int) issueCounter.incrementAndGet();
@@ -271,7 +271,7 @@ class CouponIssuanceOrderTest {
                             finalUserId, logEntry.requestStartTime / 1_000_000);
 
                     CouponIssuanceResDto result =
-                            couponIssuanceService.issueCouponWithLock(finalUserId, couponId, couponNames);
+                            couponIssuanceService.issueCoupon(finalUserId, couponId);
 
                     logEntry.issueCompleteTime = System.nanoTime() - testStartTime;
                     logEntry.issueOrder = (int) issueCounter.incrementAndGet();
@@ -362,7 +362,7 @@ class CouponIssuanceOrderTest {
                     logEntry.requestStartTime = System.nanoTime() - testStartTime;
 
                     CouponIssuanceResDto result =
-                            couponIssuanceService.issueCouponWithLock(finalUserId, couponId, couponNames);
+                            couponIssuanceService.issueCoupon(finalUserId, couponId);
 
                     logEntry.issueCompleteTime = System.nanoTime() - testStartTime;
                     logEntry.issueOrder = (int) issueCounter.incrementAndGet();
