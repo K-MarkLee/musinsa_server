@@ -13,18 +13,20 @@ import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
+import com.mudosa.musinsa.product.infrastructure.search.repository.ProductIndexSearchQueryRepository;
 
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
 
 @DisplayName("ProductQueryService 테스트")
 @Transactional
@@ -40,8 +42,8 @@ public class ProductQueryServiceTest extends ServiceConfig {
 	private CategoryRepository categoryRepository;
 	@Autowired
 	private OptionValueRepository optionValueRepository;
-	@Autowired
-	private RedisTemplate<String, Object> redisTemplate;
+	@MockBean
+	private ProductIndexSearchQueryRepository productIndexSearchQueryRepository;
 
 	private Long userId;
 	private Long brandId;
@@ -173,6 +175,22 @@ public class ProductQueryServiceTest extends ServiceConfig {
 			.brandId(brandId)
 			.limit(10)
 			.build();
+
+		ProductSearchResponse.ProductSummary esSummary = ProductSearchResponse.ProductSummary.builder()
+			.productOptionId(null)
+			.productId(blackTeeId)
+			.brandId(brandId)
+			.brandName("우리 브랜드")
+			.productName("블랙 티셔츠")
+			.productGenderType(ProductGenderType.ALL.name())
+			.isAvailable(true)
+			.hasStock(true)
+			.build();
+		given(productIndexSearchQueryRepository.searchByKeywordWithFilters(
+			org.mockito.ArgumentMatchers.any(ProductSearchCondition.class),
+			org.mockito.ArgumentMatchers.anyList(),
+			org.mockito.ArgumentMatchers.anyInt()))
+			.willReturn(new ProductIndexSearchQueryRepository.SearchResult(List.of(esSummary), false, null));
 
 		// when
 		ProductSearchResponse response = sut.searchProducts(condition);

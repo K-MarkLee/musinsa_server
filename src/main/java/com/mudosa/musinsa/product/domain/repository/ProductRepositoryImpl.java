@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.product.domain.repository;
 
-import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchCondition;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.domain.model.Image;
@@ -125,6 +124,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
         return queryFactory
                 .select(Projections.constructor(
                         ProductSearchResponse.ProductSummary.class,
+                        Expressions.nullExpression(Long.class), // productOptionId (JPA 검색 시 없음)
                         product.productId,
                         product.brand.brandId,
                         product.brandName,
@@ -147,6 +147,10 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
     private BooleanExpression categoryPathsCondition(List<String> categoryPaths) {
         if (categoryPaths == null || categoryPaths.isEmpty()) {
             return null;
+        }
+        if (categoryPaths.size() == 1 && categoryPaths.get(0) != null && !categoryPaths.get(0).isBlank()) {
+            String root = categoryPaths.get(0);
+            return product.categoryPath.startsWithIgnoreCase(root);
         }
         return product.categoryPath.in(categoryPaths);
     }
@@ -187,7 +191,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
     // 정렬 조건(가격 정렬 우선, 이후 productId) 구성
     private OrderSpecifier<?>[] orderSpecifiers(ProductSearchCondition.PriceSort priceSort) {
         if (priceSort == ProductSearchCondition.PriceSort.HIGHEST) {
-            return new OrderSpecifier<?>[] { product.defaultPrice.desc(), product.productId.asc() };
+            return new OrderSpecifier<?>[] { product.defaultPrice.desc(), product.productId.desc() };
         }
         if (priceSort == ProductSearchCondition.PriceSort.LOWEST) {
             return new OrderSpecifier<?>[] { product.defaultPrice.asc(), product.productId.asc() };

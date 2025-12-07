@@ -1,22 +1,20 @@
 package com.mudosa.musinsa.product.application;
 
-import com.mudosa.musinsa.exception.BusinessException;
-import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.application.dto.CategoryTreeResponse;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchCondition;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.application.mapper.ProductQueryMapper;
-import com.mudosa.musinsa.product.infrastructure.cache.CategoryCache;
+import com.mudosa.musinsa.product.application.observation.ProductDetailObservationSupport;
 import com.mudosa.musinsa.product.domain.model.Category;
 import com.mudosa.musinsa.product.domain.model.Image;
 import com.mudosa.musinsa.product.domain.model.Product;
-import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
 import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepositoryCustom;
-import com.mudosa.musinsa.product.application.observation.ProductDetailObservationSupport;
+import com.mudosa.musinsa.product.infrastructure.cache.CategoryCache;
+import com.mudosa.musinsa.product.infrastructure.search.repository.ProductIndexSearchQueryRepository;
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,10 +36,11 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ProductQueryService {
 
-	private final ProductRepository productRepository;
 	private final CategoryRepository categoryRepository;
 	private final CategoryCache categoryCache;
 	private final ProductDetailObservationSupport productDetailObservationSupport;
+	private final ProductRepository productRepository;
+	private final ProductIndexSearchQueryRepository productIndexSearchQueryRepository;
 
 	/**
 	 * 검색 조건에 맞는 상품을 조회해 페이지 형태로 반환한다.
@@ -51,11 +50,16 @@ public class ProductQueryService {
 		SearchParams params = parseCondition(condition);
 
 		// 2. 키워드 유무에 따라 적절한 검색 메서드 호출 (요약 DTO)
-		List<ProductSearchResponse.ProductSummary> fetchedProducts = findProducts(params);
+		if (params.keyword != null && !params.keyword.isBlank()) {
+			ProductIndexSearchQueryRepository.SearchResult esResult = productIndexSearchQueryRepository.searchByKeywordWithFilters(
+				toCondition(params), tokenize(params.keyword), params.page);
+			String nextCursor = esResult.hasNext() ? String.valueOf(params.page + 1) : null;
+			return ProductQueryMapper.toSearchResponse(esResult.products(), nextCursor, esResult.hasNext(), esResult.totalCount());
+		}
 
+		List<ProductSearchResponse.ProductSummary> fetchedProducts = findProducts(params);
 		boolean hasNext = fetchedProducts.size() > params.limit;
 		List<ProductSearchResponse.ProductSummary> products = hasNext ? fetchedProducts.subList(0, params.limit) : fetchedProducts;
-
 		String nextCursor = hasNext && !products.isEmpty()
 			? buildCursor(products.get(products.size() - 1), params.priceSort)
 			: null;
@@ -162,19 +166,27 @@ public class ProductQueryService {
 			safeCondition.getPriceSort(),
 			cursor,
 			safeCondition.getCursor(),
-			limit
+			limit,
+			parsePageIndex(safeCondition.getCursor())
 		);
 	}
 
 	// 검색 파라미터에 따라 적절한 상품 조회 메서드를 호출한다.
 	private List<ProductSearchResponse.ProductSummary> findProducts(SearchParams params) {
-		boolean keywordPresent = params.keyword != null && !params.keyword.isBlank();
-		if (keywordPresent) {
-			return productRepository.searchByKeywordWithFilters(
-				params.keyword, params.categoryPaths, params.gender, params.brandId, params.priceSort, params.cursor, params.limit + 1);
-		}
 		return productRepository.findAllByFiltersWithCursor(
 			params.categoryPaths, params.gender, params.brandId, params.priceSort, params.cursor, params.limit + 1);
+	}
+
+	private ProductSearchCondition toCondition(SearchParams params) {
+		return ProductSearchCondition.builder()
+			.keyword(params.keyword)
+			.categoryPaths(params.categoryPaths)
+			.gender(params.gender)
+			.brandId(params.brandId)
+			.priceSort(params.priceSort)
+			.cursor(params.rawCursor)
+			.limit(params.limit)
+			.build();
 	}
 
 	private ProductRepositoryCustom.Cursor parseCursor(String cursor, ProductSearchCondition.PriceSort priceSort) {
@@ -214,16 +226,17 @@ public class ProductQueryService {
 	private static class SearchParams {
 		private final String keyword;
 		private final List<String> categoryPaths;
-		private final ProductGenderType gender;
+		private final com.mudosa.musinsa.product.domain.model.ProductGenderType gender;
 		private final Long brandId;
 		private final ProductSearchCondition.PriceSort priceSort;
 		private final ProductRepositoryCustom.Cursor cursor;
 		private final String rawCursor;
 		private final int limit;
+		private final int page;
 
-		private SearchParams(String keyword, List<String> categoryPaths, ProductGenderType gender, Long brandId,
+		private SearchParams(String keyword, List<String> categoryPaths, com.mudosa.musinsa.product.domain.model.ProductGenderType gender, Long brandId,
 							 ProductSearchCondition.PriceSort priceSort, ProductRepositoryCustom.Cursor cursor,
-							 String rawCursor, int limit) {
+							 String rawCursor, int limit, int page) {
 			this.keyword = keyword;
 			this.categoryPaths = categoryPaths;
 			this.gender = gender;
@@ -232,6 +245,29 @@ public class ProductQueryService {
 			this.cursor = cursor;
 			this.rawCursor = rawCursor;
 			this.limit = limit;
+			this.page = page;
+		}
+	}
+
+	private List<String> tokenize(String keyword) {
+		if (keyword == null || keyword.isBlank()) {
+			return List.of();
+		}
+		return List.of(keyword.trim().split("\\s+")).stream()
+			.filter(token -> token != null && !token.isBlank())
+			.map(String::trim)
+			.collect(Collectors.toList());
+	}
+
+	private int parsePageIndex(String cursor) {
+		if (cursor == null || cursor.isBlank()) {
+			return 0;
+		}
+		try {
+			int page = Integer.parseInt(cursor);
+			return page >= 0 ? page : 0;
+		} catch (NumberFormatException ex) {
+			return 0;
 		}
 	}
 }

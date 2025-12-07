@@ -52,11 +52,11 @@ public class ProductDetailResponse {
     @Builder
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     @AllArgsConstructor(access = AccessLevel.PROTECTED)
-    public static class OptionDetail {
+        public static class OptionDetail {
         private Long optionId;
-    private BigDecimal productPrice;
+        private BigDecimal productPrice;
         private Integer stockQuantity;
-    private Boolean hasStock;
+        private Boolean hasStock;
         private List<OptionValueDetail> optionValues;
 
         // 옵션 값 상세 목록을 NULL 안전하게 반환한다.

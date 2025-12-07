@@ -1,6 +1,5 @@
 package com.mudosa.musinsa.product.application.dto;
 
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,6 +31,7 @@ public class ProductSearchResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ProductSummary {
+        private Long productOptionId;
         private Long productId;
         private Long brandId;
         private String brandName;

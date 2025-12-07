@@ -71,7 +71,8 @@ public class SecurityConfig {
                         "/actuator/**",           // Actuator 모니터링
                         "/error",                 // 에러 페이지
                         "/api/notification/**",    // 알림 페이지(임시)
-                        "/api/fbtoken/**"         // firebase token(임시)
+                        "/api/fbtoken/**",         // firebase token(임시)
+                        "/internal/search/**"    // 검색 색인 관리
                     )
                     .permitAll()
                     // 인증이 필요한 경로
