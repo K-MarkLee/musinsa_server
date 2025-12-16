@@ -5,11 +5,15 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
-      maximum-pool-size: 32     # MacBook M3 Max(12P+4E) 기준: 코어 수 2배 정도로 커넥션 풀 구성
-      minimum-idle: 12
-      idle-timeout: 600000
-      max-lifetime: 1800000
+      # Dev default: tuned for laptop load-test without overloading local DB.
+      # Override per-machine via env vars if needed.
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:10}
+      idle-timeout: 300000
+      max-lifetime: 1700000
       connection-timeout: 30000
+      validation-timeout: 5000
+      leak-detection-threshold: ${DB_POOL_LEAK_DETECT_MS:0}
 
   kafka:
     bootstrap-servers: localhost:9092
@@ -58,45 +62,44 @@ aws:
     secretKey: ${S3_SECRET_KEY}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   address: 0.0.0.0
   tomcat:
     threads:
-      max: 300           # M3 Max 16코어(논리 16) 환경 기준 약 15~20개/core 수준으로 여유 확보
-      min-spare: 40
-    accept-count: 500
-    max-connections: 4000
+      max: ${TOMCAT_THREADS_MAX:250}
+      min-spare: ${TOMCAT_THREADS_MIN_SPARE:25}
+    accept-count: ${TOMCAT_ACCEPT_COUNT:1000}
+    max-connections: ${TOMCAT_MAX_CONNECTIONS:8192}
+    connection-timeout: ${TOMCAT_CONNECTION_TIMEOUT_MS:20000}
+    keep-alive-timeout: ${TOMCAT_KEEP_ALIVE_TIMEOUT_MS:60000}
+    max-keep-alive-requests: ${TOMCAT_MAX_KEEP_ALIVE_REQUESTS:100}
 
-  management:
-    endpoints:
-      web:
-        exposure:
-          include: prometheus, health, info
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info
 
-    tracing:
-      enabled: false
-      sampling:
-        probability: 0.0
-      propagation:
-        # 기본 W3C tracecontext + baggage 전파로 Jaeger와 연계
-        propagate: tracecontext,baggage
-    observations:
-      annotations:
-      enabled: true
+  tracing:
+    enabled: true
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+    propagation:
+      propagate: tracecontext,baggage
 
   otlp:
     tracing:
-      endpoint: ${OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces} # 필요 시 Collector 주소/포트 환경변수로 조정
+      endpoint: ${OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
 
 logging:
   level:
     org:
-      elasticsearch.client: WARN
+      elasticsearch.client: DEBUG
       hibernate:
-        sql: error
-        type.descriptor.sql.BasicBinder: error
-        orm.jdbc.internal.LogicalConnectionImpl: error
-      springframework.orm.jpa: error
-      springframework.transaction: error
-      springframework.web.client.RestTemplate: error
-      com.mudosa.musinsa.common.client: error
+        sql: DEBUG
+        type.descriptor.sql.BasicBinder: TRACE
+        orm.jdbc.internal.LogicalConnectionImpl: DEBUG
+      springframework.orm.jpa: DEBUG
+      springframework.transaction: DEBUG
+      springframework.web.client.RestTemplate: DEBUG
+      com.mudosa.musinsa.common.client: DEBUG
