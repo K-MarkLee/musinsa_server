@@ -104,6 +104,9 @@ dependencies {
     // elasticsearch
     implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 
+    // Apache HttpClient (AWS SigV4 인터셉터에서 사용)
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+
 }
 
 

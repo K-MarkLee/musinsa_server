@@ -19,6 +19,7 @@ import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.FetchSourceFilterBuilder;
 import co.elastic.clients.elasticsearch._types.query_dsl.PrefixQuery;
 import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
 import org.springframework.stereotype.Repository;
@@ -144,12 +145,26 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
         List<SortOptions> sorts = buildSorts(condition.getPriceSort());
         int limit = condition.getLimit();
         int page = parsePage(condition.getCursor());
+        boolean isScoreSort = condition.getPriceSort() == null;
 
         NativeQueryBuilder builder = NativeQuery.builder()
             .withQuery(query)
             .withSort(sorts)
             .withPageable(PageRequest.of(page, limit))
+            // 가격 정렬일 땐 점수 계산을 생략해 CPU 부담을 줄인다
+            .withTrackScores(isScoreSort)
             .withFieldCollapse(FieldCollapse.of(c -> c.field(FIELD_PRODUCT_ID)))
+            .withSourceFilter(new FetchSourceFilterBuilder()
+                .withIncludes(
+                    "productOptionId",
+                    "productId",
+                    "brandId",
+                    "krBrandName",
+                    "productName",
+                    "defaultPrice",
+                    "thumbnailUrl"
+                )
+                .build())
             .withTrackTotalHits(false);
 
         NativeQuery nativeQuery = builder.build();
@@ -208,12 +223,12 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
             .brandName(doc.getKrBrandName())
             .productName(doc.getProductName())
             .productInfo(null)
-            .productGenderType(doc.getGender())
-            .isAvailable(doc.getIsAvailable())
-            .hasStock(doc.getHasStock())
+            .productGenderType(null)
+            .isAvailable(null)
+            .hasStock(null)
             .lowestPrice(price)
             .thumbnailUrl(doc.getThumbnailUrl())
-            .categoryPath(doc.getCategoryPath())
+            .categoryPath(null)
             .build();
     }
 }

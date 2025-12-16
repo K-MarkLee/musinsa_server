@@ -1,10 +1,10 @@
 package com.mudosa.musinsa;
 
 import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
-import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
-import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
-import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
-import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
+// import com.mudosa.musinsa.domain.chat.repository.ChatPartRepository;
+// import com.mudosa.musinsa.domain.chat.repository.ChatRoomRepository;
+// import com.mudosa.musinsa.domain.chat.repository.MessageAttachmentRepository;
+// import com.mudosa.musinsa.domain.chat.repository.MessageRepository;
 import com.mudosa.musinsa.notification.model.Notification;
 import com.mudosa.musinsa.notification.model.NotificationMetadata;
 import com.mudosa.musinsa.notification.repository.NotificationMetadataRepository;
@@ -71,18 +71,18 @@ public abstract class ServiceConfig {
   @MockitoBean
   protected FcmService fcmService;
 
-  @Autowired
-  protected ChatRoomRepository chatRoomRepository;
-  @Autowired
-  protected ChatPartRepository chatPartRepository;
+//   @Autowired
+//   protected ChatRoomRepository chatRoomRepository;
+//   @Autowired
+//   protected ChatPartRepository chatPartRepository;
   @Autowired
   protected UserRepository userRepository;
   @Autowired
   protected BrandRepository brandRepository;
-  @Autowired
-  protected MessageRepository messageRepository;
-  @Autowired
-  protected MessageAttachmentRepository attachmentRepository;
+//   @Autowired
+//   protected MessageRepository messageRepository;
+//   @Autowired
+//   protected MessageAttachmentRepository attachmentRepository;
   @Autowired
   protected NotificationMetadataRepository notificationMetadataRepository;
   @Autowired

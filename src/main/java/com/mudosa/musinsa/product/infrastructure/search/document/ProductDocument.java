@@ -42,19 +42,15 @@ public class ProductDocument {
     // 표시 + 검색용 (text/keyword 멀티필드)
     @MultiField(
             mainField = @Field(type = FieldType.Text, analyzer = "nori_default", searchAnalyzer = "nori_default"),
-            otherFields = @InnerField(suffix = "auto_complete", type = FieldType.Search_As_You_Type, analyzer = "nori_autocomplete"))
+            otherFields = {})
     private String productName;
 
     // 브랜드명 검색/표시
-    @MultiField(
-            mainField = @Field(type = FieldType.Keyword),
-            otherFields = @InnerField(suffix = "text", type = FieldType.Text, analyzer = "nori_default"))
+    @Field(type = FieldType.Text, analyzer = "nori_default")
     private String krBrandName;
 
     // 영문 브랜드명 검색/표시
-    @MultiField(
-            mainField = @Field(type = FieldType.Text),
-            otherFields = @InnerField(suffix = "keyword", type = FieldType.Keyword))
+    @Field(type = FieldType.Text)
     private String enBrandName;
 
     // 필터용 카테고리 경로 (keyword), 검색용 텍스트 서브 필드
@@ -66,12 +62,12 @@ public class ProductDocument {
     // 옵션 값(색상/사이즈) - 검색용 text + 필터용 keyword 멀티필드
     @MultiField(
             mainField = @Field(type = FieldType.Keyword),
-            otherFields = @InnerField(suffix = "text", type = FieldType.Text, analyzer = "nori_color"))
+            otherFields = @InnerField(suffix = "text", type = FieldType.Text, analyzer = "nori_color", searchAnalyzer = "nori_default"))
     private List<String> colorOptions;
 
     @MultiField(
             mainField = @Field(type = FieldType.Keyword),
-            otherFields = @InnerField(suffix = "text", type = FieldType.Text, analyzer = "nori_size"))
+            otherFields = @InnerField(suffix = "text", type = FieldType.Text, analyzer = "nori_size", searchAnalyzer = "nori_default"))
     private List<String> sizeOptions;
 
 

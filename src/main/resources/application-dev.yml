@@ -4,24 +4,26 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 32     # MacBook M3 Max(12P+4E) 기준: 코어 수 2배 정도로 커넥션 풀 구성
+      minimum-idle: 12
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+
   kafka:
     bootstrap-servers: localhost:9092
-  rabbitmq:
-    host: ${RABBIT_HOST}
-    port: 61613
-    username: guest
-    password: guest
-    listener:
-      simple:
-        concurrency: 4     # 기본 1
-        max-concurrency: 16
-        prefetch: 20
-  hikari:
-    maximum-pool-size: 70
-    minimum-idle: 10
-    idle-timeout: 600000
-    max-lifetime: 1800000
-    connection-timeout: 30000
+  # rabbitmq:
+  #   host: ${RABBIT_HOST}
+  #   port: 61613
+  #   username: guest
+  #   password: guest
+  #   listener:
+  #     simple:
+  #       concurrency: 4     # 기본 1
+  #       max-concurrency: 16
+  #       prefetch: 20
+
 
   jpa:
     hibernate:
@@ -29,6 +31,14 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  elasticsearch:
+    uris: http://localhost:9200
+#    uris: ${OPENSEARCH_SCHEME:http}://${OPENSEARCH_HOST:localhost}:${OPENSEARCH_PORT:9200}
+    connection-timeout: 5s
+    socket-timeout: 30s
+    # username: ${OPENSEARCH_USERNAME}
+    # password: ${OPENSEARCH_PASSWORD}
 
 tosspayments:
   secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
@@ -50,31 +60,43 @@ aws:
 server:
   port: 8080
   address: 0.0.0.0
+  tomcat:
+    threads:
+      max: 300           # M3 Max 16코어(논리 16) 환경 기준 약 15~20개/core 수준으로 여유 확보
+      min-spare: 40
+    accept-count: 500
+    max-connections: 4000
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: prometheus, health, info
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: prometheus, health, info
 
-  tracing:
-    enabled: true
-    sampling:
-      probability: 1.0
+    tracing:
+      enabled: false
+      sampling:
+        probability: 0.0
+      propagation:
+        # 기본 W3C tracecontext + baggage 전파로 Jaeger와 연계
+        propagate: tracecontext,baggage
+    observations:
+      annotations:
+      enabled: true
 
-#  otlp:
-#    tracing:
-#      endpoint: http://localhost:4318/v1/traces #21 대신 본인 포트로
-#      timeout=30000:
+  otlp:
+    tracing:
+      endpoint: ${OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces} # 필요 시 Collector 주소/포트 환경변수로 조정
 
 logging:
   level:
     org:
+      elasticsearch.client: WARN
       hibernate:
-        sql: debug
-        type.descriptor.sql.BasicBinder: TRACE
-        orm.jdbc.internal.LogicalConnectionImpl: DEBUG
-      springframework.orm.jpa: DEBUG
-      springframework.transaction: DEBUG
-      springframework.web.client.RestTemplate: DEBUG
-      com.mudosa.musinsa.common.client: DEBUG
+        sql: error
+        type.descriptor.sql.BasicBinder: error
+        orm.jdbc.internal.LogicalConnectionImpl: error
+      springframework.orm.jpa: error
+      springframework.transaction: error
+      springframework.web.client.RestTemplate: error
+      com.mudosa.musinsa.common.client: error

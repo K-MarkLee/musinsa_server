@@ -1,4 +1,8 @@
 {
+  "number_of_shards": 2,
+  "number_of_replicas": 0,
+  "refresh_interval": "10s",
+  "index.queries.cache.enabled": true,
   "analysis": {
     "filter": {
         "size_synonyms": {
