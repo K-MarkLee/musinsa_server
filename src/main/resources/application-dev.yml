@@ -7,8 +7,8 @@ spring:
     hikari:
       # Dev default: tuned for laptop load-test without overloading local DB.
       # Override per-machine via env vars if needed.
-      maximum-pool-size: ${DB_POOL_MAX:20}
-      minimum-idle: ${DB_POOL_MIN_IDLE:10}
+      maximum-pool-size: 30
+      minimum-idle: 10
       idle-timeout: 300000
       max-lifetime: 1700000
       connection-timeout: 30000
@@ -34,7 +34,7 @@ spring:
       ddl-auto: none
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
   elasticsearch:
     uris: http://localhost:9200
@@ -66,9 +66,9 @@ server:
   address: 0.0.0.0
   tomcat:
     threads:
-      max: ${TOMCAT_THREADS_MAX:250}
+      max: ${TOMCAT_THREADS_MAX:200} # Tuned for M3 Max Concurrency
       min-spare: ${TOMCAT_THREADS_MIN_SPARE:25}
-    accept-count: ${TOMCAT_ACCEPT_COUNT:1000}
+    accept-count: 2048
     max-connections: ${TOMCAT_MAX_CONNECTIONS:8192}
     connection-timeout: ${TOMCAT_CONNECTION_TIMEOUT_MS:20000}
     keep-alive-timeout: ${TOMCAT_KEEP_ALIVE_TIMEOUT_MS:60000}
@@ -81,7 +81,7 @@ management:
         include: prometheus, health, info
 
   tracing:
-    enabled: true
+    enabled: false
     sampling:
       probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
     propagation:
@@ -94,12 +94,12 @@ management:
 logging:
   level:
     org:
-      elasticsearch.client: DEBUG
+      elasticsearch.client: ERROR
       hibernate:
-        sql: DEBUG
+        sql: ERROR
         type.descriptor.sql.BasicBinder: TRACE
-        orm.jdbc.internal.LogicalConnectionImpl: DEBUG
-      springframework.orm.jpa: DEBUG
-      springframework.transaction: DEBUG
-      springframework.web.client.RestTemplate: DEBUG
-      com.mudosa.musinsa.common.client: DEBUG
+        orm.jdbc.internal.LogicalConnectionImpl: ERROR
+      springframework.orm.jpa: ERROR
+      springframework.transaction: ERROR
+      springframework.web.client.RestTemplate: ERROR
+      com.mudosa.musinsa.common.client: ERROR
