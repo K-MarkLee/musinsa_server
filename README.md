@@ -36,6 +36,12 @@
   - 대용량 데이터 환경에서 기존 `LIKE` 기반 검색의 한계를 확인하고 검색 전용 엔진(Elasticsearch) 도입.
   - 로컬 리소스(디바이스) 한계로 인해, AWS 배포까지 완료했으나 AWS 환경에서의 추가 튜닝/개선은 시간 관계상 진행하지 못함.
 
+
+
+#### 시연 영상
+[![시연 영상](https://img.youtube.com/vi/oC8-prv8Qdo/hqdefault.jpg)](https://youtu.be/oC8-prv8Qdo)
+
+
 ---
 
 ## 2. 기술 스택 (Tech Stack)
