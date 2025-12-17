@@ -1,13 +1,13 @@
 
 # 🔍 검색 서비스 고도화 보고서 (Search Optimization Report)
 
-## 목차 (Table of Contents)
-- 1. 프로젝트 개요 (Overview)
-- 2. 기술 스택 (Tech Stack)
-- 3. 아키텍처 (Architecture)
-- 4. 담당 기능 (Responsibilities)
-- 5. 개선 사항 및 성과 (Performance Improvements)
-- 6. 트러블슈팅 (Troubleshooting)
+
+## 0. 프로젝트 화면
+유튜브 링크 : https://youtu.be/oC8-prv8Qdo
+
+<img src="./docs/images/musinsang-gif.webp" alt="gif" width="720" />
+
+
 
 ---
 
@@ -37,10 +37,6 @@
   - 로컬 리소스(디바이스) 한계로 인해, AWS 배포까지 완료했으나 AWS 환경에서의 추가 튜닝/개선은 시간 관계상 진행하지 못함.
 
 
-
-#### 시연 영상
-
-유튜브 링크 : https://youtu.be/oC8-prv8Qdo
 ---
 
 ## 2. 기술 스택 (Tech Stack)
