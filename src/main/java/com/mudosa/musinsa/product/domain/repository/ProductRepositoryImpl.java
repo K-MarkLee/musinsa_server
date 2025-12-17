@@ -32,7 +32,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
-    // 필터링 조건을 QueryDSL로 조합해 상품 요약 목록을 커서 기반으로 조회한다. (키워드 제외)
+    // 필터링 조건을 QueryDSL로 조합해 상품 요약 목록을 커서 기반으로 조회한다.
     @Override
     public List<ProductSearchResponse.ProductSummary> findAllByFiltersWithCursor(List<String> categoryPaths,
             ProductGenderType gender,
@@ -40,19 +40,33 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
             ProductSearchCondition.PriceSort priceSort,
             Cursor cursor,
             int limit) {
-        return baseQuery(categoryPaths, gender, brandId, priceSort, cursor, limit);
-    }
+        List<BooleanExpression> conditions = new ArrayList<>();
+        conditions.add(product.isAvailable.isTrue());
+        conditions.add(categoryPathsCondition(categoryPaths));
+        conditions.add(genderCondition(gender));
+        conditions.add(brandCondition(brandId));
+        conditions.add(cursorCondition(priceSort, cursor));
 
-    // 키워드 검색 + 필터 조합 (QueryDSL)
-    @Override
-    public List<ProductSearchResponse.ProductSummary> searchByKeywordWithFilters(String keyword,
-            List<String> categoryPaths,
-            ProductGenderType gender,
-            Long brandId,
-            ProductSearchCondition.PriceSort priceSort,
-            Cursor cursor,
-            int limit) {
-        return baseQuery(categoryPaths, gender, brandId, priceSort, cursor, limit, keyword);
+        return queryFactory
+                .select(Projections.constructor(
+                        ProductSearchResponse.ProductSummary.class,
+                        Expressions.nullExpression(Long.class), // productOptionId (JPA 검색 시 없음)
+                        product.productId,
+                        product.brand.brandId,
+                        product.brandName,
+                        product.productName,
+                        product.productInfo,
+                        product.productGenderType.stringValue(),
+                        product.isAvailable,
+                        Expressions.nullExpression(Boolean.class), // hasStock 필드는 상품 조회에 필요없음
+                        product.defaultPrice,
+                        product.thumbnailImage,
+                        product.categoryPath))
+                .from(product)
+                .where(allOf(conditions))
+                .orderBy(orderSpecifiers(priceSort))
+                .limit(limit)
+                .fetch();
     }
 
     // 상품 상세 조회 (상품, 상품 옵션, 재고)
@@ -95,54 +109,6 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
                 .fetch();
     }
 
-    // QueryDSL로 상품 요약 목록을 커서 기반으로 조회한다. (키워드 제외)
-    private List<ProductSearchResponse.ProductSummary> baseQuery(List<String> categoryPaths,
-            ProductGenderType gender,
-            Long brandId,
-            ProductSearchCondition.PriceSort priceSort,
-            Cursor cursor,
-            int limit) {
-        return baseQuery(categoryPaths, gender, brandId, priceSort, cursor, limit, null);
-    }
-
-    // QueryDSL로 상품 요약 목록을 커서 기반으로 조회한다. (키워드 포함)
-    private List<ProductSearchResponse.ProductSummary> baseQuery(List<String> categoryPaths,
-            ProductGenderType gender,
-            Long brandId,
-            ProductSearchCondition.PriceSort priceSort,
-            Cursor cursor,
-            int limit,
-            String keyword) {
-        List<BooleanExpression> conditions = new ArrayList<>();
-        conditions.add(product.isAvailable.isTrue());
-        conditions.add(categoryPathsCondition(categoryPaths));
-        conditions.add(genderCondition(gender));
-        conditions.add(brandCondition(brandId));
-        conditions.add(cursorCondition(priceSort, cursor));
-        conditions.add(keywordCondition(keyword));
-
-        return queryFactory
-                .select(Projections.constructor(
-                        ProductSearchResponse.ProductSummary.class,
-                        Expressions.nullExpression(Long.class), // productOptionId (JPA 검색 시 없음)
-                        product.productId,
-                        product.brand.brandId,
-                        product.brandName,
-                        product.productName,
-                        product.productInfo,
-                        product.productGenderType.stringValue(),
-                        product.isAvailable,
-                        Expressions.nullExpression(Boolean.class), // hasStock 필드는 상품 조회에 필요없음
-                        product.defaultPrice,
-                        product.thumbnailImage,
-                        product.categoryPath))
-                .from(product)
-                .where(allOf(conditions))
-                .orderBy(orderSpecifiers(priceSort))
-                .limit(limit)
-                .fetch();
-    }
-
     // 카테고리 경로 필터 조건 생성
     private BooleanExpression categoryPathsCondition(List<String> categoryPaths) {
         if (categoryPaths == null || categoryPaths.isEmpty()) {
@@ -150,7 +116,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
         }
         if (categoryPaths.size() == 1 && categoryPaths.get(0) != null && !categoryPaths.get(0).isBlank()) {
             String root = categoryPaths.get(0);
-            return product.categoryPath.startsWithIgnoreCase(root);
+            return product.categoryPath.startsWith(root);
         }
         return product.categoryPath.in(categoryPaths);
     }
@@ -206,17 +172,4 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
                 .reduce(BooleanExpression::and)
                 .orElse(null);
     }
-
-    // 키워드 LIKE 조건 생성 (상품명/정보/브랜드명/카테고리 경로)
-    private BooleanExpression keywordCondition(String keyword) {
-        if (keyword == null || keyword.isBlank()) {
-            return null;
-        }
-        String lowered = keyword.toLowerCase();
-        return product.productName.lower().contains(lowered)
-                .or(product.productInfo.lower().contains(lowered))
-                .or(product.brandName.lower().contains(lowered))
-                .or(product.categoryPath.lower().contains(lowered));
-    }
-
 }

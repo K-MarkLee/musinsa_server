@@ -47,8 +47,7 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
     private static final String FIELD_SIZE_TEXT = "sizeOptions.text";
     private static final String FIELD_PRICE = "defaultPrice";
     private static final Set<String> ROOT_CATEGORIES = Set.of(
-        "상의", "아우터", "바지", "원피스", "스커트", "가방", "패션소품", "속옷", "홈웨어"
-    );
+            "상의", "아우터", "바지", "원피스", "스커트", "가방", "패션소품", "속옷", "홈웨어");
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -102,16 +101,19 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
 
         if (condition.getCategoryPaths() != null && !condition.getCategoryPaths().isEmpty()) {
             // 부모 카테고리 단일값이면 prefix로 하위까지 포함, 그 외에는 terms로 exact 매칭
-            if (condition.getCategoryPaths().size() == 1 && ROOT_CATEGORIES.contains(condition.getCategoryPaths().get(0))) {
+            if (condition.getCategoryPaths().size() == 1
+                    && ROOT_CATEGORIES.contains(condition.getCategoryPaths().get(0))) {
                 String root = condition.getCategoryPaths().get(0);
                 bool.filter(PrefixQuery.of(p -> p.field(FIELD_CATEGORY_PATH).value(root))._toQuery());
             } else {
                 List<FieldValue> values = condition.getCategoryPaths().stream()
-                    .filter(Objects::nonNull)
-                    .map(FieldValue::of)
-                    .toList();
+                        .filter(Objects::nonNull)
+                        .map(FieldValue::of)
+                        .toList();
                 if (!values.isEmpty()) {
-                    bool.filter(TermsQuery.of(t -> t.field(FIELD_CATEGORY_PATH).terms(TermsQueryField.of(f -> f.value(values))))._toQuery());
+                    bool.filter(TermsQuery
+                            .of(t -> t.field(FIELD_CATEGORY_PATH).terms(TermsQueryField.of(f -> f.value(values))))
+                            ._toQuery());
                 }
             }
         }
@@ -130,14 +132,13 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
     // 토큰별 should 쿼리 생성
     private Query perTokenShould(String token) {
         return BoolQuery.of(b -> b
-            .should(MatchQuery.of(m -> m.field(FIELD_PRODUCT_NAME).query(token))._toQuery())
-            .should(MatchQuery.of(m -> m.field(FIELD_CATEGORY_TEXT).query(token))._toQuery())
-            .should(MatchQuery.of(m -> m.field(FIELD_COLOR_TEXT).query(token))._toQuery())
-            .should(MatchQuery.of(m -> m.field(FIELD_SIZE_TEXT).query(token))._toQuery())
-            .should(MatchQuery.of(m -> m.field(FIELD_KR_BRAND_TEXT).query(token))._toQuery())
-            .should(MatchQuery.of(m -> m.field(FIELD_EN_BRAND_TEXT).query(token))._toQuery())
-            .minimumShouldMatch("1")
-        )._toQuery();
+                .should(MatchQuery.of(m -> m.field(FIELD_PRODUCT_NAME).query(token))._toQuery())
+                .should(MatchQuery.of(m -> m.field(FIELD_CATEGORY_TEXT).query(token))._toQuery())
+                .should(MatchQuery.of(m -> m.field(FIELD_COLOR_TEXT).query(token))._toQuery())
+                .should(MatchQuery.of(m -> m.field(FIELD_SIZE_TEXT).query(token))._toQuery())
+                .should(MatchQuery.of(m -> m.field(FIELD_KR_BRAND_TEXT).query(token))._toQuery())
+                .should(MatchQuery.of(m -> m.field(FIELD_EN_BRAND_TEXT).query(token))._toQuery())
+                .minimumShouldMatch("1"))._toQuery();
     }
 
     // elastic으로 전송해서 조건 실행
@@ -148,24 +149,23 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
         boolean isScoreSort = condition.getPriceSort() == null;
 
         NativeQueryBuilder builder = NativeQuery.builder()
-            .withQuery(query)
-            .withSort(sorts)
-            .withPageable(PageRequest.of(page, limit))
-            // 가격 정렬일 땐 점수 계산을 생략해 CPU 부담을 줄인다
-            .withTrackScores(isScoreSort)
-            .withFieldCollapse(FieldCollapse.of(c -> c.field(FIELD_PRODUCT_ID)))
-            .withSourceFilter(new FetchSourceFilterBuilder()
-                .withIncludes(
-                    "productOptionId",
-                    "productId",
-                    "brandId",
-                    "krBrandName",
-                    "productName",
-                    "defaultPrice",
-                    "thumbnailUrl"
-                )
-                .build())
-            .withTrackTotalHits(false);
+                .withQuery(query)
+                .withSort(sorts)
+                .withPageable(PageRequest.of(page, limit))
+                // 가격 정렬일 땐 점수 계산을 생략해 CPU 부담을 줄인다
+                .withTrackScores(isScoreSort)
+                .withFieldCollapse(FieldCollapse.of(c -> c.field(FIELD_PRODUCT_ID)))
+                .withSourceFilter(new FetchSourceFilterBuilder()
+                        .withIncludes(
+                                "productOptionId",
+                                "productId",
+                                "brandId",
+                                "krBrandName",
+                                "productName",
+                                "defaultPrice",
+                                "thumbnailUrl")
+                        .build())
+                .withTrackTotalHits(false);
 
         NativeQuery nativeQuery = builder.build();
         return executeQuery(nativeQuery, limit);
@@ -176,8 +176,8 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
         SearchHits<ProductDocument> hits = elasticsearchOperations.search(query, ProductDocument.class);
 
         List<ProductSearchResponse.ProductSummary> products = hits.getSearchHits().stream()
-            .map(hit -> toSummary(hit.getContent()))
-            .collect(Collectors.toList());
+                .map(hit -> toSummary(hit.getContent()))
+                .collect(Collectors.toList());
 
         boolean hasNext = products.size() >= limit;
         Long total = hits.getTotalHits();
@@ -217,18 +217,18 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
     private ProductSearchResponse.ProductSummary toSummary(ProductDocument doc) {
         BigDecimal price = doc.getDefaultPrice() != null ? BigDecimal.valueOf(doc.getDefaultPrice()) : null;
         return ProductSearchResponse.ProductSummary.builder()
-            .productOptionId(doc.getProductOptionId())
-            .productId(doc.getProductId())
-            .brandId(doc.getBrandId())
-            .brandName(doc.getKrBrandName())
-            .productName(doc.getProductName())
-            .productInfo(null)
-            .productGenderType(null)
-            .isAvailable(null)
-            .hasStock(null)
-            .lowestPrice(price)
-            .thumbnailUrl(doc.getThumbnailUrl())
-            .categoryPath(null)
-            .build();
+                .productOptionId(doc.getProductOptionId())
+                .productId(doc.getProductId())
+                .brandId(doc.getBrandId())
+                .brandName(doc.getKrBrandName())
+                .productName(doc.getProductName())
+                .productInfo(null)
+                .productGenderType(null)
+                .isAvailable(null)
+                .hasStock(null)
+                .lowestPrice(price)
+                .thumbnailUrl(doc.getThumbnailUrl())
+                .categoryPath(null)
+                .build();
     }
 }
