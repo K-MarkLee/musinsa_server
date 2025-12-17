@@ -1,4 +1,3 @@
-
 # 🔍 검색 서비스 고도화 보고서 (Search Optimization Report)
 
 ## 목차 (Table of Contents)
