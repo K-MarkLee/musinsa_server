@@ -1,10 +1,12 @@
 package com.mudosa.musinsa.event.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
-import com.mudosa.musinsa.coupon.domain.model.Coupon;
+import com.mudosa.musinsa.coupon.model.Coupon;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Check;
@@ -15,15 +17,18 @@ import java.util.List;
 
 @Entity
 @Table(
-        name = "event",
+      name = "event",
         indexes = {
-                @Index(name = "idx_event_status", columnList = "status"),
-                @Index(name = "idx_event_period", columnList = "started_at, ended_at")
+                @Index(name = "idx_event_status_started", columnList = "status, started_at"),
+                @Index(name = "idx_event_status_ended", columnList = "status, ended_at"),
+                @Index(name = "idx_event_coupon", columnList = "coupon_id")
         }
 )
 @Check(constraints = "ended_at > started_at")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class Event extends BaseEntity {
 
     @Id
@@ -47,20 +52,18 @@ public class Event extends BaseEntity {
     // DDL: status ENUM('DRAFT','PLANNED','OPEN','PAUSED','ENDED','CANCELLED') NOT NULL DEFAULT 'DRAFT'
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
     private EventStatus status = EventStatus.DRAFT;
 
     // DDL: is_public BOOLEAN NOT NULL DEFAULT TRUE
     @Column(name = "is_public", nullable = false)
+    @Builder.Default
     private Boolean isPublic = true;
 
     // DDL: limit_per_user INT NOT NULL DEFAULT 1
     @Column(name = "limit_per_user", nullable = false)
+    @Builder.Default
     private Integer limitPerUser = 1;
-
-    // DDL: limit_scope ENUM('EVENT','OPTION') NOT NULL DEFAULT 'EVENT'
-    @Enumerated(EnumType.STRING)
-    @Column(name = "limit_scope", nullable = false, length = 20)
-    private LimitScope limitScope = LimitScope.EVENT;
 
     // DDL: started_at / ended_at NOT NULL
     // 이벤트 시작시간 , 종료 시간
@@ -72,34 +75,17 @@ public class Event extends BaseEntity {
 
     // 같은 애그리거트 내부 연관(DDL 외부에 별도 테이블 필요)
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<EventOption> eventOptions = new ArrayList<>();
 
+    @org.hibernate.annotations.BatchSize(size = 100)
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<EventImage> eventImages = new ArrayList<>();
 
-    /** 팩토리 메서드 */
-    public static Event create(
-            String title,
-            String description,
-            EventType eventType,
-            LimitScope limitScope,
-            int limitPerUser,
-            boolean isPublic,
-            LocalDateTime startedAt,
-            LocalDateTime endedAt
-    ) {
-        Event e = new Event();
-        e.title = title;
-        e.description = description;
-        e.eventType = eventType;
-        e.status = EventStatus.DRAFT; // DDL default와 일치
-        e.isPublic = isPublic;
-        e.limitScope = limitScope;
-        e.limitPerUser = limitPerUser;
-        e.startedAt = startedAt;
-        e.endedAt = endedAt;
-        return e;
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
 
     public void addEventOption(EventOption option) {
         this.eventOptions.add(option);
@@ -109,6 +95,10 @@ public class Event extends BaseEntity {
     public void addEventImage(EventImage image) {
         this.eventImages.add(image);
         image.assignEvent(this);
+    }
+
+    public void assignCoupon(Coupon coupon) {
+        this.coupon = coupon;
     }
 
     /** 진행중 여부(비즈니스 로직) */
@@ -124,6 +114,4 @@ public class Event extends BaseEntity {
 
     // ===== Enums =====
     public enum EventType { DROP, COMMENT, DISCOUNT }
-    public enum EventStatus { DRAFT, PLANNED, OPEN, PAUSED, ENDED, CANCELLED }
-    public enum LimitScope { EVENT, OPTION }
 }

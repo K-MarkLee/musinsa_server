@@ -1,0 +1,6 @@
+FROM mysql:8.0
+
+COPY sinsang_data_1000k /var/lib/mysql
+RUN chown -R mysql:mysql /var/lib/mysql/
+
+EXPOSE 3306

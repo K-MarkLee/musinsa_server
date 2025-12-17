@@ -1,5 +1,6 @@
 package com.mudosa.musinsa.product.application.dto;
 
+import java.math.BigDecimal;
 import com.mudosa.musinsa.product.domain.model.CartItem;
 import com.mudosa.musinsa.product.domain.model.Image;
 
@@ -7,7 +8,6 @@ import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -83,31 +83,31 @@ public class CartItemDetailResponse {
             .map(mapping -> {
                 OptionValue optionValue = mapping.getOptionValue();
                 return OptionValueSummary.builder()
-                    .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
-                    .optionName(optionValue != null ? optionValue.getOptionName() : null)
-                    .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
-                    .build();
+                        .optionValueId(optionValue != null ? optionValue.getOptionValueId() : null)
+                        .optionName(optionValue != null ? optionValue.getOptionName() : null)
+                        .optionValue(optionValue != null ? optionValue.getOptionValue() : null)
+                        .build();
             })
             .collect(Collectors.toList());
 
-        BigDecimal unitAmount = productOption.getProductPrice() != null
+        java.math.BigDecimal unitAmount = productOption.getProductPrice() != null
             ? productOption.getProductPrice().getAmount()
             : null;
-
+            
         return CartItemDetailResponse.builder()
-            .cartItemId(cartItem.getCartItemId())
-            .userId(cartItem.getUser() != null ? cartItem.getUser().getId() : null)
-            .productId(product != null ? product.getProductId() : null)
-            .productOptionId(productOption != null ? productOption.getProductOptionId() : null)
-            .productName(product != null ? product.getProductName() : null)
-            .productInfo(product != null ? product.getProductInfo() : null)
-            .brandName(product != null ? product.getBrandName() : null)
-            .quantity(cartItem.getQuantity())
-            .unitPrice(unitAmount)
-            .stockQuantity(stockQuantity)
-            .hasStock(hasStock)
-            .thumbnailUrl(thumbnailUrl)
-            .optionValues(optionSummaries)
-            .build();
+                .cartItemId(cartItem.getCartItemId())
+                .userId(cartItem.getUser() != null ? cartItem.getUser().getId() : null)
+                .productId(product != null ? product.getProductId() : null)
+                .productOptionId(productOption != null ? productOption.getProductOptionId() : null)
+                .productName(product != null ? product.getProductName() : null)
+                .productInfo(product != null ? product.getProductInfo() : null)
+                .brandName(product != null ? product.getBrandName() : null)
+                .quantity(cartItem.getQuantity())
+                .unitPrice(unitAmount)
+                .stockQuantity(stockQuantity)
+                .hasStock(hasStock)
+                .thumbnailUrl(thumbnailUrl)
+                .optionValues(optionSummaries)
+                .build();
     }
 }

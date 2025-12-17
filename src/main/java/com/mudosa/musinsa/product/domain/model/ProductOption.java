@@ -12,8 +12,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Comparator;
-import java.util.Objects;
 
 // 상품 옵션과 가격, 재고를 관리하는 엔티티이다.
 @Entity
@@ -43,28 +41,32 @@ public class ProductOption extends BaseEntity {
     @OneToMany(mappedBy = "productOption", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ProductOptionValue> productOptionValues = new ArrayList<>();
 
-    // 옵션 생성 시 필수 값 검증 후 연관 엔티티를 초기화한다.
-    @Builder
-    public ProductOption(Product product, Money productPrice, Inventory inventory,
-                         List<ProductOptionValue> productOptionValues) {
-        // 필수 파라미터를 확인해 무결성을 보장한다.
-        if (product == null) {
-            throw new IllegalArgumentException("상품은 옵션에 필수입니다.");
-        }
+    // 외부 노출 생성 메서드 + 필수 값 검증
+    public static ProductOption create(Product product, Money productPrice, Inventory inventory) {
         if (productPrice == null || productPrice.isLessThanOrEqual(Money.ZERO)) {
-            throw new IllegalArgumentException("상품 가격은 0원보다 커야 합니다.");
+            throw new BusinessException(ErrorCode.PRODUCT_PRICE_REQUIRED);
         }
         if (inventory == null) {
-            throw new IllegalArgumentException("재고 정보는 옵션에 필수입니다.");
+            throw new BusinessException(ErrorCode.INVENTORY_REQUIRED);
         }
 
+        return new ProductOption(product, productPrice, inventory);
+    }
+
+    @Builder
+    private ProductOption(Product product, Money productPrice, Inventory inventory) {
         this.product = product;
         this.productPrice = productPrice;
         this.inventory = inventory;
-        if (productOptionValues != null) {
-            productOptionValues.forEach(this::addOptionValue);
-        }
+    }
 
+    // 옵션 값 매핑을 추가하고 현재 옵션과 연결한다.
+    public void addOptionValue(ProductOptionValue optionValue) {
+        if (optionValue == null) {
+            throw new BusinessException(ErrorCode.OPTION_VALUE_REQUIRED);
+        }
+        optionValue.attachTo(this);
+        this.productOptionValues.add(optionValue);
     }
 
     // 상품 애그리거트에서만 호출해 양방향 연관을 설정한다.
@@ -73,40 +75,24 @@ public class ProductOption extends BaseEntity {
         this.productOptionValues.forEach(value -> value.attachTo(this));
     }
 
-    // 옵션 값 매핑을 추가하고 현재 옵션과 연결한다.
-    public void addOptionValue(ProductOptionValue optionValue) {
-        if (optionValue == null) {
-            return;
-        }
-        optionValue.attachTo(this);
-        this.productOptionValues.add(optionValue);
-    }
-
-    // 상품과의 연관을 제거해 고아 제거가 정상 동작하도록 한다.
-    void detachFromProduct() {
-        this.product = null;
-        this.productOptionValues.forEach(ProductOptionValue::refreshIdentifiers);
-    }
-
     // 주문 과정에서 옵션 재고를 차감한다.
     public void decreaseStock(int quantity) {
         if (quantity <= 0) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "차감 수량은 1 이상이어야 합니다.");
+            throw new BusinessException(ErrorCode.INVALID_INVENTORY_UPDATE_VALUE, "차감 수량은 1 이상이어야 합니다.");
         }
 
         try {
             this.inventory.decrease(quantity);
         } catch (IllegalStateException ex) {
-            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK, ex.getMessage());
+            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK);
         }
     }
 
     // 주문 취소 등으로 옵션 재고를 복구한다.
     public void restoreStock(int quantity) {
         if (quantity <= 0) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "복구 수량은 1 이상이어야 합니다.");
+            throw new BusinessException(ErrorCode.RECOVER_VALUE_INVALID, "복구 수량은 1 이상이어야 합니다.");
         }
-
         this.inventory.increase(quantity);
     }
 
@@ -114,18 +100,17 @@ public class ProductOption extends BaseEntity {
     public void validateAvailable() {
         if (this.inventory.getStockQuantity() == null
             || this.inventory.getStockQuantity().getValue() <= 0) {
-            throw new BusinessException(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE);
+            throw new BusinessException(ErrorCode.PRODUCT_OPTION_OUT_OF_STOCK);
         }
     }
 
-    List<Long> normalizedOptionValueIds() {
-        return this.productOptionValues.stream()
-            .map(ProductOptionValue::getOptionValue)
-            .filter(Objects::nonNull)
-            .map(OptionValue::getOptionValueId)
-            .filter(Objects::nonNull)
-            .sorted(Comparator.naturalOrder())
-            .toList();
+    // 현재 재고 수량을 반환한다.
+    public Integer getStockQuantity() {
+        return this.getInventory().getStockQuantity().getValue();
     }
 
+    // 해당 재고가 요청 수량을 충족하는지 확인한다.
+    public boolean hasEnoughStock(Integer quantity) {
+        return this.getStockQuantity() >= quantity;
+    }
 }

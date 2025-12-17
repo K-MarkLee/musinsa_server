@@ -1,16 +1,22 @@
 package com.mudosa.musinsa.fbtoken.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
+@Getter
+@RequiredArgsConstructor
 public class FBTokenDTO {
-    private Long tokenId;
-    private String firebaseTokenKey;
-    private Long userId;
+    private String memberId;
+    private String token;
+
+    @Builder
+    public FBTokenDTO(Long memberId, String token) {
+        this.memberId = String.valueOf(memberId);
+        this.token = token;
+    }
+
+    @Builder
+    public FBTokenDTO(String memberId, String token) {
+        this.memberId = memberId;
+        this.token = token;
+    }
 }

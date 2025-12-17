@@ -3,7 +3,7 @@ FROM gradle:8.10-jdk21 AS build
 
 WORKDIR /app
 
-# Gradle Wrapper와 build 파일들 먼저 복사 (캐싱 최적화)
+# Gradle Wrapper와 build 파일들 먼저 복사
 COPY gradlew .
 COPY gradle gradle
 COPY build.gradle .
@@ -49,7 +49,5 @@ ENTRYPOINT ["java", \
     "-Djava.security.egd=file:/dev/./urandom", \
     "-XX:+UseContainerSupport", \
     "-XX:MaxRAMPercentage=75.0", \
-    "-XX:+HeapDumpOnOutOfMemoryError", \
-    "-XX:HeapDumpPath=/app/logs/heap-dump.hprof", \
     "-jar", \
     "app.jar"]

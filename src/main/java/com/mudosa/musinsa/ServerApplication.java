@@ -5,6 +5,8 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.batch.BatchAutoConfiguration;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = {BatchAutoConfiguration.class})
@@ -12,11 +14,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @MapperScan(
     basePackages = {
         "com.mudosa.musinsa.settlement.domain.repository",
-        "com.mudosa.musinsa.domain.order.mapper",
-        "com.mudosa.musinsa.domain.payment.mapper"
     },
     annotationClass = Mapper.class
 )
+@EnableSpringDataWebSupport(pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
+@EnableCaching
 public class ServerApplication {
 
     public static void main(String[] args) {

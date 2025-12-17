@@ -6,7 +6,7 @@ import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.domain.model.OrderProduct;
-import com.mudosa.musinsa.order.domain.model.Orders;
+import com.mudosa.musinsa.order.domain.model.Order;
 import com.mudosa.musinsa.order.domain.repository.OrderRepository;
 import com.mudosa.musinsa.payment.application.event.PaymentApprovedEvent;
 import com.mudosa.musinsa.payment.domain.model.Payment;
@@ -68,7 +68,7 @@ public class PaymentSettlementService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        Orders order = orderRepository.findByIdWithProductsAndBrand(payment.getOrderId())
+        Order order = orderRepository.findByIdWithProductsAndBrand(payment.getOrderId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 
         for (OrderProduct orderProduct : order.getOrderProducts()) {
@@ -86,7 +86,7 @@ public class PaymentSettlementService {
 
         Long brandId = orderProduct.getProductOption().getProduct().getBrand().getBrandId();
 
-        Money transactionAmount = new Money(orderProduct.getProductPrice())
+        Money transactionAmount = orderProduct.getProductPrice()
                 .multiply(orderProduct.getProductQuantity());
 
         Money pgFeeAmount = pgFeeCalculator.calculate(payment.getMethod(), transactionAmount);

@@ -6,9 +6,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.math.BigDecimal;
 
 // 상품 상세 정보를 담아 프레젠테이션 계층에 전달하는 응답 DTO이다.
 @Getter
@@ -25,7 +25,6 @@ public class ProductDetailResponse {
     private String productGenderType;
     private Boolean isAvailable;
     private String categoryPath;
-    private Long likeCount;
     private List<ImageResponse> images;
     private List<OptionDetail> options;
 
@@ -53,11 +52,11 @@ public class ProductDetailResponse {
     @Builder
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     @AllArgsConstructor(access = AccessLevel.PROTECTED)
-    public static class OptionDetail {
+        public static class OptionDetail {
         private Long optionId;
         private BigDecimal productPrice;
         private Integer stockQuantity;
-    private Boolean hasStock;
+        private Boolean hasStock;
         private List<OptionValueDetail> optionValues;
 
         // 옵션 값 상세 목록을 NULL 안전하게 반환한다.
@@ -71,7 +70,6 @@ public class ProductDetailResponse {
         @AllArgsConstructor(access = AccessLevel.PROTECTED)
         public static class OptionValueDetail {
             private Long optionValueId;
-            private Long optionNameId;
             private String optionName;
             private String optionValue;
         }

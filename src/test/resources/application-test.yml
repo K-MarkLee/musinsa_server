@@ -1,27 +1,24 @@
 spring:
-  # H2 In-Memory DB (테스트용)
   datasource:
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:mem:~/ServerApplication
     username: sa
     password:
+  data:
+     redis:
+       host: ${REDIS_HOST:localhost}
+       port: ${REDIS_PORT:6379}
+       password: ${REDIS_PASSWORD:}
+       database: 15
 
-  # JPA 테스트 설정
   jpa:
     hibernate:
-      ddl-auto: create-drop
-    show-sql: true
+      ddl-auto: create
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.H2Dialect
-        # 쿼리 실행 횟수 통계 활성화
-        generate_statistics: true
-        # 배치 크기 설정
-        jdbc:
-          batch_size: 50
+        show_sql: true
 
-# MyBatis 설정 (Settlement 집계 테스트용 - settlement 매퍼만 로드)
 mybatis:
   mapper-locations: classpath:mappers/settlement/*.xml
   type-aliases-package: com.mudosa.musinsa.settlement.batch.dto
@@ -29,23 +26,37 @@ mybatis:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+jwt:
+  secret: "this-is-a-very-long-test-secret-key-32bytes-min"
 
 tosspayments:
   secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
   client-key: test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm
+  confirm_url: http://localhost:8081/v1/payments/confirm
+  base_cancel_url: http://localhost:8081/v1/payments
 
-# FCM 테스트 환경 설정
 fcm:
-  service-acount-file: key/fdbdproject.json
+  service-account-file: key/fdbdproject.json
   topic-name: test-topic
   project-id: test-project
 
 logging:
   level:
-    com.mudosa.musinsa: debug
-    org.springframework.web: info
-    org.hibernate.SQL: debug
-    # 쿼리 파라미터 바인딩 로그
-    org.hibernate.type.descriptor.sql.BasicBinder: trace
-    # 쿼리 통계 로그
-    org.hibernate.stat: debug
+    org:
+      hibernate:
+        sql: debug
+        type.descriptor.sql.BasicBinder: TRACE
+        orm.jdbc.internal.LogicalConnectionImpl: DEBUG
+      springframework.orm.jpa: DEBUG
+      springframework.transaction: DEBUG
+
+aws:
+  s3:
+    bucket: test
+    accessKey: s3_access_key
+    secretKey: s3_secret_key
+
+# redis test
+cache:
+  preload:
+    enabled: false # 테스트 하고싶으면 true

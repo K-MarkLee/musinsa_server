@@ -1,5 +1,8 @@
 package com.mudosa.musinsa.product.domain.vo;
 
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
+
 import jakarta.persistence.Embeddable;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -21,10 +24,10 @@ public class StockQuantity {
     // 숫자 범위를 점검해 잘못된 재고 입력을 막는다.
     private void validate(Integer value) {
         if (value == null) {
-            throw new IllegalArgumentException("재고 수량은 null일 수 없습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_CANNOT_BE_NULL);
         }
         if (value < 0) {
-            throw new IllegalArgumentException("재고 수량은 음수일 수 없습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_CANNOT_BE_NEGATIVE);
         }
     }
     
@@ -38,10 +41,10 @@ public class StockQuantity {
     public void decrease(int quantity){
         // 음수 재고를 방지하기 위한 방어 로직
         if (quantity <= 0) {
-            throw new IllegalArgumentException("차감 수량은 0 이하일 수 없습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_CANNOT_BE_LESS_THAN_ONE);
         }
         if (this.value - quantity < 0) {
-            throw new IllegalArgumentException("재고 수량은 음수가 될 수 없습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_OUT_OF_STOCK);
         }
         this.value -= quantity;
     }
@@ -50,7 +53,7 @@ public class StockQuantity {
     public void increase(int quantity){
         // 잘못된 요청으로 상태가 깨지지 않도록 검증
         if (quantity <= 0) {
-            throw new IllegalArgumentException("증가 수량은 0 이하일 수 없습니다.");
+            throw new BusinessException(ErrorCode.STOCK_QUANTITY_INVALID,"증가 수량은 0 이하일 수 없습니다.");
         }
         this.value += quantity;
     }

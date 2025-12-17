@@ -8,8 +8,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
+
+import java.math.BigDecimal;
 
 // 상품 옵션 단건 등록 요청을 담는 DTO이다.
 @Getter
@@ -25,5 +26,5 @@ public class ProductOptionCreateRequest {
     private Integer stockQuantity;
 
     @NotEmpty(message = "옵션 값 ID는 최소 1개 이상이어야 합니다.")
-    private List<Long> optionValueIds;
+    private List<@NotNull Long> optionValueIds;
 }

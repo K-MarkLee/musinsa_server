@@ -1,124 +1,175 @@
 package com.mudosa.musinsa.product.domain.repository;
 
+import com.mudosa.musinsa.product.application.dto.ProductSearchCondition;
+import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
+import com.mudosa.musinsa.product.domain.model.Image;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.TypedQuery;
-import org.hibernate.Hibernate;
+import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
+import com.mudosa.musinsa.product.domain.model.QImage;
+import com.mudosa.musinsa.product.domain.model.QInventory;
+import com.mudosa.musinsa.product.domain.model.QProductOption;
+import com.mudosa.musinsa.product.domain.model.QProductOptionValue;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
-import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.List;
 
-// 상품 상세 조회와 조건 검색을 담당하는 커스텀 구현체로 연관 로딩 전략을 직접 제어한다.
+import static com.mudosa.musinsa.product.domain.model.QProduct.product;
+
+// 상품 검색 조건을 조합해 목록 결과를 반환하는 커스텀 구현체.
 @Repository
+@RequiredArgsConstructor
 public class ProductRepositoryImpl implements ProductRepositoryCustom {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final JPAQueryFactory queryFactory;
 
-    // 상품 ID로 상세 정보를 조회하고 필요한 연관을 순차적으로 초기화한다.
+    // 필터링 조건을 QueryDSL로 조합해 상품 요약 목록을 커서 기반으로 조회한다.
+    @Override
+    public List<ProductSearchResponse.ProductSummary> findAllByFiltersWithCursor(List<String> categoryPaths,
+            ProductGenderType gender,
+            Long brandId,
+            ProductSearchCondition.PriceSort priceSort,
+            Cursor cursor,
+            int limit) {
+        List<BooleanExpression> conditions = new ArrayList<>();
+        conditions.add(product.isAvailable.isTrue());
+        conditions.add(categoryPathsCondition(categoryPaths));
+        conditions.add(genderCondition(gender));
+        conditions.add(brandCondition(brandId));
+        conditions.add(cursorCondition(priceSort, cursor));
+
+        return queryFactory
+                .select(Projections.constructor(
+                        ProductSearchResponse.ProductSummary.class,
+                        Expressions.nullExpression(Long.class), // productOptionId (JPA 검색 시 없음)
+                        product.productId,
+                        product.brand.brandId,
+                        product.brandName,
+                        product.productName,
+                        product.productInfo,
+                        product.productGenderType.stringValue(),
+                        product.isAvailable,
+                        Expressions.nullExpression(Boolean.class), // hasStock 필드는 상품 조회에 필요없음
+                        product.defaultPrice,
+                        product.thumbnailImage,
+                        product.categoryPath))
+                .from(product)
+                .where(allOf(conditions))
+                .orderBy(orderSpecifiers(priceSort))
+                .limit(limit)
+                .fetch();
+    }
+
+    // 상품 상세 조회 (상품, 상품 옵션, 재고)
     @Override
     public Optional<Product> findDetailById(Long productId) {
-        TypedQuery<Product> query = entityManager.createQuery(
-            "select p from Product p " +
-                "join fetch p.brand " +
-                "where p.productId = :productId",
-            Product.class
-        );
-        query.setParameter("productId", productId);
+        QProductOption productOption = QProductOption.productOption;
+        QInventory inventory = QInventory.inventory;
 
-        List<Product> results = query.getResultList();
-        if (results.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Product product = results.get(0);
-        initializeCollections(product);
-        return Optional.of(product);
+        return Optional.ofNullable(queryFactory
+                .selectFrom(product)
+                .distinct()
+                .leftJoin(product.brand).fetchJoin()
+                .leftJoin(product.productOptions, productOption).fetchJoin()
+                .leftJoin(productOption.inventory, inventory).fetchJoin()
+                .where(product.productId.eq(productId), product.isAvailable.isTrue())
+                .fetchOne());
     }
 
-    // 검색 조건을 Criteria API로 조합해 상품 목록을 조회한다.
+    // 상품 상세 조회 (이미지)
     @Override
-    public List<Product> findAllByFilters(List<String> categoryPaths,
-                                          ProductGenderType gender,
-                                          String keyword,
-                                          Long brandId) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Product> cq = cb.createQuery(Product.class);
-        Root<Product> product = cq.from(Product.class);
-
-        List<Predicate> predicates = new ArrayList<>();
-
-        if (gender != null) {
-            Expression<ProductGenderType> genderPath = product.get("productGenderType");
-            predicates.add(cb.equal(genderPath, gender));
-        }
-
-        if (categoryPaths != null && !categoryPaths.isEmpty()) {
-            Expression<String> categoryPathExpression = product.get("categoryPath");
-            List<Predicate> categoryPredicates = new ArrayList<>();
-            for (String path : categoryPaths) {
-                Predicate exactMatch = cb.equal(categoryPathExpression, path);
-                Predicate childMatch = cb.like(categoryPathExpression, path + "/%");
-                categoryPredicates.add(cb.or(exactMatch, childMatch));
-            }
-            predicates.add(cb.or(categoryPredicates.toArray(new Predicate[0])));
-        }
-
-        if (keyword != null && !keyword.isBlank()) {
-            String lowered = "%" + keyword.toLowerCase() + "%";
-            Expression<String> namePath = cb.lower(product.get("productName"));
-            Expression<String> infoPath = cb.lower(product.get("productInfo"));
-            Expression<String> brandNamePath = cb.lower(product.get("brandName"));
-            Expression<String> categoryPathExpr = cb.lower(product.get("categoryPath"));
-
-            Predicate nameLike = cb.like(namePath, lowered);
-            Predicate infoLike = cb.like(infoPath, lowered);
-            Predicate brandLike = cb.like(brandNamePath, lowered);
-            Predicate categoryLike = cb.like(categoryPathExpr, lowered);
-
-            predicates.add(cb.or(nameLike, infoLike, brandLike, categoryLike));
-        }
-
-        if (brandId != null) {
-            predicates.add(cb.equal(product.get("brand").get("brandId"), brandId));
-        }
-
-        // 항상 판매 가능 상품만 조회한다.
-        predicates.add(cb.isTrue(product.get("isAvailable")));
-
-        cq.select(product).distinct(true);
-        if (!predicates.isEmpty()) {
-            cq.where(cb.and(predicates.toArray(new Predicate[0])));
-        }
-
-        return entityManager.createQuery(cq).getResultList();
+    public List<Image> findImagesByProductId(Long productId) {
+        QImage image = QImage.image;
+        return queryFactory
+                .selectFrom(image)
+                .where(image.product.productId.eq(productId))
+                .orderBy(image.isThumbnail.desc(), image.imageId.asc())
+                .fetch();
     }
 
-    // 상세 조회 시 필요한 컬렉션과 연관 엔티티를 Hibernate.initialize로 강제 로딩한다.
-    private void initializeCollections(Product product) {
-        Hibernate.initialize(product.getImages());
-        Hibernate.initialize(product.getProductOptions());
+    // 상품 상세 조회 (옵션 값)
+    @Override
+    public List<ProductOptionValue> findProductOptionValuesByProductId(Long productId) {
+        QProductOption productOption = QProductOption.productOption;
+        QProductOptionValue productOptionValue = QProductOptionValue.productOptionValue;
 
-        product.getProductOptions().forEach(option -> {
-            Hibernate.initialize(option.getInventory());
-            Hibernate.initialize(option.getProductOptionValues());
-            option.getProductOptionValues().forEach(mapping -> {
-                if (mapping != null) {
-                    Hibernate.initialize(mapping.getOptionValue());
-                    if (mapping.getOptionValue() != null) {
-                        Hibernate.initialize(mapping.getOptionValue().getOptionName());
-                    }
-                }
-            });
-        });
+        return queryFactory
+                .selectFrom(productOptionValue)
+                .leftJoin(productOptionValue.productOption, productOption).fetchJoin()
+                .where(productOption.product.productId.eq(productId))
+                .fetch();
+    }
+
+    // 카테고리 경로 필터 조건 생성
+    private BooleanExpression categoryPathsCondition(List<String> categoryPaths) {
+        if (categoryPaths == null || categoryPaths.isEmpty()) {
+            return null;
+        }
+        if (categoryPaths.size() == 1 && categoryPaths.get(0) != null && !categoryPaths.get(0).isBlank()) {
+            String root = categoryPaths.get(0);
+            return product.categoryPath.startsWith(root);
+        }
+        return product.categoryPath.in(categoryPaths);
+    }
+
+    // 성별 필터 조건 생성
+    private BooleanExpression genderCondition(ProductGenderType gender) {
+        if (gender == null) {
+            return null;
+        }
+        return product.productGenderType.eq(gender);
+    }
+
+    // 브랜드 필터 조건 생성
+    private BooleanExpression brandCondition(Long brandId) {
+        if (brandId == null) {
+            return null;
+        }
+        return product.brand.brandId.eq(brandId);
+    }
+
+    // 커서 기반 페이지 조건 생성 (가격 정렬 포함)
+    private BooleanExpression cursorCondition(ProductSearchCondition.PriceSort priceSort, Cursor cursor) {
+        if (cursor == null || cursor.productId() == null) {
+            return null;
+        }
+        BigDecimal cursorPrice = cursor.price();
+        if (priceSort == ProductSearchCondition.PriceSort.HIGHEST && cursorPrice != null) {
+            return product.defaultPrice.lt(cursorPrice)
+                    .or(product.defaultPrice.eq(cursorPrice).and(product.productId.gt(cursor.productId())));
+        }
+        if (priceSort == ProductSearchCondition.PriceSort.LOWEST && cursorPrice != null) {
+            return product.defaultPrice.gt(cursorPrice)
+                    .or(product.defaultPrice.eq(cursorPrice).and(product.productId.gt(cursor.productId())));
+        }
+        return product.productId.gt(cursor.productId());
+    }
+
+    // 정렬 조건(가격 정렬 우선, 이후 productId) 구성
+    private OrderSpecifier<?>[] orderSpecifiers(ProductSearchCondition.PriceSort priceSort) {
+        if (priceSort == ProductSearchCondition.PriceSort.HIGHEST) {
+            return new OrderSpecifier<?>[] { product.defaultPrice.desc(), product.productId.desc() };
+        }
+        if (priceSort == ProductSearchCondition.PriceSort.LOWEST) {
+            return new OrderSpecifier<?>[] { product.defaultPrice.asc(), product.productId.asc() };
+        }
+        return new OrderSpecifier<?>[] { product.productId.asc() };
+    }
+
+    // null이 아닌 조건만 AND로 묶는다.
+    private BooleanExpression allOf(List<BooleanExpression> expressions) {
+        return expressions.stream()
+                .filter(expr -> expr != null)
+                .reduce(BooleanExpression::and)
+                .orElse(null);
     }
 }

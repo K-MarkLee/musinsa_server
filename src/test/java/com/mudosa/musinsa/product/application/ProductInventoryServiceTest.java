@@ -1,326 +1,348 @@
 package com.mudosa.musinsa.product.application;
 
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
-import com.mudosa.musinsa.brand.domain.model.BrandStatus;
-import com.mudosa.musinsa.common.vo.Money;
+import com.mudosa.musinsa.brand.domain.model.BrandMember;
+import com.mudosa.musinsa.brand.domain.repository.BrandRepository;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
-import com.mudosa.musinsa.product.application.dto.ProductAvailabilityRequest;
-import com.mudosa.musinsa.product.application.dto.ProductOptionStockResponse;
+import com.mudosa.musinsa.product.application.dto.ProductCreateRequest;
 import com.mudosa.musinsa.product.application.dto.StockAdjustmentRequest;
-import com.mudosa.musinsa.product.domain.model.Inventory;
-
+import com.mudosa.musinsa.product.domain.model.Category;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
-import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
+import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
+import com.mudosa.musinsa.product.domain.repository.InventoryRepository;
+import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
-import com.mudosa.musinsa.product.domain.vo.StockQuantity;
+import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
-class ProductInventoryServiceTest {
+@DisplayName("ProductInventoryService 테스트")
+@Transactional
+class ProductInventoryServiceTest extends ServiceConfig {
 
-    @Mock
-    private ProductRepository productRepository;
+	@Autowired
+	private ProductInventoryService sut;
+	@Autowired
+	private ProductCommandService productCommandService;
+	@Autowired
+	private ProductRepository productRepository;
+	@Autowired
+	private ProductOptionRepository productOptionRepository;
+	@Autowired
+	private InventoryRepository inventoryRepository;
+	@Autowired
+	private BrandRepository brandRepository;
+	@Autowired
+	private CategoryRepository categoryRepository;
+	@Autowired
+	private OptionValueRepository optionValueRepository;
 
-    @Mock
-    private ProductOptionRepository productOptionRepository;
+	private Long userId;
+	private Long brandId;
+	private String categoryPath;
+	private Long sizeLId;
+	private Long sizeMId;
+	private Long colorBlackId;
 
-    @Mock
-    private InventoryService inventoryService;
+	@BeforeEach
+	void setUp() {
+		userId = 1L;
+		brandId = saveBrandWithMember(userId).getBrandId();
+		categoryPath = saveCategoryPath("상의", "티셔츠").buildPath();
+		sizeLId = saveOptionValue("사이즈", "L").getOptionValueId();
+		sizeMId = saveOptionValue("사이즈", "M").getOptionValueId();
+		colorBlackId = saveOptionValue("색상", "블랙").getOptionValueId();
+	}
 
-    @InjectMocks
-    private ProductInventoryService productInventoryService;
+	@Test
+	@DisplayName("브랜드 관리자는 상품 옵션 재고 현황을 조회할 수 있다.")
+	void getProductOptionStocks() {
+		// given
+		Long productId = createProduct(
+			"다중 옵션 티셔츠",
+			List.of(
+				optionRequest(BigDecimal.valueOf(10000), 5, List.of(sizeLId, colorBlackId)),
+				optionRequest(BigDecimal.valueOf(11000), 0, List.of(sizeMId, colorBlackId))
+			)
+		);
+		List<ProductOption> productOptions = findProductOptions(productId);
+		ProductOption inStockOption = productOptions.stream()
+			.filter(po -> po.getInventory().getStockQuantity().getValue() == 5)
+			.findFirst()
+			.orElseThrow();
+		ProductOption outOfStockOption = productOptions.stream()
+			.filter(po -> po.getInventory().getStockQuantity().getValue() == 0)
+			.findFirst()
+			.orElseThrow();
 
-    @Test
-    @DisplayName("브랜드가 소유한 상품의 옵션 재고가 요약 정보로 변환된다")
-    void getProductOptionStocks_returnsSummary() {
-        Brand brand = Brand.builder()
-            .brandId(1L)
-            .nameKo("브랜드")
-            .nameEn("BRAND")
-            .status(BrandStatus.ACTIVE)
-            .commissionRate(BigDecimal.TEN)
-            .build();
+		// when
+		var responses = sut.getProductOptionStocks(brandId, productId, userId);
 
-        Product product = Product.builder()
-            .brand(brand)
-            .productName("티셔츠")
-            .productInfo("상세 설명")
-            .productGenderType(ProductGenderType.ALL)
-            .brandName("브랜드")
-            .categoryPath("상의/티셔츠")
-            .isAvailable(true)
-            .build();
-        ReflectionTestUtils.setField(product, "productId", 100L);
+		// then
+		assertThat(responses).hasSize(2);
+		var inStockResponse = responses.stream()
+			.filter(res -> res.getProductOptionId().equals(inStockOption.getProductOptionId()))
+			.findFirst()
+			.orElseThrow();
+		var outOfStockResponse = responses.stream()
+			.filter(res -> res.getProductOptionId().equals(outOfStockOption.getProductOptionId()))
+			.findFirst()
+			.orElseThrow();
 
-        Inventory inventory = Inventory.builder()
-            .stockQuantity(new StockQuantity(5))
-            .build();
+		assertThat(inStockResponse.getStockQuantity()).isEqualTo(5);
+		assertThat(inStockResponse.getHasStock()).isTrue();
 
-        ProductOption productOption = ProductOption.builder()
-            .product(product)
-            .productPrice(new Money(new BigDecimal("19900")))
-            .inventory(inventory)
-            .build();
-        ReflectionTestUtils.setField(productOption, "productOptionId", 200L);
+		assertThat(outOfStockResponse.getStockQuantity()).isZero();
+		assertThat(outOfStockResponse.getHasStock()).isFalse();
+	}
 
-        OptionValue optionValue = OptionValue.builder()
-            .optionName("사이즈")
-            .optionValue("M")
-            .build();
-        ReflectionTestUtils.setField(optionValue, "optionValueId", 400L);
+	@Test
+	@DisplayName("브랜드 멤버가 아니면 재고 조회가 거부된다.")
+	void getProductOptionStocksWithNonMemberThrows() {
+		// given
+		Long productId = createProduct(
+			"멤버 아님 티셔츠",
+			List.of(optionRequest(BigDecimal.valueOf(10000), 5, List.of(sizeLId, colorBlackId)))
+		);
+		Long nonMemberUserId = 9999L;
 
-        ProductOptionValue mapping = ProductOptionValue.builder()
-            .productOption(productOption)
-            .optionValue(optionValue)
-            .build();
-        productOption.addOptionValue(mapping);
-        product.addProductOption(productOption);
+		// when // then
+		assertThatThrownBy(() -> sut.getProductOptionStocks(brandId, productId, nonMemberUserId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.NOT_BRAND_MEMBER);
+	}
 
-        when(productRepository.findDetailById(100L)).thenReturn(Optional.of(product));
+	@Test
+	@DisplayName("재고를 추가하면 수량이 증가한다.")
+	void addStockIncreasesQuantity() {
+		// given
+		Long productId = createProduct(
+			"재고 추가 티셔츠",
+			List.of(optionRequest(BigDecimal.valueOf(10000), 5, List.of(sizeLId, colorBlackId)))
+		);
+		Long productOptionId = findProductOptions(productId).get(0).getProductOptionId();
+		StockAdjustmentRequest request = StockAdjustmentRequest.builder()
+			.productOptionId(productOptionId)
+			.quantity(3)
+			.build();
 
-        List<ProductOptionStockResponse> responses = productInventoryService.getProductOptionStocks(1L, 100L);
+		// when
+		var response = sut.addStock(brandId, productId, request, userId);
 
-        assertThat(responses).hasSize(1);
-        ProductOptionStockResponse summary = responses.get(0);
-        assertThat(summary.getProductOptionId()).isEqualTo(200L);
-        assertThat(summary.getProductName()).isEqualTo("티셔츠");
-    assertThat(summary.getProductPrice()).isEqualByComparingTo("19900");
-        assertThat(summary.getStockQuantity()).isEqualTo(5);
-        assertThat(summary.getHasStock()).isTrue();
-        assertThat(summary.getOptionValues())
-            .hasSize(1)
-            .extracting(ProductOptionStockResponse.OptionValueSummary::getOptionValue)
-            .containsExactly("M");
-    }
+		// then
+		assertThat(response.getStockQuantity()).isEqualTo(8);
+		assertThat(response.getHasStock()).isTrue();
+		assertThat(inventoryRepository.findByProductOptionId(productOptionId))
+			.get()
+			.extracting(inv -> inv.getStockQuantity().getValue())
+			.isEqualTo(8);
+	}
 
-    @Test
-    @DisplayName("다른 브랜드가 접근하면 재고 조회가 거부된다")
-    void getProductOptionStocks_brandMismatch_throwsForbidden() {
-        Brand brand = Brand.builder()
-            .brandId(1L)
-            .nameKo("브랜드")
-            .nameEn("BRAND")
-            .status(BrandStatus.ACTIVE)
-            .commissionRate(BigDecimal.TEN)
-            .build();
+	@Test
+	@DisplayName("다른 상품의 옵션으로 재고를 조정하면 BusinessException이 발생한다.")
+	void adjustStockWithOptionNotBelongingToProductThrows() {
+		// given
+		Long productId = createProduct(
+			"상품 A",
+			List.of(optionRequest(BigDecimal.valueOf(10000), 5, List.of(sizeLId, colorBlackId)))
+		);
+		Long otherProductId = createProduct(
+			"상품 B",
+			List.of(optionRequest(BigDecimal.valueOf(12000), 3, List.of(sizeMId, colorBlackId)))
+		);
+		Long otherProductOptionId = findProductOptions(otherProductId).get(0).getProductOptionId();
 
-        Product product = Product.builder()
-            .brand(brand)
-            .productName("티셔츠")
-            .productInfo("상세 설명")
-            .productGenderType(ProductGenderType.ALL)
-            .brandName("브랜드")
-            .categoryPath("상의/티셔츠")
-            .isAvailable(true)
-            .build();
-        ReflectionTestUtils.setField(product, "productId", 100L);
+		StockAdjustmentRequest request = StockAdjustmentRequest.builder()
+			.productOptionId(otherProductOptionId)
+			.quantity(1)
+			.build();
 
-        when(productRepository.findDetailById(100L)).thenReturn(Optional.of(product));
+		// when // then
+		assertThatThrownBy(() -> sut.addStock(brandId, productId, request, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.PRODUCT_OPTION_NOT_FOUND);
 
-        assertThatThrownBy(() -> productInventoryService.getProductOptionStocks(2L, 100L))
-            .isInstanceOf(BusinessException.class)
-            .extracting(ex -> ((BusinessException) ex).getErrorCode())
-            .isEqualTo(ErrorCode.FORBIDDEN);
-    }
+		assertThatThrownBy(() -> sut.subtractStock(brandId, productId, request, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.PRODUCT_OPTION_NOT_FOUND);
+	}
 
-    @Test
-    @DisplayName("재고 추가 요청은 InventoryService에 위임된다")
-    void addStock_delegatesToInventoryService() {
-        Product product = prepareProductWithOption();
-        ProductOption productOption = product.getProductOptions().get(0);
+	@Test
+	@DisplayName("다른 브랜드 상품의 재고를 조정하려 하면 예외가 발생한다.")
+	void adjustStockForOtherBrandThrows() {
+		// given
+		Long productId = createProduct(
+			"브랜드 불일치 티셔츠",
+			List.of(optionRequest(BigDecimal.valueOf(10000), 5, List.of(sizeLId, colorBlackId)))
+		);
+		Long productOptionId = findProductOptions(productId).get(0).getProductOptionId();
+		Brand otherBrand = saveBrandWithMember(userId);
+		StockAdjustmentRequest request = StockAdjustmentRequest.builder()
+			.productOptionId(productOptionId)
+			.quantity(1)
+			.build();
 
-        Inventory updatedInventory = Inventory.builder()
-            .stockQuantity(new StockQuantity(13))
-            .build();
+		// when // then
+		assertThatThrownBy(() -> sut.addStock(otherBrand.getBrandId(), productId, request, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+	}
 
-        when(productOptionRepository.findByIdWithProductAndInventory(200L)).thenReturn(Optional.of(productOption));
-        when(inventoryService.addStock(200L, 3)).thenReturn(updatedInventory);
+	@Test
+	@DisplayName("재고를 차감하면 수량이 감소한다.")
+	void subtractStockDecreasesQuantity() {
+		// given
+		Long productId = createProduct(
+			"재고 차감 티셔츠",
+			List.of(optionRequest(BigDecimal.valueOf(10000), 5, List.of(sizeLId, colorBlackId)))
+		);
+		Long productOptionId = findProductOptions(productId).get(0).getProductOptionId();
+		StockAdjustmentRequest request = StockAdjustmentRequest.builder()
+			.productOptionId(productOptionId)
+			.quantity(2)
+			.build();
 
-        StockAdjustmentRequest request = StockAdjustmentRequest.builder()
-            .productOptionId(200L)
-            .quantity(3)
-            .build();
+		// when
+		var response = sut.subtractStock(brandId, productId, request, userId);
 
-        ProductOptionStockResponse response = productInventoryService.addStock(1L, 100L, request);
+		// then
+		assertThat(response.getStockQuantity()).isEqualTo(3);
+		assertThat(response.getHasStock()).isTrue();
+	}
 
-        verify(inventoryService, times(1)).addStock(200L, 3);
-        assertThat(response.getStockQuantity()).isEqualTo(13);
-        assertThat(response.getProductOptionId()).isEqualTo(200L);
-    }
+	@Test
+	@DisplayName("재고보다 많이 차감하면 BusinessException이 발생한다.")
+	void subtractStockWithInsufficientQuantityThrows() {
+		// given
+		Long productId = createProduct(
+			"재고 부족 티셔츠",
+			List.of(optionRequest(BigDecimal.valueOf(10000), 1, List.of(sizeLId, colorBlackId)))
+		);
+		Long productOptionId = findProductOptions(productId).get(0).getProductOptionId();
+		StockAdjustmentRequest request = StockAdjustmentRequest.builder()
+			.productOptionId(productOptionId)
+			.quantity(5)
+			.build();
 
-    @Test
-    @DisplayName("재고 차감 요청은 InventoryService에 위임된다")
-    void subtractStock_delegatesToInventoryService() {
-        Product product = prepareProductWithOption();
-        ProductOption productOption = product.getProductOptions().get(0);
+		// when // then
+		assertThatThrownBy(() -> sut.subtractStock(brandId, productId, request, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.INSUFFICIENT_STOCK);
+	}
 
-        Inventory updatedInventory = Inventory.builder()
-            .stockQuantity(new StockQuantity(8))
-            .build();
+	@ParameterizedTest
+	@MethodSource("invalidQuantityProvider")
+	@DisplayName("유효하지 않은 수량으로 재고를 조정하려 하면 예외가 발생한다.")
+	void adjustStockWithInvalidQuantityThrows(Integer invalidQuantity, ErrorCode expectedErrorCode) {
+		// given
+		Long productId = createProduct(
+			"유효하지 않은 수량 티셔츠",
+			List.of(optionRequest(BigDecimal.valueOf(10000), 5, List.of(sizeLId, colorBlackId)))
+		);
+		Long productOptionId = findProductOptions(productId).get(0).getProductOptionId();
+		StockAdjustmentRequest request = StockAdjustmentRequest.builder()
+			.productOptionId(productOptionId)
+			.quantity(invalidQuantity)
+			.build();
 
-        when(productOptionRepository.findByIdWithProductAndInventory(200L)).thenReturn(Optional.of(productOption));
-        when(inventoryService.subtractStock(200L, 2)).thenReturn(updatedInventory);
+		// when // then
+		assertThatThrownBy(() -> sut.addStock(brandId, productId, request, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(expectedErrorCode);
+	}
 
-        StockAdjustmentRequest request = StockAdjustmentRequest.builder()
-            .productOptionId(200L)
-            .quantity(2)
-            .build();
+	static Stream<Arguments> invalidQuantityProvider() {
+		return Stream.of(
+			Arguments.of(null, ErrorCode.INVALID_INVENTORY_UPDATE_VALUE),
+			Arguments.of(0, ErrorCode.INVALID_INVENTORY_UPDATE_VALUE),
+			Arguments.of(-1, ErrorCode.INVALID_INVENTORY_UPDATE_VALUE)
+		);
+	}
 
-        ProductOptionStockResponse response = productInventoryService.subtractStock(1L, 100L, request);
+	@Test
+	@DisplayName("상품이 null 일때 브랜드의 상품의 옵션을 로드하려 하면 예외가 발생한다.")
+	void loadProductOptionForBrandWithNullProductThrows() {
+		// given
+		Long nonExistentProductId = 9999L;
+		StockAdjustmentRequest request = StockAdjustmentRequest.builder()
+			.productOptionId(1L)
+			.quantity(1)
+			.build();
 
-        verify(inventoryService, times(1)).subtractStock(200L, 2);
-        assertThat(response.getStockQuantity()).isEqualTo(8);
-    }
+		// when // then
+		assertThatThrownBy(() -> sut.addStock(brandId, nonExistentProductId, request, userId))
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+	}
 
-    @Test
-    @DisplayName("재고 조정 시 다른 브랜드가 접근하면 예외가 발생한다")
-    void adjustStock_brandMismatch_throwsForbidden() {
-        Product product = prepareProductWithOption();
-        ProductOption productOption = product.getProductOptions().get(0);
+	// ==== helper methods ==== //
+	private Long createProduct(String name, List<ProductCreateRequest.OptionCreateRequest> options) {
+		ProductCreateRequest request = ProductCreateRequest.builder()
+			.productName(name)
+			.productInfo("상품 정보")
+			.productGenderType(ProductGenderType.ALL)
+			.categoryPath(categoryPath)
+			.isAvailable(true)
+			.images(List.of(ProductCreateRequest.ImageCreateRequest.builder()
+				.imageUrl("http://example.com/thumb.jpg")
+				.isThumbnail(true)
+				.build()))
+			.options(options)
+			.build();
 
-        when(productOptionRepository.findByIdWithProductAndInventory(200L)).thenReturn(Optional.of(productOption));
+		return productCommandService.createProduct(request, brandId, userId);
+	}
 
-        StockAdjustmentRequest request = StockAdjustmentRequest.builder()
-            .productOptionId(200L)
-            .quantity(1)
-            .build();
+	private ProductCreateRequest.OptionCreateRequest optionRequest(BigDecimal price, int stock, List<Long> optionValueIds) {
+		return ProductCreateRequest.OptionCreateRequest.builder()
+			.productPrice(price)
+			.stockQuantity(stock)
+			.optionValueIds(optionValueIds)
+			.build();
+	}
 
-        assertThatThrownBy(() -> productInventoryService.addStock(999L, 100L, request))
-            .isInstanceOf(BusinessException.class)
-            .extracting(ex -> ((BusinessException) ex).getErrorCode())
-            .isEqualTo(ErrorCode.FORBIDDEN);
+	private List<ProductOption> findProductOptions(Long productId) {
+		Product product = productRepository.findById(productId).orElseThrow();
+		return productOptionRepository.findAllByProduct(product);
+	}
 
-        assertThatThrownBy(() -> productInventoryService.subtractStock(999L, 100L, request))
-            .isInstanceOf(BusinessException.class)
-            .extracting(ex -> ((BusinessException) ex).getErrorCode())
-            .isEqualTo(ErrorCode.FORBIDDEN);
-    }
+	private Brand saveBrandWithMember(Long userId) {
+		Brand brand = Brand.create("브랜드", "BRAND", BigDecimal.ZERO);
+		brand.addMember(BrandMember.create(userId));
+		return brandRepository.save(brand);
+	}
 
-    @Test
-    @DisplayName("상품 판매 가능 상태가 브랜드 권한 검증 후 변경된다")
-    void updateProductAvailability_updatesFlag() {
-        Brand brand = Brand.builder()
-            .brandId(1L)
-            .nameKo("브랜드")
-            .nameEn("BRAND")
-            .status(BrandStatus.ACTIVE)
-            .commissionRate(BigDecimal.TEN)
-            .build();
+	private Category saveCategoryPath(String parentName, String childName) {
+		Category parent = categoryRepository.save(Category.create(parentName, null, null));
+		return categoryRepository.save(Category.create(childName, parent, null));
+	}
 
-        Product product = Product.builder()
-            .brand(brand)
-            .productName("니트")
-            .productInfo("상세")
-            .productGenderType(ProductGenderType.ALL)
-            .brandName("브랜드")
-            .categoryPath("상의/니트")
-            .isAvailable(true)
-            .build();
-        ReflectionTestUtils.setField(product, "productId", 100L);
-
-        when(productRepository.findDetailById(100L)).thenReturn(Optional.of(product));
-
-        ProductAvailabilityRequest request = ProductAvailabilityRequest.builder()
-            .isAvailable(false)
-            .build();
-
-        com.mudosa.musinsa.product.application.dto.ProductAvailabilityResponse response =
-            productInventoryService.updateProductAvailability(1L, 100L, request);
-
-        assertThat(product.getIsAvailable()).isFalse();
-        assertThat(response.getProductId()).isEqualTo(100L);
-        assertThat(response.getIsAvailable()).isFalse();
-    }
-
-    @Test
-    @DisplayName("판매 가능 상태 변경 시 브랜드가 다르면 예외가 발생한다")
-    void updateProductAvailability_brandMismatch_throwsForbidden() {
-        Product product = prepareProductWithOption();
-        ReflectionTestUtils.setField(product.getBrand(), "brandId", 1L);
-
-        when(productRepository.findDetailById(100L)).thenReturn(Optional.of(product));
-
-        ProductAvailabilityRequest request = ProductAvailabilityRequest.builder()
-            .isAvailable(false)
-            .build();
-
-        assertThatThrownBy(() -> productInventoryService.updateProductAvailability(2L, 100L, request))
-            .isInstanceOf(BusinessException.class)
-            .extracting(ex -> ((BusinessException) ex).getErrorCode())
-            .isEqualTo(ErrorCode.FORBIDDEN);
-    }
-
-    @Test
-    @DisplayName("동일한 판매 상태로 변경을 요청하면 예외가 발생한다")
-    void updateProductAvailability_noChange_throws() {
-        Product product = prepareProductWithOption();
-        ReflectionTestUtils.setField(product.getBrand(), "brandId", 1L);
-
-        when(productRepository.findDetailById(100L)).thenReturn(Optional.of(product));
-
-        ProductAvailabilityRequest request = ProductAvailabilityRequest.builder()
-            .isAvailable(true)
-            .build();
-
-        assertThatThrownBy(() -> productInventoryService.updateProductAvailability(1L, 100L, request))
-            .isInstanceOf(BusinessException.class)
-            .extracting(ex -> ((BusinessException) ex).getErrorCode())
-            .isEqualTo(ErrorCode.VALIDATION_ERROR);
-    }
-
-    private Product prepareProductWithOption() {
-        Brand brand = Brand.builder()
-            .brandId(1L)
-            .nameKo("브랜드")
-            .nameEn("BRAND")
-            .status(BrandStatus.ACTIVE)
-            .commissionRate(BigDecimal.TEN)
-            .build();
-
-        Product product = Product.builder()
-            .brand(brand)
-            .productName("패딩")
-            .productInfo("설명")
-            .productGenderType(ProductGenderType.ALL)
-            .brandName("브랜드")
-            .categoryPath("아우터/패딩")
-            .isAvailable(true)
-            .build();
-        ReflectionTestUtils.setField(product, "productId", 100L);
-
-        Inventory inventory = Inventory.builder()
-            .stockQuantity(new StockQuantity(10))
-            .build();
-
-        ProductOption option = ProductOption.builder()
-            .product(product)
-            .productPrice(new Money(new BigDecimal("29900")))
-            .inventory(inventory)
-            .build();
-        ReflectionTestUtils.setField(option, "productOptionId", 200L);
-
-        product.addProductOption(option);
-        return product;
-    }
+	private OptionValue saveOptionValue(String optionName, String optionValue) {
+		return optionValueRepository.save(OptionValue.create(optionName, optionValue));
+	}
 }

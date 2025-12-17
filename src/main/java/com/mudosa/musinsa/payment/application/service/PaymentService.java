@@ -3,228 +3,109 @@ package com.mudosa.musinsa.payment.application.service;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.OrderService;
-import com.mudosa.musinsa.order.domain.repository.OrderRepository;
 import com.mudosa.musinsa.payment.application.dto.*;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelRequest;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentCancelResponseDto;
+import com.mudosa.musinsa.payment.application.dto.request.PaymentConfirmRequest;
+import com.mudosa.musinsa.payment.application.dto.response.PaymentCancelResponse;
+import com.mudosa.musinsa.payment.application.dto.response.PaymentConfirmResponse;
 import com.mudosa.musinsa.payment.domain.model.Payment;
+import com.mudosa.musinsa.payment.domain.model.PaymentEventType;
+import com.mudosa.musinsa.payment.domain.model.PgProvider;
 import com.mudosa.musinsa.payment.domain.repository.PaymentRepository;
 import com.mudosa.musinsa.payment.application.event.PaymentApprovedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
+import static com.mudosa.musinsa.exception.ErrorCode.PAYMENT_APPROVAL_FAILED;
+import static com.mudosa.musinsa.exception.ErrorCode.PAYMENT_TIMEOUT;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
 
-    private final PaymentRepository paymentRepository;
-    private final OrderRepository orderRepository;
-    private final OrderService orderService;
     private final PaymentProcessor paymentProcessor;
-    private final ApplicationEventPublisher eventPublisher;
+    private final PaymentConfirmService paymentConfirmService;
 
-    public PaymentConfirmResponse confirmPaymentAndCompleteOrder(PaymentConfirmRequest request) {
-        log.info("결제 승인 시작, orderId: {}, amount: {}",
-           request.getOrderNo(), request.getAmount());
-
+    public PaymentConfirmResponse confirmPaymentAndCompleteOrder(PaymentConfirmRequest request, Long userId) {
         Long paymentId = null;
         Long orderId = null;
+        boolean pgApproved = false;
 
         try{
-            /* 1. 결제 생성 */
-            PaymentCreationResult creationResult = createPaymentTransaction(request);
-
-            if (creationResult.hasInsufficientStock()) {
-                log.warn("재고 부족으로 결제 생성 실패");
-
-                return PaymentConfirmResponse.insufficientStock(
-                        creationResult.getInsufficientStockItems()
-                );
-            }
+            //TX1: 결제 생성
+            PaymentCreationResult creationResult = paymentConfirmService.createPaymentTransaction(request.toPaymentCreateRequest(), userId);
 
             paymentId = creationResult.getPaymentId();
             orderId = creationResult.getOrderId();
 
-            /* 2. 주문 완료 처리 */
-            orderService.completeOrder(orderId);
-
-            /* 3. PG 승인 요청 */
+            //트랜잭션 아님: PG 승인 요청
             PaymentResponseDto pgResponse = paymentProcessor.processPayment(request);
+            pgApproved = true;
 
-            /* 4. 결제 승인 처리 */
-            approvePayment(paymentId, request.getUserId(), pgResponse);
+            //TX2: 결제 승인
+            paymentConfirmService.approvePayment(paymentId, userId, pgResponse, orderId);
 
-            // 성공 시 orderNo만 반환
-            return PaymentConfirmResponse.success(request.getOrderNo());
+            return PaymentConfirmResponse.builder()
+                    .orderNo(request.getOrderNo())
+                    .build();
 
         }catch(BusinessException e){
-            log.error("결제 프로세스 실패 - BusinessException: {}", e.getMessage());
-            handleBusinessException(paymentId, orderId, e, request.getUserId());
-            throw e;
+            //결제 생성 전 오류 -> 롤백이 되기 때문에 보상할게 없음
+            if(paymentId == null){
+                if(e.getErrorCode() == ErrorCode.INSUFFICIENT_STOCK){
+                    throw e;
+                }
 
-        }catch (Exception e){
-            log.error("✗ 결제 프로세스 실패 - 예상치 못한 오류", e);
-            handleUnexpectedException(paymentId, orderId, e, request.getUserId());
-            throw new BusinessException(ErrorCode.PAYMENT_APPROVAL_FAILED,
-                    "결제 처리 중 시스템 오류가 발생했습니다");
-        }
-    }
-
-
-    /* 결제 생성 */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public PaymentCreationResult createPaymentTransaction(PaymentConfirmRequest request) {
-        log.info("→ TX1 시작: 결제 생성 트랜잭션");
-
-        // 1. 주문 검증 및 계산
-        OrderValidationResult validationResult = orderService.validateAndPrepareOrder(
-                request.getOrderNo(),
-                request.getUserId(),
-                BigDecimal.valueOf(request.getAmount()),
-                request.getCouponId()
-        );
-
-        if (validationResult.hasInsufficientStock()) {
-            log.warn("재고 부족 - 결제 생성 중단");
-
-            return PaymentCreationResult.insufficientStock(
-                    validationResult.getOrderId(),
-                    validationResult.getInsufficientStockItems()
-            );
-        }
-
-        log.info("주문 검증 완료 - orderId: {}, finalAmount: {}, discount: {}",
-                validationResult.getOrderId(),
-                validationResult.getFinalAmount(),
-                validationResult.getDiscountAmount());
-
-
-        // 3. Payment 엔티티 생성
-        Payment payment = Payment.create(
-                validationResult.getOrderId(),
-                validationResult.getFinalAmount(),
-                request.getPgProvider(),
-                request.getUserId()
-        );
-
-        payment = paymentRepository.save(payment);
-
-        log.info("← TX1 커밋: 결제 생성 완료 - paymentId={}", payment.getId());
-
-        return PaymentCreationResult.success(
-                payment.getId(),
-                validationResult.getOrderId(),
-                validationResult.getUserId()
-        );
-    }
-
-
-    /* 결제 실패 처리 */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void failPayment(Long paymentId, String errorMessage, Long userId) {
-        log.warn("결제 실패 처리 - paymentId={}", paymentId);
-
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
-
-        payment.fail(errorMessage, userId);
-        paymentRepository.save(payment);
-
-        log.warn("결제 실패 처리 완료");
-    }
-
-    /* PG사 결제 승인 후 결제 상태 변경 및 Settlement 생성 */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void approvePayment(Long paymentId, Long userId, PaymentResponseDto paymentResponseDto) {
-        log.info("→ TX3 시작: 결제 승인 트랜잭션 - paymentId={}", paymentId);
-
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
-
-        String pgTransactionId = paymentResponseDto.getPaymentKey();
-
-        payment.approve(pgTransactionId, userId, paymentResponseDto.getApprovedAt(), paymentResponseDto.getMethod());
-        paymentRepository.save(payment);
-
-        log.info("← TX3 커밋: 결제 승인 완료 - paymentId={}, pgTxId={}",
-                paymentId, pgTransactionId);
-
-        /* 정산 이벤트 발행 */
-        eventPublisher.publishEvent(
-                new PaymentApprovedEvent(paymentId, pgTransactionId, userId)
-        );
-    }
-
-    /* 결제 실패 처리 */
-    private void handleBusinessException(
-            Long paymentId,
-            Long orderId,
-            BusinessException e,
-            Long userId) {
-
-        log.error("BusinessException 처리 시작 - paymentId: {}, orderId: {}, error: {}",
-                paymentId, orderId, e.getErrorCode());
-
-        // 결제 생성 전 실패임 => 보상 트랜잭션 불필요
-        if (paymentId == null) {
-            log.info("결제 생성 단계 실패 - 보상 트랜잭션 불필요");
-            return;
-        }
-
-        // 주문 완료 단계에서 실패인 경우
-        if (e.getErrorCode() == ErrorCode.ORDER_ALREADY_COMPLETED) {
-            log.warn("주문 완료 실패 - 중복 처리");
-            failPayment(paymentId, e.getMessage(), userId);
-            return;
-        }
-
-        // PG 승인 단계에서 실패 => 주문 롤백 처리 해야함
-        if (orderId != null && isOrderCompleted(orderId)) {
-            log.warn("PG 승인 실패 - 주문 롤백 시작");
-            try {
-                orderService.rollbackOrder(orderId);
-                failPayment(paymentId, e.getMessage(), userId);
-                log.info("보상 트랜잭션 성공");
-            } catch (Exception rollbackError) {
-                log.error("보상 트랜잭션 실패 - 수동 처리 필요", rollbackError);
-
+                throw new BusinessException(ErrorCode.PAYMENT_FAILED_BEFORE_PG_CONFIRM, e.getMessage());
             }
-        } else {
-            // 주문 완료 전 실패
-            failPayment(paymentId, e.getMessage(), userId);
+
+            //PG사에 의한 오류 처리
+            if(!pgApproved && isPgRelatedError(e.getErrorCode())){
+                paymentConfirmService.failPayment(paymentId, e.getMessage(), userId, orderId);
+                throw e;
+            }
+
+            if(pgApproved){
+                paymentConfirmService.manualPaymentCheck(paymentId, userId);
+                throw new BusinessException(
+                        ErrorCode.PAYMENT_SYSTEM_ERROR,
+                        "결제는 승인되었으나 후속 처리 중 오류가 발생했습니다. 고객센터로 문의해주세요."
+                );
+            }
+
+            throw e;
         }
     }
 
-    /* 예상하지 못한 결제 실패의 경우 */
-    private void handleUnexpectedException(
-            Long paymentId,
-            Long orderId,
-            Exception e,
-            Long userId) {
-
-        log.error("예상치 못한 오류 처리 시작", e);
-
-        if (paymentId == null) {
-            return;
-        }
-
-        if (orderId != null && isOrderCompleted(orderId)) {
-            orderService.rollbackOrder(orderId);
-        }
-        failPayment(paymentId, "시스템 오류: " + e.getMessage(), userId);
-    }
-    
-    /* 주문 완료 여부 확인 */
-    private boolean isOrderCompleted(Long orderId) {
-        return orderService.isOrderCompleted(orderId);
+    private boolean isPgRelatedError(ErrorCode errorCode) {
+        return errorCode == PAYMENT_APPROVAL_FAILED
+                || errorCode == PAYMENT_TIMEOUT;
     }
 
+    public PaymentCancelResponse cancelPayment(PaymentCancelRequest request, Long userId, LocalDateTime cancelledAt) {
+        try{
+            //TX1: 결제 상태 변경, 주문 관련 원복
+            paymentConfirmService.cancelPayment(request.getPaymentTransactionId(), request.getCancelReason(), userId, cancelledAt);
 
+            //트랜젹션 아님: 외부 PG사 호출
+            PaymentCancelResponseDto pgResponse =
+                    paymentProcessor.processCancelPayment(request);
 
+            return new PaymentCancelResponse(pgResponse);
+        }catch (BusinessException e){
+            paymentConfirmService.failCancel(request.getPaymentTransactionId(), e.getMessage(), userId);
+            throw e;
+        }
+
+    }
 }

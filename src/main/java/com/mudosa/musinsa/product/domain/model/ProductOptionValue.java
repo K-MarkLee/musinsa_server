@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.util.Objects;
 
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
+
 // 상품 옵션과 옵션 값을 매핑해 유니크한 조합을 보장하는 엔티티이다.
 // OptionValue를 통해 OptionName에 접근하므로 조인 구조가 단순해진다.
 @Entity
@@ -65,17 +68,19 @@ public class ProductOptionValue {
         }
     }
 
-    // 옵션과 옵션 값을 연결하며 식별자를 초기화한다.
-    @Builder
-    public ProductOptionValue(ProductOption productOption, OptionValue optionValue) {
-        // 필수 파라미터를 확인해 무결성을 보장한다.
+    // 외부 노출 생성 메서드 + 필수 값 검증
+    public static ProductOptionValue create(ProductOption productOption, OptionValue optionValue) {
         if (productOption == null) {
-            throw new IllegalArgumentException("상품 옵션은 필수입니다.");
+            throw new BusinessException(ErrorCode.PRODUCT_OPTION_REQUIRED);
         }
         if (optionValue == null) {
-            throw new IllegalArgumentException("옵션 값은 필수입니다.");
+            throw new BusinessException(ErrorCode.OPTION_VALUE_REQUIRED);
         }
-        
+        return new ProductOptionValue(productOption, optionValue);
+    }
+
+    @Builder
+    private ProductOptionValue(ProductOption productOption, OptionValue optionValue) {
         this.productOption = productOption;
         this.optionValue = optionValue;
         refreshIdentifiers();

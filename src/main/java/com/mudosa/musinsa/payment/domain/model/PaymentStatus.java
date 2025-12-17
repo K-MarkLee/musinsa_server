@@ -9,41 +9,99 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @RequiredArgsConstructor
 public enum PaymentStatus {
+    PENDING("결제 대기") {
+        @Override
+        public PaymentStatus approve() {
+            return APPROVED;
+        }
 
-    PENDING("결제 대기"),
+        @Override
+        public PaymentStatus fail() {
+            return FAILED;
+        }
 
-    APPROVED("결제 승인"),
+        @Override
+        public PaymentStatus cancel() {
+            throw invalidTransition("취소");
+        }
+    },
 
-    FAILED("결제 실패"),
+    APPROVED("결제 승인") {
+        @Override
+        public PaymentStatus approve() {
+            throw invalidTransition("승인");
+        }
 
-    CANCELLED("결제 취소"),
+        @Override
+        public PaymentStatus fail() {
+            throw invalidTransition("실패");
+        }
 
-    PARTIAL_CANCELLED("부분 취소");
+        @Override
+        public PaymentStatus cancel() {
+            return CANCELLED;
+        }
+
+    },
+
+    FAILED("결제 실패") {
+        @Override
+        public PaymentStatus approve() {
+            throw invalidTransition("승인");
+        }
+
+        @Override
+        public PaymentStatus fail() {
+            throw invalidTransition("실패");
+        }
+
+        @Override
+        public PaymentStatus cancel() {
+            throw invalidTransition("취소");
+        }
+
+        @Override
+        public PaymentStatus rollback() {
+            return PENDING;
+        }
+    },
+
+    CANCELLED("결제 취소") {
+        @Override
+        public PaymentStatus approve() {
+            throw invalidTransition("승인");
+        }
+
+        @Override
+        public PaymentStatus fail() {
+            throw invalidTransition("실패");
+        }
+
+        @Override
+        public PaymentStatus cancel() {
+            throw invalidTransition("취소");
+        }
+
+        @Override
+        public PaymentStatus rollback() {
+            return APPROVED;
+        }
+    };
 
     private final String description;
 
-    public boolean canTransitionTo(PaymentStatus nextStatus) {
-        return switch (this) {
-            case PENDING -> nextStatus == APPROVED || nextStatus == FAILED;
-            case APPROVED -> nextStatus == CANCELLED || nextStatus == PARTIAL_CANCELLED;
-            case FAILED -> nextStatus == PENDING;  // 재시도 가능
-            case CANCELLED, PARTIAL_CANCELLED -> false;
-        };
+    public abstract PaymentStatus approve();
+    public abstract PaymentStatus fail();
+    public abstract PaymentStatus cancel();
+
+    public PaymentStatus rollback() {
+        throw invalidTransition("재시도");
     }
 
-    public PaymentStatus transitionTo(PaymentStatus nextStatus) {
-        if (!canTransitionTo(nextStatus)) {
-            throw new BusinessException(
-                    ErrorCode.INVALID_PAYMENT_STATUS,
-                    String.format("%s → %s 전이는 허용되지 않습니다", this, nextStatus)
-            );
-        }
-        return nextStatus;
+    protected BusinessException invalidTransition(String action) {
+        return new BusinessException(
+                ErrorCode.INVALID_PAYMENT_STATUS,
+                String.format("%s 상태에서는 %s할 수 없습니다", this.description, action)
+        );
     }
-
-    public boolean isPending() {
-
-        return this == PENDING;
-    }
-
 }

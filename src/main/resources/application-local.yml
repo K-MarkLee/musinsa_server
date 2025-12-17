@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+
+
+tosspayments:
+  secret-key: ${TOSS_SECRET_KEY:test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6}
+  client-key: ${TOSS_CLIENT_KEY:test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm}
+  confirm_url: https://api.tosspayments.com/v1/payments/confirm
+  base_cancel_url: https://api.tosspayments.com/v1/payments
+
+fcm:
+  service-acount-file: key/fdbdproject.json
+  topic-name: fdbdMessage
+  project-id: fdbdproject
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info # 필요한 것만 나열하거나 "*"로 전체 노출
+
+logging:
+  level:
+    org:
+      hibernate:
+        sql: debug
+        type.descriptor.sql.BasicBinder: TRACE
+        orm.jdbc.internal.LogicalConnectionImpl: DEBUG
+      springframework.orm.jpa: DEBUG
+      springframework.transaction: DEBUG
+      springframework.web.client.RestTemplate: DEBUG
+      com.mudosa.musinsa.common.client: DEBUG

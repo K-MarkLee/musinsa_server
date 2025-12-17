@@ -1,21 +1,19 @@
 package com.mudosa.musinsa.order.controller;
 
 import com.mudosa.musinsa.common.dto.ApiResponse;
-import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.order.application.OrderService;
-import com.mudosa.musinsa.order.application.dto.OrderCreateRequest;
-import com.mudosa.musinsa.order.application.dto.OrderCreateResponse;
-import com.mudosa.musinsa.order.application.dto.OrderDetailResponse;
-import com.mudosa.musinsa.order.application.dto.PendingOrderResponse;
+import com.mudosa.musinsa.order.application.dto.*;
+import com.mudosa.musinsa.order.application.dto.request.OrderCreateRequest;
+import com.mudosa.musinsa.order.application.dto.response.OrderCreateResponse;
+import com.mudosa.musinsa.order.application.dto.response.OrderDetailResponse;
+import com.mudosa.musinsa.order.application.dto.response.OrderListResponse;
 import com.mudosa.musinsa.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,68 +30,66 @@ public class OrderController {
             description = "주문을 생성합니다"
     )
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody OrderCreateRequest request)
     {
         Long userId = userDetails.getUserId();
 
-        log.info("[Order] 주문 생성 요청, userId: {}", userId);
-
         OrderCreateResponse response = orderService.createPendingOrder(request, userId);
 
-        if (response.hasInsufficientStock()) {
-            log.warn("[Order] 재고 부족으로 주문 생성 실패, userId: {}, 부족한 상품 수: {}", 
-                    userId, response.getInsufficientStockItems().size());
-            
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(
-                            ErrorCode.ORDER_INSUFFICIENT_STOCK.getCode(),
-                            ErrorCode.ORDER_INSUFFICIENT_STOCK.getMessage(),
-                            response
-                    ));
-        }
-
-        log.info("[Order] 주문 생성 완료, orderId: {}, orderNo: {}", 
-                response.getOrderId(), response.getOrderNo());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(
-            summary = "주문 조회",
+            summary = "주문서 조회",
             description = "생성한 주문을 조회합니다."
     )
-    @GetMapping("/pending")
-    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{orderNo}/pending")
     public ResponseEntity<ApiResponse<PendingOrderResponse>> fetchOrder(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam(value="orderNo") String orderNo
+            @PathVariable String orderNo
     ){
-        Long userId = userDetails.getUserId();
-        
-        log.info("[Order] 주문 조회 요청, userId: {}, orderNo: {}", userId, orderNo);
-
         PendingOrderResponse response = orderService.fetchPendingOrder(orderNo);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(
+            summary = "주문 취소",
+            description = "주문을 취소 합니다."
+    )
+    @PutMapping("/{orderNo}/cancel")
+    public ResponseEntity<ApiResponse<Void>> cancelOrder(
+            @PathVariable String orderNo
+    ){
+        orderService.cancelPendingOrder(orderNo);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @Operation(
+            summary = "주문 목록 조회",
+            description = "주문 목록을 조회합니다."
+    )
+    @GetMapping
+    public ResponseEntity<ApiResponse<OrderListResponse>> fetchOrderList(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ){
+        Long userId = userDetails.getUserId();
+        OrderListResponse response = orderService.fetchOrderList(userId);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(
             summary = "주문 상세 조회",
-            description = "주문 상세 정보를 조회합니다 (PENDING, COMPLETED 모두 가능)"
+            description = "주문의 상세 내역을 조회합니다."
     )
     @GetMapping("/{orderNo}")
     public ResponseEntity<ApiResponse<OrderDetailResponse>> fetchOrderDetail(
             @PathVariable String orderNo
     ){
-        log.info("[Order] 주문 상세 조회 요청, orderNo: {}", orderNo);
-
         OrderDetailResponse response = orderService.fetchOrderDetail(orderNo);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
-
-    /* 주문 목록 조회 */
 }

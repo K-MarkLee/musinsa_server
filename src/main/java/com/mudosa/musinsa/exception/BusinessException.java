@@ -5,20 +5,23 @@ import lombok.Getter;
 @Getter
 public class BusinessException extends RuntimeException {
   private final ErrorCode errorCode;
+  private final Object data;
 
   public BusinessException(ErrorCode errorCode) {
-    super(errorCode.getMessage());
-    this.errorCode = errorCode;
+    this(errorCode, null, null);
   }
 
-  /* 에러 메시지 커스텀 버전 추가 */
   public BusinessException(ErrorCode errorCode, String customMessage) {
-    super(customMessage);
-    this.errorCode = errorCode;
+    this(errorCode, customMessage, null);
   }
 
-  public BusinessException(ErrorCode errorCode, Throwable cause) {
-    super(errorCode.getMessage(), cause);
+  public BusinessException(ErrorCode errorCode, Object data) {
+    this(errorCode, null, data);
+  }
+
+  public BusinessException(ErrorCode errorCode, String customMessage, Object data) {
+    super(customMessage != null ? customMessage : errorCode.getMessage());
     this.errorCode = errorCode;
+    this.data = data;
   }
 }

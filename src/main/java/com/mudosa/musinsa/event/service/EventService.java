@@ -9,10 +9,12 @@ import com.mudosa.musinsa.event.repository.EventImageRepository;
 import com.mudosa.musinsa.event.repository.EventOptionRepository;
 import com.mudosa.musinsa.event.repository.EventRepository;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
+import com.mudosa.musinsa.event.model.EventStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,13 +34,14 @@ public class EventService {
 
     /*
     * 이벤트 타입에 맞는 이벤트 목록을 반환하는 메서드
-    *
+    * ✅ N+1 문제 해결: Fetch Join을 사용하여 한 번의 쿼리로 모든 연관 데이터 로드
     *  */
     public List<EventListResDto> getEventListByType(Event.EventType eventType) {
 
         LocalDateTime now = LocalDateTime.now();
 
-        List<Event> events = eventRepository.findAllByEventType(eventType); // 레포지토리에 메서드 "findAllByEventType" 구현필요,이벤트 목록을 db에서 가져오기
+        // ✅ Fetch Join 사용 (201회 쿼리 → 1회 쿼리)
+        List<Event> events = eventRepository.findAllByEventTypeWithRelations(eventType);
         return events.stream()
                 .map(event -> mapEventToDto(event,now))
                 .collect(Collectors.toList());//이벤트 상태 계산하고 DTO로 변환, 메서드 참조는 기존에 정의된 메서드를 직접 참조
@@ -56,61 +59,41 @@ public class EventService {
     }
 
     // 이벤트 객체를 DTO 로 변환한다.
+    // ✅ N+1 문제 해결: 이미 Fetch Join으로 로드된 데이터를 사용 (추가 쿼리 없음)
+
     private EventListResDto mapEventToDto(Event event, LocalDateTime currentTime) {
-        Event.EventStatus status = calculateEventStatus(event, currentTime);
+        EventStatus status = EventStatus.calculateStatus(event, currentTime);
 
-        // 1) 옵션 엔티티 조회
-        List<EventOption> options = eventOptionRepository.findByEventId(event.getId()); // 레포지토리에 구현 필요 + List로 객체반환
-
-        // 2) 이벤트 썸네일 조회
-        String thumbnailUrl = eventImageRepository.findByEventIdAndIsThumbnailTrue(event.getId()) //레포지토리 구현 필요
+        // ✅ 이미 로드된 eventImages에서 썸네일 찾기 (추가 쿼리 없음)
+        String thumbnailUrl = event.getEventImages().stream()
+                .filter(EventImage::getIsThumbnail)
+                .findFirst()
                 .map(EventImage::getImageUrl)
-                .orElse(null);  // 썸네일 이미지가 없으면 null 반환
+                .orElse(null);
 
-        // 3) EventOption -> EventOptionResDto 매핑
-
-        List<EventOptionResDto> optionDtos = options.stream()
-                .map(eo -> {
-                    //필요 시 상품명만 뽑기 ( 구조에 맞게 수정 )
-                    String productName = null;
-                    String optionLabel = null;
-
-                    ProductOption po = eo.getProductOption();
-                    Long productOptionId = null;
-                    Long productId = null;
-
-                    if (po != null) {
-                        productOptionId = po.getProductOptionId();
-                        optionLabel = null; // 추후에 로직 추가 필요,
-
-                        if(po.getProduct() != null) {
-                            productName = po.getProduct().getProductName();
-                            productId = po.getProduct().getProductId();
-
-                        }
-                    }
-
-                    return EventOptionResDto.from(eo, productName, optionLabel, productOptionId, productId);
-
-                })
+        // ✅ 이미 로드된 eventOptions와 productOption, product 사용 (추가 쿼리 없음)
+        List<EventOptionResDto> optionDtos = event.getEventOptions().stream()
+                .map(eo -> new EventOptionResDto(
+                        eo.getId(),                                      // optionId
+                        eo.getProductOption().getProductOptionId(),      // productOptionId
+                        eo.getProductOption().getProduct().getProductName(),  // productName
+                        null,                                            // optionLabel (미사용)
+                        eo.getProductOption().getProductPrice() != null
+                                ? eo.getProductOption().getProductPrice().getAmount()
+                                : null,
+                        eo.getEventPrice(),                              // eventPrice
+                        eo.getEventStock(),                              // eventStock
+                        eo.getProductOption().getProduct().getProductId()     // productId
+                ))
                 .toList();
+
 
         return EventListResDto.from(event, optionDtos, thumbnailUrl, status);
 
     }
 
 
-    //TODO: 이벤트로 단일 책임 원칙 설정
-    // 이벤트 상태 계산 (SOON, OPEN, CLOSED)
-    private Event.EventStatus calculateEventStatus(Event event, LocalDateTime currentTime) {
-        if (currentTime.isBefore(event.getStartedAt())) {
-            return Event.EventStatus.PLANNED;
-        } else if (currentTime.isAfter(event.getEndedAt())) {
-            return Event.EventStatus.ENDED;
-        } else {
-            return Event.EventStatus.OPEN;
-        }
-    }
+
 
 
 }

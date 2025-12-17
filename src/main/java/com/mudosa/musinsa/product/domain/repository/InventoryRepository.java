@@ -8,10 +8,11 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
+
 import java.util.Optional;
 
 @Repository
-public interface InventoryRepository extends JpaRepository<Inventory, Long> {
+public interface InventoryRepository extends JpaRepository<Inventory, Long>{
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select i from ProductOption po join po.inventory i where po.productOptionId = :productOptionId")

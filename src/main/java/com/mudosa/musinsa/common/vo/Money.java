@@ -1,46 +1,38 @@
 package com.mudosa.musinsa.common.vo;
 
 import jakarta.persistence.Embeddable;
-import lombok.AccessLevel;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/**
- * 금액 Value Object
- * - 불변 객체
- * - 도메인 로직 캡슐화
- */
 @Embeddable
 @Getter
 @EqualsAndHashCode
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
 public class Money {
 
-    /**
-     * 소수점 2자리
-     */
     private static final int SCALE = 2;
 
     private static final RoundingMode ROUNDING_MODE = RoundingMode.HALF_UP;
 
     private BigDecimal amount;
 
+    public static final Money ZERO = new Money(0);
+
     public Money(BigDecimal amount) {
         validateAmount(amount);
         this.amount = amount.setScale(SCALE, ROUNDING_MODE);
     }
 
+    public static Money of(BigDecimal amount){return new Money(amount);}
+    public static Money of(Long amount){return new Money(BigDecimal.valueOf(amount));}
+
     public Money(long amount) {
         this(BigDecimal.valueOf(amount));
     }
 
-    public static final Money ZERO = new Money(BigDecimal.ZERO);
-
-    // 연산 메서드 (새 객체 반환 - 불변성)
     public Money add(Money other) {
         return new Money(this.amount.add(other.amount));
     }
@@ -62,7 +54,7 @@ public class Money {
             throw new IllegalArgumentException("0으로 나눌 수 없습니다.");
         }
 
-        BigDecimal result = this.amount.divide(divisor, SCALE + 10, ROUNDING_MODE);
+        BigDecimal result = this.amount.divide(divisor, SCALE, ROUNDING_MODE);
         return new Money(result);
     }
 
@@ -70,21 +62,8 @@ public class Money {
         return divide(BigDecimal.valueOf(divisor));
     }
 
-    // 비교 메서드
-    public boolean isGreaterThan(Money other) {
-        return this.amount.compareTo(other.amount) > 0;
-    }
-
-    public boolean isLessThan(Money other) {
-        return this.amount.compareTo(other.amount) < 0;
-    }
-
     public boolean isLessThanOrEqual(Money other) {
         return this.amount.compareTo(other.amount) <= 0;
-    }
-
-    public boolean isNegative() {
-        return this.amount.compareTo(BigDecimal.ZERO) < 0;
     }
 
     // 검증
@@ -95,10 +74,5 @@ public class Money {
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("금액은 음수일 수 없습니다.");
         }
-    }
-
-    @Override
-    public String toString() {
-        return amount.toString();
     }
 }

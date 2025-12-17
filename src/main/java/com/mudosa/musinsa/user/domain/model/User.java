@@ -3,15 +3,14 @@ package com.mudosa.musinsa.user.domain.model;
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 사용자 애그리거트 루트
- */
+
 @Entity
 @Table(name = "`user`")
 @Getter
@@ -47,10 +46,18 @@ public class User extends BaseEntity {
     
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
-    
-    // OAuth 정보 (같은 애그리거트)
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OAuth> oauths = new ArrayList<>();
+
+    @Builder
+    private User(String userName, String password, String userEmail, String contactNumber, UserRole role, String currentAddress, String avatarUrl, Boolean isActive) {
+        this.userName = userName;
+        this.password = password;
+        this.userEmail = userEmail;
+        this.contactNumber = contactNumber;
+        this.role = role;
+        this.currentAddress = currentAddress;
+        this.avatarUrl = avatarUrl;
+        this.isActive = isActive;
+    }
 
     public static User create(
         String userName,
@@ -61,25 +68,15 @@ public class User extends BaseEntity {
         String contactNumber,
         String currentAddress
     ) {
-        User user = new User();
-        user.userName = userName;
-        user.password = password;
-        user.userEmail = email;
-        user.role = role;
-        user.isActive = true;
-        user.avatarUrl = avatarUrl;
-        user.contactNumber = contactNumber;
-        user.currentAddress = currentAddress;
-        return user;
+       return User.builder()
+               .avatarUrl(avatarUrl)
+               .currentAddress(currentAddress)
+               .contactNumber(contactNumber)
+               .password(password)
+               .userEmail(email)
+               .userName(userName)
+               .role(role)
+               .isActive(true)
+               .build();
     }
-
-    public void addOAuth(OAuth oauth) {
-        this.oauths.add(oauth);
-        oauth.assignUser(this);
-    }
-
-    public void setAvatarUrl(String avatarUrl){
-        this.avatarUrl = avatarUrl;
-    }
-
 }

@@ -4,6 +4,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+generated/
 
 ### STS ###
 .apt_generated
@@ -54,3 +55,9 @@ Thumbs.db
 
 ### Docker ###
 docker-compose.override.yml
+
+### Redis-cache ###
+dump.rdb
+
+# Service Account Keys
+src/main/resources/key/fdbdproject.json

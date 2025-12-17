@@ -1,13 +1,10 @@
 package com.mudosa.musinsa.product.application.dto;
 
-import com.mudosa.musinsa.product.application.ProductService;
+import com.mudosa.musinsa.product.application.dto.ProductSearchCondition.PriceSort;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
-import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,29 +18,27 @@ import java.util.Locale;
 public class ProductSearchRequest {
 
     private String keyword;
-    private List<String> categoryPaths = new ArrayList<>();
+    private List<String> categoryPaths;
     private String gender;
     private Long brandId;
     private String priceSort;
-    @Min(0)
-    private Integer page;
-    @Min(1)
-    private Integer size;
+    private String cursor;
+    private Integer limit;
 
     // 요청 값을 ProductSearchCondition으로 변환한다.
-    public ProductService.ProductSearchCondition toCondition() {
-    ProductGenderType genderType = parseGender();
-        ProductService.ProductSearchCondition.PriceSort sort = parsePriceSort();
-        Pageable pageable = createPageable();
+    public ProductSearchCondition toCondition() {
+        ProductGenderType genderType = parseGender();
+        PriceSort sort = parsePriceSort();
 
-        return ProductService.ProductSearchCondition.builder()
-            .keyword(keyword)
-            .categoryPaths(categoryPaths != null ? categoryPaths : Collections.emptyList())
-            .gender(genderType)
-            .brandId(brandId)
-            .priceSort(sort)
-            .pageable(pageable)
-            .build();
+        return ProductSearchCondition.builder()
+                .keyword(keyword)
+                .categoryPaths(categoryPaths != null ? categoryPaths : Collections.emptyList())
+                .gender(genderType)
+                .brandId(brandId)
+                .priceSort(sort)
+                .cursor(cursor)
+                .limit(limit)
+                .build();
     }
 
     // 문자열 성별 값을 ENUM으로 변환한다.
@@ -59,22 +54,15 @@ public class ProductSearchRequest {
     }
 
     // 문자열 가격 정렬 값을 ENUM으로 변환한다.
-    private ProductService.ProductSearchCondition.PriceSort parsePriceSort() {
+    private PriceSort parsePriceSort() {
         if (priceSort == null || priceSort.isBlank()) {
             return null;
         }
         try {
-            return ProductService.ProductSearchCondition.PriceSort.valueOf(priceSort.trim().toUpperCase(Locale.ROOT));
+            return PriceSort.valueOf(priceSort.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
             return null;
         }
-    }
-
-    // 페이지 번호와 사이즈를 보정해 Pageable을 생성한다.
-    private Pageable createPageable() {
-        int pageNumber = page != null && page >= 0 ? page : 0;
-        int pageSize = size != null && size > 0 ? size : 20;
-        return PageRequest.of(pageNumber, pageSize);
     }
 
     // 카테고리 경로 목록을 defensive copy하여 저장한다.

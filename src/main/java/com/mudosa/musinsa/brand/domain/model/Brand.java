@@ -70,4 +70,8 @@ public class Brand {
     this.brandMembers.add(member);
     member.assignBrand(this);
   }
+
+  public void changeLogoUrl(String logoUrl) {
+    this.logoUrl = logoUrl;
+  }
 }

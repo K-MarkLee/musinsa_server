@@ -29,7 +29,9 @@ public enum PaymentEventType {
 
     VALIDATION_FAILED("결제 정보 검증 실패"),
 
-    TIMEOUT("결제 타임아웃");
+    TIMEOUT("결제 타임아웃"),
+
+    REQUIRES_MANUAL_CHECK("수동 확인 필요");
 
     private final String description;
 

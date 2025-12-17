@@ -1,7 +1,8 @@
 package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
-import com.mudosa.musinsa.event.model.Event;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -30,21 +31,22 @@ public class Image extends BaseEntity {
     @Column(name = "is_thumbnail", nullable = false)
     private Boolean isThumbnail;
     
-    // 이미지를 생성하며 필수 정보를 검증한다.
-    @Builder
-    public Image(Product product, String imageUrl, Boolean isThumbnail) {
-        // 필수 파라미터를 확인해 무결성을 보장한다.
+    // 외부 노출 생성 메서드 + 필수 값 검증
+    public static Image create(Product product,String imageUrl, boolean isThumbnail) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
-            throw new IllegalArgumentException("이미지 URL은 필수입니다.");
+            throw new BusinessException(ErrorCode.URL_REQUIRED);
         }
-
-        
-        this.product = product;
-        this.imageUrl = imageUrl;
-        this.isThumbnail = isThumbnail != null ? isThumbnail : false;
+        return new Image(product, imageUrl, isThumbnail);
     }
 
-    // 상품 애그리거트에서만 호출해 양방향 연관을 설정한다.
+    @Builder
+    private Image(Product product,String imageUrl, boolean isThumbnail) {
+        this.product = product;
+        this.imageUrl = imageUrl;   
+        this.isThumbnail = isThumbnail;
+    }
+
+    // 상품과의 연관관계를 설정한다.
     void setProduct(Product product) {
         this.product = product;
     }

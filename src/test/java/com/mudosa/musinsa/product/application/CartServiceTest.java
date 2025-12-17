@@ -1,289 +1,526 @@
 package com.mudosa.musinsa.product.application;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
+import com.mudosa.musinsa.ServiceConfig;
 import com.mudosa.musinsa.brand.domain.model.Brand;
-import com.mudosa.musinsa.brand.domain.model.BrandStatus;
 import com.mudosa.musinsa.common.vo.Money;
 import com.mudosa.musinsa.exception.BusinessException;
 import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.application.dto.CartItemCreateRequest;
-import com.mudosa.musinsa.product.application.dto.CartItemDetailResponse;
-import com.mudosa.musinsa.product.application.dto.CartItemResponse;
-import com.mudosa.musinsa.product.domain.model.CartItem;
 import com.mudosa.musinsa.product.domain.model.Inventory;
 import com.mudosa.musinsa.product.domain.model.Product;
+import com.mudosa.musinsa.product.domain.model.CartItem;
 import com.mudosa.musinsa.product.domain.model.ProductGenderType;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.repository.CartItemRepository;
-import com.mudosa.musinsa.product.domain.repository.ProductOptionRepository;
+import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.vo.StockQuantity;
 import com.mudosa.musinsa.user.domain.model.User;
 import com.mudosa.musinsa.user.domain.model.UserRole;
-import com.mudosa.musinsa.user.domain.repository.UserRepository;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Transactional;
 
-@ExtendWith(MockitoExtension.class)
-class CartServiceTest {
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Stream;
 
-    @Mock
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@DisplayName("CartService 테스트")
+@Transactional
+class CartServiceTest extends ServiceConfig {
+
+    @Autowired
+    private CartService cartService;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
     private CartItemRepository cartItemRepository;
 
-    @Mock
-    private ProductOptionRepository productOptionRepository;
-
-    @Mock
-    private UserRepository userRepository;
-
-    @InjectMocks
-    private CartService cartService;
-
     @Test
-    @DisplayName("사용자 장바구니를 조회하면 상품 상세 정보와 함께 반환한다")
-    void getCartItems_returnsDetailedResponses() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null, null, null);
-        ReflectionTestUtils.setField(user, "id", 10L);
+    @DisplayName("올바른 요청으로 장바구니 상품 추가시 정상적으로 장바구니 상품이 추가된다.")
+    void addCartItem() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        int quantity = 2;
 
-        Product product = createProduct(true);
-        ProductOption option1 = createProductOption(product, 5);
-        ProductOption option2 = createProductOption(product, 7);
-        ReflectionTestUtils.setField(option1, "productOptionId", 2101L);
-        ReflectionTestUtils.setField(option2, "productOptionId", 2102L);
-
-        CartItem first = CartItem.builder()
-            .user(user)
-            .productOption(option1)
-            .quantity(1)
-            .unitPrice(option1.getProductPrice())
+        CartItemCreateRequest request = CartItemCreateRequest.builder()
+            .productOptionId(productOption.getProductOptionId())
+            .quantity(quantity)
             .build();
-        CartItem second = CartItem.builder()
-            .user(user)
-            .productOption(option2)
-            .quantity(2)
-            .unitPrice(option2.getProductPrice())
-            .build();
-        ReflectionTestUtils.setField(first, "cartItemId", 500L);
-        ReflectionTestUtils.setField(second, "cartItemId", 501L);
 
-        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
-        when(cartItemRepository.findAllWithDetailsByUserId(10L)).thenReturn(List.of(first, second));
+        // when
+        cartService.addCartItem(user.getId(), request);
 
-        List<CartItemDetailResponse> responses = cartService.getCartItems(10L);
-
-        assertThat(responses).hasSize(2);
-        assertThat(responses).extracting("cartItemId").containsExactlyInAnyOrder(500L, 501L);
-        assertThat(responses).extracting("productName").containsOnly("상품");
+        // then
+        assertThat(cartItemRepository.findAllByUserId(user.getId()))
+            .singleElement()
+            .satisfies(cartItem -> {
+                assertThat(cartItem.getProductOption().getProductOptionId()).isEqualTo(productOption.getProductOptionId());
+                assertThat(cartItem.getQuantity()).isEqualTo(2);
+            });
     }
 
     @Test
-    @DisplayName("새 옵션을 장바구니에 담으면 신규 항목이 생성된다")
-    void addCartItem_createsNewItem() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null, null, null);
-        ReflectionTestUtils.setField(user, "id", 10L);
+    @DisplayName("존재하지 않는 사용자로 장바구니 상품 추가시 BusinessException이 발생한다.")
+    void addCartItemsWithInvalidUser() {
+        // given
+        Long notExistUserId = 99999L;
 
-        Product product = createProduct(true);
-        ProductOption option = createProductOption(product, 5);
-        ReflectionTestUtils.setField(option, "productOptionId", 2101L);
-
-        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
-        when(productOptionRepository.findByIdWithProductAndInventory(2101L)).thenReturn(Optional.of(option));
-        when(cartItemRepository.findByUserIdAndProductOptionId(10L, 2101L)).thenReturn(Optional.empty());
-        when(cartItemRepository.save(any(CartItem.class))).thenAnswer(invocation -> {
-            CartItem saved = invocation.getArgument(0);
-            ReflectionTestUtils.setField(saved, "cartItemId", 900L);
-            return saved;
-        });
-
-        CartItemResponse response = cartService.addCartItem(10L,
-            CartItemCreateRequest.builder()
-                .productOptionId(2101L)
-                .quantity(2)
-                .build());
-
-        assertThat(response.getCartItemId()).isEqualTo(900L);
-        assertThat(response.getUserId()).isEqualTo(10L);
-        assertThat(response.getProductOptionId()).isEqualTo(2101L);
-        assertThat(response.getQuantity()).isEqualTo(2);
-    assertThat(response.getUnitPrice()).isEqualTo(new Money(BigDecimal.valueOf(15900)).getAmount());
-    }
-
-    @Test
-    @DisplayName("동일 옵션을 다시 담으면 수량이 누적된다")
-    void addCartItem_existingItemIncrementsQuantity() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null, null, null);
-        ReflectionTestUtils.setField(user, "id", 10L);
-
-        Product product = createProduct(true);
-        ProductOption option = createProductOption(product, 6);
-        ReflectionTestUtils.setField(option, "productOptionId", 2101L);
-
-        CartItem existing = CartItem.builder()
-            .user(user)
-            .productOption(option)
-            .quantity(1)
-            .unitPrice(option.getProductPrice())
-            .build();
-
-        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
-        when(productOptionRepository.findByIdWithProductAndInventory(2101L)).thenReturn(Optional.of(option));
-        when(cartItemRepository.findByUserIdAndProductOptionId(10L, 2101L)).thenReturn(Optional.of(existing));
-        when(cartItemRepository.save(existing)).thenReturn(existing);
-
-        CartItemResponse response = cartService.addCartItem(10L,
-            CartItemCreateRequest.builder()
-                .productOptionId(2101L)
-                .quantity(2)
-                .build());
-
-        assertThat(existing.getQuantity()).isEqualTo(3);
-        assertThat(response.getQuantity()).isEqualTo(3);
-    }
-
-    @Test
-    @DisplayName("장바구니 수량을 수정하면 재고 검증 후 반영된다")
-    void updateCartItemQuantity_updatesSuccessfully() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null, null, null);
-        ReflectionTestUtils.setField(user, "id", 10L);
-
-        Product product = createProduct(true);
-        ProductOption option = createProductOption(product, 10);
-        ReflectionTestUtils.setField(option, "productOptionId", 2101L);
-
-        CartItem cartItem = CartItem.builder()
-            .user(user)
-            .productOption(option)
-            .quantity(2)
-            .unitPrice(option.getProductPrice())
-            .build();
-        ReflectionTestUtils.setField(cartItem, "cartItemId", 201L);
-
-        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
-    when(cartItemRepository.findById(201L)).thenReturn(Optional.of(cartItem));
-        when(productOptionRepository.findByIdWithProductAndInventory(2101L)).thenReturn(Optional.of(option));
-        when(cartItemRepository.save(cartItem)).thenReturn(cartItem);
-
-        CartItemResponse response = cartService.updateCartItemQuantity(10L, 201L, 5);
-
-        assertThat(response.getQuantity()).isEqualTo(5);
-        assertThat(cartItem.getQuantity()).isEqualTo(5);
-    }
-
-    @Test
-    @DisplayName("장바구니 항목을 삭제하면 사용자 소유 항목만 제거된다")
-    void deleteCartItem_removesEntry() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null, null, null);
-        ReflectionTestUtils.setField(user, "id", 10L);
-
-        Product product = createProduct(true);
-        ProductOption option = createProductOption(product, 4);
-        ReflectionTestUtils.setField(option, "productOptionId", 2101L);
-
-        CartItem cartItem = CartItem.builder()
-            .user(user)
-            .productOption(option)
-            .quantity(1)
-            .unitPrice(option.getProductPrice())
-            .build();
-        ReflectionTestUtils.setField(cartItem, "cartItemId", 300L);
-
-        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
-    when(cartItemRepository.findById(300L)).thenReturn(Optional.of(cartItem));
-
-        cartService.deleteCartItem(10L, 300L);
-
-        verify(cartItemRepository).delete(cartItem);
-    }
-
-    @Test
-    @DisplayName("재고를 초과해 장바구니에 담으면 예외가 발생한다")
-    void addCartItem_exceedsStock_throwsException() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null, null, null);
-        ReflectionTestUtils.setField(user, "id", 10L);
-
-        Product product = createProduct(true);
-        ProductOption option = createProductOption(product, 2);
-        ReflectionTestUtils.setField(option, "productOptionId", 2101L);
-
-        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
-        when(productOptionRepository.findByIdWithProductAndInventory(2101L)).thenReturn(Optional.of(option));
-        when(cartItemRepository.findByUserIdAndProductOptionId(10L, 2101L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> cartService.addCartItem(10L,
-            CartItemCreateRequest.builder()
-                .productOptionId(2101L)
-                .quantity(3)
-                .build()))
+        // when // then
+        assertThatThrownBy(() -> cartService.addCartItem(notExistUserId, CartItemCreateRequest.builder().productOptionId(1L).quantity(1).build()))
             .isInstanceOf(BusinessException.class)
-            .extracting(ex -> ((BusinessException) ex).getErrorCode())
-            .isEqualTo(ErrorCode.INSUFFICIENT_STOCK);
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.USER_NOT_FOUND);
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidProductOptionValues")
+    @DisplayName("유효하지 않는 상품 옵션으로 장바구니 상품 추가 시 BusinessException이 발생한다.")
+    void addCartItemWithInvalidProductOption(Long invalidProductOptionOptionId, ErrorCode expectedErrorCode) {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        CartItemCreateRequest request = CartItemCreateRequest.builder()
+            .productOptionId(invalidProductOptionOptionId)
+            .quantity(1)
+            .build();
+
+        // when // then
+        assertThatThrownBy(() -> cartService.addCartItem(user.getId(), request))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(expectedErrorCode);
+    }
+
+    static Stream<Arguments> invalidProductOptionValues() {
+        return Stream.of(
+            Arguments.of(null, ErrorCode.PRODUCT_OPTION_NOT_FOUND),
+            Arguments.of(99999L, ErrorCode.PRODUCT_OPTION_NOT_FOUND)
+        );
     }
 
     @Test
-    @DisplayName("판매 중지된 상품 옵션은 장바구니에 담을 수 없다")
-    void addCartItem_inactiveProduct_throwsException() {
-        User user = User.create("tester", "pw", "user@test.com", UserRole.USER, null, null, null);
-        ReflectionTestUtils.setField(user, "id", 10L);
+    @DisplayName("장바구니 상품 추가 시 수량이 null이면 CART_ITEM_STOCK_QUANTITY_REQUIRED가 발생한다.")
+    void addCartItemWithNullQuantity() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
 
-        Product product = createProduct(false);
-        ProductOption option = createProductOption(product, 3);
-        ReflectionTestUtils.setField(option, "productOptionId", 2101L);
+        CartItemCreateRequest request = CartItemCreateRequest.builder()
+            .productOptionId(productOption.getProductOptionId())
+            .quantity(null)
+            .build();
 
-        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
-        when(productOptionRepository.findByIdWithProductAndInventory(2101L)).thenReturn(Optional.of(option));
-
-        assertThatThrownBy(() -> cartService.addCartItem(10L,
-            CartItemCreateRequest.builder()
-                .productOptionId(2101L)
-                .quantity(1)
-                .build()))
+        // when // then
+        assertThatThrownBy(() -> cartService.addCartItem(user.getId(), request))
             .isInstanceOf(BusinessException.class)
-            .extracting(ex -> ((BusinessException) ex).getErrorCode())
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.CART_ITEM_STOCK_QUANTITY_REQUIRED);
+    }
+
+    @Test
+    @DisplayName("재고의 stockQuantity가 null이면 PRODUCT_OPTION_OUT_OF_STOCK가 발생한다.")
+    void addCartItemWithNullStockQuantity() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        ReflectionTestUtils.setField(productOption.getInventory(), "stockQuantity", null);
+
+        CartItemCreateRequest request = CartItemCreateRequest.builder()
+            .productOptionId(productOption.getProductOptionId())
+            .quantity(1)
+            .build();
+
+        // when // then
+        assertThatThrownBy(() -> cartService.addCartItem(user.getId(), request))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.PRODUCT_OPTION_OUT_OF_STOCK);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = false)
+    @DisplayName("상품 장바구니 추가 시 사용 불가능한(비활성화된) 상품으로 요청할 경우 BusinessException이 발생한다.")
+    void addCartItemWithUnavailableProduct(Boolean isAvailable) {
+        // given
+        User user = userRepository.save(User.create("user2", "pw", "u2@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        ReflectionTestUtils.setField(productOption.getProduct(), "isAvailable", isAvailable);
+
+        CartItemCreateRequest request = CartItemCreateRequest.builder()
+            .productOptionId(productOption.getProductOptionId())
+            .quantity(1)
+            .build();
+
+        // when // then
+        assertThatThrownBy(() -> cartService.addCartItem(user.getId(), request))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
             .isEqualTo(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE);
     }
 
-    private Product createProduct(boolean available) {
-        Brand brand = Brand.builder()
-            .brandId(1L)
-            .nameKo("브랜드")
-            .nameEn("BRAND")
-            .status(BrandStatus.ACTIVE)
-            .commissionRate(BigDecimal.TEN)
-            .build();
+    @Test
+    @DisplayName("올바른 요청으로 장바구니 상품 목록을 조회시 정상적으로 장바구니 상품 목록이 반환된다.")
+    void getCartItems() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption1 = prepareProductOption();
+        ProductOption productOption2 = prepareProductOption();
+        cartItemRepository.saveAll(List.of(
+            CartItem.builder().user(user).productOption(productOption1).quantity(2).build(),
+            CartItem.builder().user(user).productOption(productOption2).quantity(3).build()
+        ));
 
-        Product product = Product.builder()
-            .brand(brand)
-            .productName("상품")
-            .productInfo("상품 설명")
-            .productGenderType(ProductGenderType.MEN)
-            .brandName("브랜드")
-            .categoryPath("상의/티셔츠")
-            .isAvailable(available)
-            .build();
-        return product;
+        // when
+        var cartItems = cartService.getCartItems(user.getId());
+
+        // then
+        assertThat(cartItems)
+            .hasSize(2)
+            .extracting("productOptionId")
+            .containsExactlyInAnyOrder(
+                productOption1.getProductOptionId(),
+                productOption2.getProductOptionId()
+            );
     }
 
-    private ProductOption createProductOption(Product product, int stock) {
-        Inventory inventory = Inventory.builder()
-            .stockQuantity(new StockQuantity(stock))
+    @Test
+    @DisplayName("존재하지 않는 사용자로 장바구니 목록 조회 시 BusinessException이 발생한다.")
+    void getCartItemsWithInvalidUser() {
+        // given
+        Long notExistUserId = 99999L;
+
+        // when // then
+        assertThatThrownBy(() -> cartService.getCartItems(notExistUserId))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.USER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("올바른 요청으로 장바구니 상품 수량 변경시 정상적으로 장바구니 상품 수량이 변경된다.")
+    void updateCartItemQuantity() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        CartItem cartItem = cartItemRepository.save(
+            CartItem.builder()
+                .user(user)
+                .productOption(productOption)
+                .quantity(2)
+                .build()
+        );
+        int newQuantity = 5;
+
+        // when
+        cartService.updateCartItemQuantity(user.getId(), cartItem.getCartItemId(), newQuantity);
+
+        // then
+        CartItem updatedCartItem = cartItemRepository.findById(cartItem.getCartItemId()).orElseThrow();
+        assertThat(updatedCartItem.getQuantity()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("상품 수량을 0 이하로 변경 요청 시 BusinessException이 발생한다.")
+    void updateCartItemQuantityWithInvalidQuantity() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        CartItem cartItem = cartItemRepository.save(
+            CartItem.builder()
+                .user(user)
+                .productOption(productOption)
+                .quantity(2)
+                .build()
+        );
+        int invalidQuantity = 0;
+
+        // when // then
+        assertThatThrownBy(() -> cartService.updateCartItemQuantity(user.getId(), cartItem.getCartItemId(), invalidQuantity))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.INVALID_CART_ITEM_UPDATE_VALUE);
+    }
+
+    @Test
+    @DisplayName("장바구니 상품 수량 변경 시 존재하지 않는 장바구니 항목으로 요청할 경우 BusinessException이 발생한다.")
+    void updateCartItemQuantityWithInvalidCartItem() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        Long notExistCartItemId = 99999L;
+        int newQuantity = 3;
+
+        // when // then
+        assertThatThrownBy(() -> cartService.updateCartItemQuantity(user.getId(), notExistCartItemId, newQuantity))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.CART_ITEM_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 장바구니 상품 수량 변경 시 BusinessException이 발생한다.")
+    void updateCartItemQuantityWithDifferentUser() {
+        // given
+        User user1 = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        User user2 = userRepository.save(User.create("user2", "pw", "u2@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        CartItem cartItem = cartItemRepository.save(
+            CartItem.builder()
+                .user(user1)
+                .productOption(productOption)
+                .quantity(2)
+                .build()
+        );
+        int newQuantity = 3;
+
+        // when // then
+        assertThatThrownBy(() -> cartService.updateCartItemQuantity(user2.getId(), cartItem.getCartItemId(), newQuantity))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.CART_ITEM_ONLY_ACCESS_PERSONAL);
+    }
+
+    @Test
+    @DisplayName("장바구니 수량 변경 시 상품 옵션이 없으면 BusinessException이 발생한다.")
+    void updateCartItemQuantityWithMissingProductOption() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption validProductOption = prepareProductOption();
+        CartItem cartItem = cartItemRepository.save(
+            CartItem.builder()
+                .user(user)
+                .productOption(validProductOption)
+                .quantity(2)
+                .build()
+        );
+        int newQuantity = 3;
+        ReflectionTestUtils.setField(cartItem, "productOption", null);
+
+        // when // then
+        assertThatThrownBy(() -> cartService.updateCartItemQuantity(user.getId(), cartItem.getCartItemId(), newQuantity))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.PRODUCT_OPTION_NOT_FOUND);
+    }
+
+    @ParameterizedTest
+    @DisplayName("상품 장바구니 수량 변경 시 사용 불가능한(비활성화된) 상품으로 요청할 경우 BusinessException이 발생한다.")
+    @ValueSource(booleans = false)
+    void updateCartItemQuantityWithUnavailableProduct(Boolean isAvailable) {
+        // given
+        User user = userRepository.save(User.create("user2", "pw", "u2@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        CartItem cartItem = cartItemRepository.save(
+            CartItem.builder()
+                .user(user)
+                .productOption(productOption)
+                .quantity(2)
+                .build()
+        );
+        ReflectionTestUtils.setField(productOption.getProduct(), "isAvailable", isAvailable);
+        int newQuantity = 3;
+
+        // when // then
+        assertThatThrownBy(() -> cartService.updateCartItemQuantity(user.getId(), cartItem.getCartItemId(), newQuantity))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.PRODUCT_OPTION_NOT_AVAILABLE);
+    }
+
+    @Test
+    @DisplayName("동일 옵션을 다시 담으면 기존 장바구니 수량이 누적된다.")
+    void addCartItemAccumulatesQuantity() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption(); // 재고 10
+
+        cartItemRepository.save(
+            CartItem.builder()
+                .user(user)
+                .productOption(productOption)
+                .quantity(3)
+                .build()
+        );
+
+        CartItemCreateRequest request = CartItemCreateRequest.builder()
+            .productOptionId(productOption.getProductOptionId())
+            .quantity(2)
             .build();
 
-        return ProductOption.builder()
-            .product(product)
-            .productPrice(new Money(BigDecimal.valueOf(15900)))
-            .inventory(inventory)
-            .build();
+        // when
+        cartService.addCartItem(user.getId(), request);
+
+        // then
+        assertThat(cartItemRepository.findAllByUserId(user.getId()))
+            .singleElement()
+            .satisfies(cartItem -> assertThat(cartItem.getQuantity()).isEqualTo(5));
+    }
+
+    @Test
+    @DisplayName("상품 옵션 ID 목록으로 장바구니 항목을 삭제할 수 있다.")
+    void deleteCartItemsByProductOptions() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption option1 = prepareProductOption();
+        ProductOption option2 = prepareProductOption();
+        cartItemRepository.saveAll(List.of(
+            CartItem.builder().user(user).productOption(option1).quantity(1).build(),
+            CartItem.builder().user(user).productOption(option2).quantity(1).build()
+        ));
+
+        // when
+        cartService.deleteCartItemsByProductOptions(user.getId(), List.of(option1.getProductOptionId()));
+
+        // then
+        assertThat(cartItemRepository.findAllByUserId(user.getId()))
+            .singleElement()
+            .satisfies(remaining -> assertThat(remaining.getProductOption().getProductOptionId())
+                .isEqualTo(option2.getProductOptionId()));
+    }
+
+    @ParameterizedTest
+    @DisplayName("올바르지 않는 상품 옵션의 수량으로 장바구니 수량 변경 시 BusinessException이 발생한다.")
+    @MethodSource("invalidQuantities")
+    void updateCartItemQuantityWithInvalidQuantity(Integer invalidQuantity, ErrorCode expectedErrorCode) {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        CartItem cartItem = cartItemRepository.save(
+            CartItem.builder()
+                .user(user)
+                .productOption(productOption)
+                .quantity(2)
+                .build()
+        );
+
+        // when // then
+        assertThatThrownBy(() -> cartService.updateCartItemQuantity(user.getId(), cartItem.getCartItemId(), invalidQuantity))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(expectedErrorCode);
+    }
+
+    static Stream<Arguments> invalidQuantities() {
+        return Stream.of(
+            Arguments.of(null, ErrorCode.CART_ITEM_STOCK_QUANTITY_REQUIRED),
+            Arguments.of(0, ErrorCode.INVALID_CART_ITEM_UPDATE_VALUE),
+            Arguments.of(-3, ErrorCode.INVALID_CART_ITEM_UPDATE_VALUE)
+        );
+    }
+
+    @Test
+    @DisplayName("요청한 상품 옵션의 수량이 재고 수량을 초과할 경우 장바구니 수량 변경 시 BusinessException이 발생한다.")
+    void updateCartItemQuantityWithExceedingQuantity() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        CartItem cartItem = cartItemRepository.save(
+            CartItem.builder()
+                .user(user)
+                .productOption(productOption)
+                .quantity(2)
+                .build()
+        );
+        int newQuantity = 20; // 재고 수량을 초과하는 값
+
+        // when // then
+        assertThatThrownBy(() -> cartService.updateCartItemQuantity(user.getId(), cartItem.getCartItemId(), newQuantity))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.CART_ITEM_INSUFFICIENT_STOCK);
+    }
+
+    @Test
+    @DisplayName("올바른 요청으로 장바구니 상품 개별 삭제시 정상적으로 장바구니 상품이 삭제된다.")
+    void deleteCartItem() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        CartItem cartItem = cartItemRepository.save(
+            CartItem.builder()
+                .user(user)
+                .productOption(productOption)
+                .quantity(2)
+                .build()
+        );
+
+        // when
+        cartService.deleteCartItem(user.getId(), cartItem.getCartItemId());
+
+        // then
+        assertThat(cartItemRepository.findById(cartItem.getCartItemId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("장바구니 상품 삭제 시 존재하지 않는 장바구니 항목으로 요청할 경우 BusinessException이 발생한다.")
+    void deleteCartItemWithInvalidCartItem() {
+        // given
+        User user = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        Long notExistCartItemId = 99999L;
+
+        // when // then
+        assertThatThrownBy(() -> cartService.deleteCartItem(user.getId(), notExistCartItemId))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.CART_ITEM_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 장바구니 상품 삭제 시 BusinessException이 발생한다.")
+    void deleteCartItemWithDifferentUser() {
+        // given
+        User user1 = userRepository.save(User.create("user1", "pw", "u1@test.com", UserRole.USER, null, null, null));
+        User user2 = userRepository.save(User.create("user2", "pw", "u2@test.com", UserRole.USER, null, null, null));
+        ProductOption productOption = prepareProductOption();
+        CartItem cartItem = cartItemRepository.save(
+            CartItem.builder()
+                .user(user1)
+                .productOption(productOption)
+                .quantity(2)
+                .build()
+        );
+        
+        // when // then
+        assertThatThrownBy(() -> cartService.deleteCartItem(user2.getId(), cartItem.getCartItemId()))
+            .isInstanceOf(BusinessException.class)
+            .extracting(e -> ((BusinessException) e).getErrorCode())
+            .isEqualTo(ErrorCode.CART_ITEM_ONLY_ACCESS_PERSONAL);
+    }
+
+    // 상품 및 상품 옵션 준비
+    private ProductOption prepareProductOption() {
+        Brand brand = brandRepository.save(Brand.create("브랜드", "BRAND", BigDecimal.ZERO));
+        Product product = Product.create(
+            brand,
+            "상품명",
+            "상품 정보",
+            ProductGenderType.ALL,
+            brand.getNameKo(),
+            "상의/티셔츠",
+            true,
+            BigDecimal.ZERO,
+            "http://example.com/thumb.jpg",
+            List.of(),
+            List.of()
+        );
+
+        ProductOption productOption = ProductOption.create(
+            product,
+            new Money(10000L),
+            Inventory.create(new StockQuantity(10))
+        );
+        product.addProductOption(productOption);
+
+        productRepository.save(product);
+        return productOption;
     }
 }

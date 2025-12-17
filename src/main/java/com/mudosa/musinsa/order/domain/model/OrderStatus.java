@@ -6,13 +6,59 @@ import lombok.Getter;
 
 @Getter
 public enum OrderStatus {
-    PENDING("결제 대기 중"),
-    COMPLETED("결제 완료"),
-    PREPARING("배송 준비 중"),
-    SHIPPING("배송 중"),
-    DELIVERED("배송 완료"),
-    CANCELLED("주문 취소"),
-    REFUNDED("환불 완료");
+    PENDING("결제 대기 중") {
+        @Override
+        public OrderStatus complete() {
+            return COMPLETED;
+        }
+
+        @Override
+        public OrderStatus cancel() {
+            return CANCELLED;
+        }
+
+        @Override
+        public OrderStatus rollback() {
+            return this;
+        }
+    },
+
+    COMPLETED("결제 완료") {
+        @Override
+        public OrderStatus complete() {
+            throw new BusinessException(
+                    ErrorCode.INVALID_ORDER_STATUS_TRANSITION,
+                    "이미 완료된 주문입니다"
+            );
+        }
+
+        @Override
+        public OrderStatus cancel() {
+            return CANCELLED;
+        }
+
+        @Override
+        public OrderStatus rollback() {
+            return PENDING;
+        }
+    },
+
+    CANCELLED("주문 취소") {
+        @Override
+        public OrderStatus complete() {
+            throw invalidTransition("완료");
+        }
+
+        @Override
+        public OrderStatus cancel() {
+            throw invalidTransition("취소");
+        }
+
+        @Override
+        public OrderStatus rollback() {
+            return COMPLETED;
+        }
+    };
 
     private final String description;
 
@@ -20,29 +66,18 @@ public enum OrderStatus {
         this.description = description;
     }
 
+    public abstract OrderStatus complete();
+    public abstract OrderStatus cancel();
+    public abstract OrderStatus rollback();
 
-    public boolean canTransitionTo(OrderStatus nextStatus) {
-        return switch (this) {
-            case PENDING -> nextStatus == COMPLETED || nextStatus == CANCELLED;
-            case COMPLETED -> nextStatus == PREPARING || nextStatus == CANCELLED;
-            case PREPARING -> nextStatus == SHIPPING || nextStatus == CANCELLED;
-            case SHIPPING -> nextStatus == DELIVERED || nextStatus == CANCELLED;
-            case DELIVERED -> nextStatus == REFUNDED;
-            case CANCELLED, REFUNDED -> false;
-        };
+    protected BusinessException invalidTransition(String action) {
+        return new BusinessException(
+                ErrorCode.INVALID_ORDER_STATUS_TRANSITION,
+                String.format("%s 상태에서는 %s할 수 없습니다", this.description, action)
+        );
     }
 
-    public OrderStatus transitionTo(OrderStatus nextStatus) {
-        if (!canTransitionTo(nextStatus)) {
-            throw new BusinessException(
-                    ErrorCode.INVALID_ORDER_STATUS_TRANSITION,
-                    String.format("%s → %s 전이는 허용되지 않습니다", this, nextStatus)
-            );
-        }
-        return nextStatus;
-    }
-
-    public boolean isPending() {
+    public boolean isCancable() {
         return this == PENDING;
     }
 
@@ -50,26 +85,6 @@ public enum OrderStatus {
         return this == COMPLETED;
     }
 
-    public boolean isCancelled() {
-        return this == CANCELLED;
+    public boolean isCancelled() { return this == CANCELLED;
     }
-
-    public boolean isDelivered() {
-        return this == DELIVERED;
-    }
-
-    public boolean isRefunded() {
-        return this == REFUNDED;
-    }
-
-    public boolean isSettleable() {
-        return this == COMPLETED || this == PREPARING ||
-                this == SHIPPING || this == DELIVERED;
-    }
-
-    public boolean isCancellable() {
-        return this == PENDING || this == COMPLETED ||
-                this == PREPARING || this == SHIPPING;
-    }
-
 }

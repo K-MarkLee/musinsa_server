@@ -1,6 +1,9 @@
 package com.mudosa.musinsa.product.domain.model;
 
 import com.mudosa.musinsa.common.domain.model.BaseEntity;
+import com.mudosa.musinsa.exception.BusinessException;
+import com.mudosa.musinsa.exception.ErrorCode;
+
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -36,14 +39,16 @@ public class Category extends BaseEntity {
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private final List<Category> children = new ArrayList<>();
     
-    // 카테고리를 생성하면서 필수 정보를 검증한다.
-    @Builder
-    public Category(String categoryName, Category parent, String imageUrl) {
-        // 필수 파라미터를 확인해 무결성을 보장한다.
+    // 외부 노출 생성 메서드 + 필수 값 검증
+    public static Category create(String categoryName, Category parent, String imageUrl) {
         if (categoryName == null || categoryName.trim().isEmpty()) {
-            throw new IllegalArgumentException("카테고리명은 필수입니다.");
+            throw new BusinessException(ErrorCode.CATEGORY_NAME_REQUIRED);
         }
-        
+        return new Category(categoryName, parent, imageUrl);
+    }
+
+    @Builder
+    private Category(String categoryName, Category parent, String imageUrl) {
         this.categoryName = categoryName;
         this.parent = parent;
         this.imageUrl = imageUrl;
@@ -68,20 +73,9 @@ public class Category extends BaseEntity {
                 return currentName;  // 부모: "상의"
             }
 
-            return currentParent.buildPathInternal(visited) + "/" + currentName;  // 자식: "상의/티셔츠"
+            return currentParent.buildPathInternal(visited) + ">" + currentName;  // 자식: "상의 > 티셔츠"
         } finally {
             visited.remove(this);
         }
     }
-    
-    // 부모 카테고리가 존재하는지 확인한다.
-    public boolean hasParent() {
-        return this.parent != null;
-    }
-    
-    // 루트 카테고리 여부를 확인한다.
-    public boolean isRoot() {
-        return this.parent == null;
-    }
-
 }
