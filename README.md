@@ -39,9 +39,8 @@
 
 
 #### 시연 영상
-[![시연 영상](https://img.youtube.com/vi/oC8-prv8Qdo/hqdefault.jpg)](https://youtu.be/oC8-prv8Qdo)
 
-
+유튜브 링크 : https://youtu.be/oC8-prv8Qdo
 ---
 
 ## 2. 기술 스택 (Tech Stack)
