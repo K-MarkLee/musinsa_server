@@ -105,6 +105,7 @@
 ---
 
 ## 5. WIKI 및 참고 자료
-프로젝트 진행시 문제 파악 -> 점진전 개선의 디테일한 내용을 WIKI로 정리하였습니다.
+자세한 설명과 트러블슈팅은 WIKI에 정리했습니다. 아래의 링크를 참조해주세요.
+
 
 [WIKI 바로가기](https://github.com/k9want/sellect-ecommerce-platform/wiki)
