@@ -20,6 +20,8 @@
 - **목표**: 이커머스의 핵심 도메인인 “상품”을 중심으로 요구사항을 정리하고, MVP 수준의 CRUD를 빠르게 구현.
 - **요구사항 명세**: 상품 등록/수정/삭제, 상품 조회(목록/상세), 검색/필터, 페이징 등.
 
+<br>
+
 #### Phase 2: 리팩토링 및 테스트 (Stability)
 - **목표**: 테스트 기반 리팩토링으로 구조적 안정성 확보.
 - **테스트 전략**:
@@ -29,9 +31,11 @@
   - Controller-Service-Repository 계층 책임을 명확히 분리.
   - **SRP(단일 책임 원칙) + CQRS 관점 분리**: 상품 관리(Command)와 조회/검색(Query) 책임을 분리해 변경 영향도를 축소.
 
+<br>
+
 #### Phase 3: 대용량 데이터 챌린지 (Scalability)
 - **상황**: 네이버 쇼핑 API를 활용해 상품 데이터를 대량 적재하고(약 1,000만 건), 로컬 환경에서 부하 테스트를 수행.
-- **목표**: 병목을 찾고, 성능 개선 포인트를 “지표 기반”으로 확인(Grafana, K6, Prometheus).
+- **목표**: 병목을 찾고, 성능 개선 포인트를 “지표 기반”으로 확인(Grafana, k6, Prometheus).
 - **진행**:
   - 대용량 데이터 환경에서 기존 `LIKE` 기반 검색의 한계를 확인하고 검색 전용 엔진(Elasticsearch) 도입.
   - 로컬 리소스(디바이스) 한계로 인해, AWS 배포까지 완료했으나 AWS 환경에서의 추가 튜닝/개선은 시간 관계상 진행하지 못함.
@@ -61,10 +65,14 @@
 
 ## 4. 성능 개선치
 
+**실제 상품 데이터 약 1,000만 건의 환경에서의 피크 타임 부하 테스트 개선치입니다.**
+
+<br>
+
 ### 단순 조회(List) 기준
 
 #### Performance
-- Summary: 30s → 275ms
+- Summary: 30s -> 275ms
 
 <img src="./docs/images/list-30s.png" alt="List baseline 30s" width="720" />
 
@@ -77,9 +85,7 @@
 ### 상세 조회(Detail) 기준
 
 #### Performance
-- Summary : 30s -> 723ms
-
-<img src="./docs/images/detail-835ms.png" alt="Detail optimized 835ms" width="720" />
+- Summary: 30s -> 723ms
 
 <img src="./docs/images/detail-no-monitor.png" alt="Detail no monitor" width="720" />
 
@@ -91,7 +97,7 @@
 ### 검색(Search) 기준 (Elasticsearch)
 
 #### Performance
-- Summary : 5s -> 2.3s
+- Summary: 5s -> 2.3s
 
 <img src="./docs/images/es-5s.png" alt="ES search 5s" width="720" />
 
@@ -105,7 +111,7 @@
 ---
 
 ## 5. WIKI 및 참고 자료
-자세한 설명과 트러블슈팅은 WIKI에 정리했습니다. 아래의 링크를 참조해주세요.
+설계/트러블슈팅/성능 개선 과정은 WIKI에 단계별로 정리했습니다. 아래 링크에서 흐름대로 확인하실 수 있습니다.
 
 
-[WIKI 바로가기](https://github.com/k9want/sellect-ecommerce-platform/wiki)
+[WIKI 바로가기](https://github.com/K-MarkLee/musinsa_server/wiki)
