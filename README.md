@@ -63,7 +63,25 @@
 
 ---
 
-## 4. 성능 개선치
+## 4. ERD와 아키텍쳐
+> 요구사항 명세서를 기반으로 주요 엔티티 및 관계를 설정했습니다.
+
+<img src="https://raw.githubusercontent.com/K-MarkLee/musinsa_server/main/docs/images/erd.png" width="1000">
+
+
+<br>
+
+
+> 서버의 아키텍쳐 구성입니다.
+<img src="https://raw.githubusercontent.com/K-MarkLee/musinsa_server/main/docs/images/Server-Architecture.png" width="900">
+
+- Route 53, ALB, Bastion을 포함한 AWS 기반 아키텍처로 구성했습니다.
+
+- **시퀸스 다이어그램 및 인프라 정보는 [WIKI](https://github.com/K-MarkLee/musinsa_server/wiki) 에 있습니다.** 
+
+---
+
+## 5. 성능 개선치
 
 **실제 상품 데이터 약 1,000만 건의 환경에서의 피크 타임 부하 테스트 개선치입니다.**
 
@@ -110,7 +128,7 @@
 
 ---
 
-## 5. WIKI 및 참고 자료
+## 6. WIKI 및 참고 자료
 설계/트러블슈팅/성능 개선 과정은 WIKI에 단계별로 정리했습니다. 아래 링크에서 흐름대로 확인하실 수 있습니다.
 
 
