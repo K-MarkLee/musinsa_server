@@ -77,7 +77,11 @@
 
 - Route 53, ALB, Bastion을 포함한 AWS 기반 아키텍처로 구성했습니다.
 
-- **시퀸스 다이어그램 및 인프라 정보는 [WIKI](https://github.com/K-MarkLee/musinsa_server/wiki) 에 있습니다.** 
+- **시퀸스 다이어그램 및 인프라 정보는 [WIKI](https://github.com/K-MarkLee/musinsa_server/wiki) 에 있습니다.**
+
+<br>
+
+<br>
 
 ---
 
