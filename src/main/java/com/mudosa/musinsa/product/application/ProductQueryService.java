@@ -20,6 +20,7 @@ import com.mudosa.musinsa.product.infrastructure.search.repository.ProductIndexS
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -47,6 +48,8 @@ public class ProductQueryService {
 	/**
 	 * 검색 조건에 맞는 상품을 조회해 페이지 형태로 반환한다.
 	 */
+	// ES 검색에는 DB 트랜잭션을 열지 않는다. 목록 DB 조회는 저장소에서 시작한다.
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public ProductSearchResponse searchProducts(ProductSearchCondition condition) {
 		// 1. 검색 조건 파싱
 		SearchParams params = parseCondition(condition);

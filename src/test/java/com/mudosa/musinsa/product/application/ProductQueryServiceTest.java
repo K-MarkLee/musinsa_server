@@ -16,6 +16,7 @@ import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.infrastructure.search.repository.ProductIndexSearchQueryRepository;
 import com.mudosa.musinsa.product.infrastructure.search.config.ProductIndexConfig;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.AopTestUtils;
 
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
@@ -403,6 +404,8 @@ public class ProductQueryServiceTest extends ServiceConfig {
 	@EnumSource(ProductSearchCondition.PriceSort.class)
 	@DisplayName("동일 가격일 때 가격 정렬 방향에 맞게 중복·누락 없이 다음 페이지를 조회한다.")
 	void searchProductsWithPriceCursorPagingSamePriceUsesIdOrder(ProductSearchCondition.PriceSort priceSort) {
+		// 롤백되는 테스트 데이터와 같은 트랜잭션에서 조회한다. 트랜잭션 경계는 별도 테스트로 검증한다.
+		ProductQueryService queryService = AopTestUtils.getTargetObject(sut);
 		// given
 		Long firstId = productCommandService.createProduct(
 			createProductRequest("동일가1", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(7000)), brandId, userId);
@@ -417,7 +420,7 @@ public class ProductQueryServiceTest extends ServiceConfig {
 			.build();
 
 		// when
-		ProductSearchResponse firstPage = sut.searchProducts(firstPageCondition);
+		ProductSearchResponse firstPage = queryService.searchProducts(firstPageCondition);
 
 		// then
 		assertThat(firstPage.isHasNext()).isTrue();
@@ -432,7 +435,7 @@ public class ProductQueryServiceTest extends ServiceConfig {
 			.limit(2)
 			.cursor(firstPage.getNextCursor())
 			.build();
-		ProductSearchResponse secondPage = sut.searchProducts(secondPageCondition);
+		ProductSearchResponse secondPage = queryService.searchProducts(secondPageCondition);
 
 		assertThat(secondPage.isHasNext()).isFalse();
 		assertThat(secondPage.getProducts())

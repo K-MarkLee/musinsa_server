@@ -17,6 +17,7 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.math.BigDecimal;
@@ -34,6 +35,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
 
     // 필터링 조건을 QueryDSL로 조합해 상품 요약 목록을 커서 기반으로 조회한다.
     @Override
+    @Transactional(readOnly = true)
     public List<ProductSearchResponse.ProductSummary> findAllByFiltersWithCursor(List<String> categoryPaths,
             ProductGenderType gender,
             Long brandId,
