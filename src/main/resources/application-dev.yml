@@ -13,9 +13,8 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
-      # Dev default: tuned for laptop load-test without overloading local DB.
-      # Override per-machine via env vars if needed.
-      maximum-pool-size: 30
+      # 로컬 상세 조회 비교 기준값. 운영 최적값으로 확정한 수치는 아니다.
+      maximum-pool-size: 50
       minimum-idle: 10
       idle-timeout: 300000
       max-lifetime: 1700000
@@ -76,9 +75,9 @@ server:
     mbeanregistry:
       enabled: true
     threads:
-      max: ${TOMCAT_THREADS_MAX:200} # Tuned for M3 Max Concurrency
-      min-spare: ${TOMCAT_THREADS_MIN_SPARE:25}
-    accept-count: 2048
+      max: ${TOMCAT_THREADS_MAX:200} # 500 증설 효과가 없어 기존 기준값 유지
+      min-spare: ${TOMCAT_THREADS_MIN_SPARE:10}
+    accept-count: ${TOMCAT_ACCEPT_COUNT:100} # backlog 증설 효과는 미검증
     max-connections: ${TOMCAT_MAX_CONNECTIONS:8192}
     connection-timeout: ${TOMCAT_CONNECTION_TIMEOUT_MS:20000}
     keep-alive-timeout: ${TOMCAT_KEEP_ALIVE_TIMEOUT_MS:60000}

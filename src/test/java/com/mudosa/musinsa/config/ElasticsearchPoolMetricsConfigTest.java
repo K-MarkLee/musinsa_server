@@ -16,6 +16,25 @@ import static org.awaitility.Awaitility.await;
 
 class ElasticsearchPoolMetricsConfigTest {
     @Test
+    void appliesTheMeasuredDevConnectionLimits() throws Exception {
+        var customizer = new ElasticsearchRestClientConfig();
+        var builder = RestClient.builder(new HttpHost("127.0.0.1", 9200));
+        customizer.customize(builder);
+        builder.setHttpClientConfigCallback(http -> {
+            customizer.customize(http);
+            return http;
+        });
+        var registry = new SimpleMeterRegistry();
+        try (var client = builder.build()) {
+            new ElasticsearchPoolMetricsConfig().elasticsearchPoolMetrics(client, registry).run(null);
+            assertThat(registry.get("httpcomponents.httpclient.pool.total.max").gauge().value()).isEqualTo(150);
+            assertThat(registry.get("httpcomponents.httpclient.pool.route.max.default").gauge().value()).isEqualTo(150);
+        } finally {
+            registry.close();
+        }
+    }
+
+    @Test
     void exposesTheExistingPoolAndRecordsConnectionWaits() throws Exception {
         var entered = new CountDownLatch(1);
         var release = new CountDownLatch(1);
