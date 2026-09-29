@@ -1,12 +1,11 @@
 package com.mudosa.musinsa.product.application;
 
-import com.mudosa.musinsa.exception.BusinessException;
-import com.mudosa.musinsa.exception.ErrorCode;
 import com.mudosa.musinsa.product.application.dto.CategoryTreeResponse;
 import com.mudosa.musinsa.product.application.dto.ProductDetailResponse;
 import com.mudosa.musinsa.product.application.dto.ProductSearchCondition;
 import com.mudosa.musinsa.product.application.dto.ProductSearchResponse;
 import com.mudosa.musinsa.product.application.mapper.ProductQueryMapper;
+import com.mudosa.musinsa.product.application.observation.ProductDetailObservationSupport;
 import com.mudosa.musinsa.product.domain.model.Category;
 import com.mudosa.musinsa.product.domain.model.Image;
 import com.mudosa.musinsa.product.domain.model.Product;
@@ -15,8 +14,10 @@ import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepository;
 import com.mudosa.musinsa.product.domain.repository.ProductRepositoryCustom;
 import com.mudosa.musinsa.product.infrastructure.cache.CategoryCache;
-import com.mudosa.musinsa.product.infrastructure.cache.OptionValueCache;
 import com.mudosa.musinsa.product.infrastructure.search.repository.ProductIndexSearchQueryRepository;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,9 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
+
 
 /**
  * 상품 조회 전용 서비스. 목록, 상세, 검색 응답을 구성한다.
@@ -38,11 +38,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional(readOnly = true)
 public class ProductQueryService {
-
+	private final ObservationRegistry observationRegistry;
 	private final CategoryRepository categoryRepository;
 	private final CategoryCache categoryCache;
+	private final ProductDetailObservationSupport productDetailObservationSupport;
 	private final ProductRepository productRepository;
-	private final OptionValueCache optionValueCache;
 	private final ProductIndexSearchQueryRepository productIndexSearchQueryRepository;
 
 	/**
@@ -50,68 +50,68 @@ public class ProductQueryService {
 	 */
 	// ES 검색에는 DB 트랜잭션을 열지 않는다. 목록 DB 조회는 저장소에서 시작한다.
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
+	@Observed(name = "product.read", contextualName = "product.read")
 	public ProductSearchResponse searchProducts(ProductSearchCondition condition) {
 		// 1. 검색 조건 파싱
 		SearchParams params = parseCondition(condition);
 
 		// 2. 키워드 유무에 따라 적절한 검색 메서드 호출 (요약 DTO)
 		if (params.keyword != null && !params.keyword.isBlank()) {
-			ProductIndexSearchQueryRepository.SearchResult esResult = productIndexSearchQueryRepository
-					.searchByKeywordWithFilters(
-							toCondition(params), tokenize(params.keyword), params.page);
+			ProductIndexSearchQueryRepository.SearchResult esResult = Observation.createNotStarted("product.search.es", observationRegistry)
+				.observe(() -> productIndexSearchQueryRepository.searchByKeywordWithFilters(
+					toCondition(params), tokenize(params.keyword), params.page));
 			String nextCursor = esResult.hasNext() ? String.valueOf(params.page + 1) : null;
-			return ProductQueryMapper.toSearchResponse(esResult.products(), nextCursor, esResult.hasNext(),
-					esResult.totalCount());
+			return Observation.createNotStarted("product.search.response", observationRegistry)
+				.observe(() -> ProductQueryMapper.toSearchResponse(esResult.products(), nextCursor, esResult.hasNext(), esResult.totalCount()));
 		}
 
-		List<ProductSearchResponse.ProductSummary> fetchedProducts = findProducts(params);
+		List<ProductSearchResponse.ProductSummary> fetchedProducts = Observation.createNotStarted("product.list.db", observationRegistry)
+			.observe(() -> findProducts(params));
 		boolean hasNext = fetchedProducts.size() > params.limit;
-		List<ProductSearchResponse.ProductSummary> products = hasNext ? fetchedProducts.subList(0, params.limit)
-				: fetchedProducts;
+		List<ProductSearchResponse.ProductSummary> products = hasNext ? fetchedProducts.subList(0, params.limit) : fetchedProducts;
 		String nextCursor = hasNext && !products.isEmpty()
-				? buildCursor(products.get(products.size() - 1), params.priceSort)
-				: null;
+			? buildCursor(products.get(products.size() - 1), params.priceSort)
+			: null;
 
 		// 3. 응답 DTO 반환
-		return ProductQueryMapper.toSearchResponse(products, nextCursor, hasNext, null);
+		return Observation.createNotStarted("product.list.response", observationRegistry)
+			.observe(() -> ProductQueryMapper.toSearchResponse(products, nextCursor, hasNext, null));
 	}
 
 	/**
 	 * 단일 상품 상세 정보를 조회한다.
 	 */
+	@Observed(name = "product.detail", contextualName = "product.detail")
 	public ProductDetailResponse getProductDetail(Long productId) {
 		// 1. 상품 존재/상태 확인 및 옵션(+재고)까지 단일 쿼리로 조회
-		Product product = productRepository.findDetailById(productId)
-				.orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "해당 상품을 찾을 수 없거나 비활성화된 상품입니다"));
+		Product product = productDetailObservationSupport.fetchProductWithOptions(productId);
 
 		// 2. 이미지 컬렉션은 별도 쿼리로 로딩
-		List<Image> productImages = productRepository.findImagesByProductId(productId);
-		List<ProductDetailResponse.ImageResponse> images = productImages.stream()
+		List<Image> productImages = productDetailObservationSupport.fetchImages(productId);
+		List<ProductDetailResponse.ImageResponse> images = Observation.createNotStarted("product.detail.map-images", observationRegistry)
+			.observe(() -> productImages.stream()
 				.map(ProductQueryMapper::toImageResponse)
-				.collect(Collectors.toList());
+				.collect(Collectors.toList()));
 
 		// 3. 옵션값 매핑을 별도 조회 후 옵션별로 그룹핑 (엔티티 변형 없음)
-		List<ProductOptionValue> optionValues = productRepository.findProductOptionValuesByProductId(productId);
-		Map<Long, List<ProductOptionValue>> optionValuesByOptionId = optionValues.stream()
-				.filter(pov -> pov.getId() != null && pov.getId().getProductOptionId() != null)
-				.collect(Collectors.groupingBy(pov -> pov.getId().getProductOptionId()));
+		List<ProductOptionValue> optionValues = productDetailObservationSupport.fetchProductOptionValues(productId);
+		Map<Long, List<ProductOptionValue>> optionValuesByOptionId = productDetailObservationSupport.groupOptionValuesByOptionId(optionValues);
 
-		// 4. 캐시에서 옵션값 메타데이터(이름/값)를 조회
-		Set<Long> optionValueIds = optionValues.stream()
-				.map(mapping -> mapping.getId() != null ? mapping.getId().getOptionValueId() : null)
-				.filter(Objects::nonNull)
-				.collect(Collectors.toSet());
-		Map<Long, OptionValueCache.Value> optionValueCacheMap = optionValueCache.getAll(optionValueIds);
+		// 4. 캐시에서 옵션값 메타데이터(이름/값)를 조회해 DTO 매핑에 사용
+		Map<Long, ProductQueryMapper.OptionValueInfo> optionValueInfoMap =
+			productDetailObservationSupport.buildOptionValueInfoMap(optionValues);
 
 		// 5. 최종 응답 DTO 구성
-		List<ProductDetailResponse.OptionDetail> options = product.getProductOptions().stream()
+		return Observation.createNotStarted("product.detail.map-response", observationRegistry).observe(() -> {
+			List<ProductDetailResponse.OptionDetail> options = product.getProductOptions().stream()
 				.map(option -> ProductQueryMapper.toOptionDetail(
-						option,
-						optionValuesByOptionId.getOrDefault(option.getProductOptionId(), List.of()),
-						optionValueCacheMap))
+					option,
+					optionValuesByOptionId.getOrDefault(option.getProductOptionId(), List.of()),
+					optionValueInfoMap))
 				.collect(Collectors.toList());
 
-		return ProductQueryMapper.toProductDetail(product, images, options);
+			return ProductQueryMapper.toProductDetail(product, images, options);
+		});
 	}
 
 	/**

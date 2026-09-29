@@ -2,11 +2,12 @@ package com.mudosa.musinsa.product.application;
 
 import com.mudosa.musinsa.product.application.dto.ProductSearchCondition;
 import com.mudosa.musinsa.product.application.dto.CategoryTreeResponse;
-import com.mudosa.musinsa.product.infrastructure.cache.OptionValueCache;
+import com.mudosa.musinsa.product.application.observation.ProductDetailObservationSupport;
 import com.mudosa.musinsa.product.domain.repository.*;
 import com.mudosa.musinsa.product.infrastructure.cache.CategoryCache;
 import com.mudosa.musinsa.product.infrastructure.search.repository.ProductIndexSearchQueryRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -38,9 +39,9 @@ class ProductSearchTransactionTest {
     void esDoesNotUseDbTransactionWhileDbReadsKeepReadOnlyTransactions() {
         var es = mock(ProductIndexSearchQueryRepository.class);
         var cache = mock(CategoryCache.class);
-        var products = mock(ProductRepository.class);
-        var service = transactionalProxy(new ProductQueryService(
-            mock(CategoryRepository.class), cache, products, mock(OptionValueCache.class), es));
+        var detail = mock(ProductDetailObservationSupport.class);
+        var service = transactionalProxy(new ProductQueryService(ObservationRegistry.NOOP,
+            mock(CategoryRepository.class), cache, detail, mock(ProductRepository.class), es));
         when(es.searchByKeywordWithFilters(any(), anyList(), anyInt())).thenAnswer(invocation -> {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             return new ProductIndexSearchQueryRepository.SearchResult(List.of(), false, 0L);
@@ -59,7 +60,7 @@ class ProductSearchTransactionTest {
         });
         service.getCategoryTree();
         var stop = new IllegalStateException("stop after transaction assertion");
-        when(products.findDetailById(1L)).thenAnswer(invocation -> {
+        when(detail.fetchProductWithOptions(1L)).thenAnswer(invocation -> {
             assertReadOnlyTransaction();
             throw stop;
         });

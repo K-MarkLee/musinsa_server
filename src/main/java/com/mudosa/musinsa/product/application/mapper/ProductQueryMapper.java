@@ -6,7 +6,6 @@ import com.mudosa.musinsa.product.domain.model.Image;
 import com.mudosa.musinsa.product.domain.model.Product;
 import com.mudosa.musinsa.product.domain.model.ProductOption;
 import com.mudosa.musinsa.product.domain.model.ProductOptionValue;
-import com.mudosa.musinsa.product.infrastructure.cache.OptionValueCache;
 
 import java.util.List;
 import java.util.Map;
@@ -63,12 +62,12 @@ public final class ProductQueryMapper {
 	// 상품 옵션 엔티티를 응답 DTO로 변환한다.
 	public static ProductDetailResponse.OptionDetail toOptionDetail(ProductOption option,
 			List<ProductOptionValue> optionValues,
-			Map<Long, OptionValueCache.Value> optionValueCacheMap) {
+			Map<Long, OptionValueInfo> optionValueInfoMap) {
 		List<ProductDetailResponse.OptionDetail.OptionValueDetail> optionValueDetails = optionValues.stream()
 				.map(mapping -> {
 					Long optionValueId = mapping.getId() != null ? mapping.getId().getOptionValueId() : null;
-					OptionValueCache.Value cached = optionValueId != null && optionValueCacheMap != null
-							? optionValueCacheMap.get(optionValueId)
+					OptionValueInfo cached = optionValueId != null && optionValueInfoMap != null
+							? optionValueInfoMap.get(optionValueId)
 							: null;
 					return ProductDetailResponse.OptionDetail.OptionValueDetail.builder()
 							.optionValueId(optionValueId)
@@ -93,4 +92,6 @@ public final class ProductQueryMapper {
 				.optionValues(optionValueDetails)
 				.build();
 	}
+
+	public static record OptionValueInfo(Long optionValueId, String optionName, String optionValue) {}
 }

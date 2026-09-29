@@ -22,6 +22,8 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.FetchSourceFilterBuilder;
 import co.elastic.clients.elasticsearch._types.query_dsl.PrefixQuery;
 import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -30,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -50,6 +53,7 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
             "상의", "아우터", "바지", "원피스", "스커트", "가방", "패션소품", "속옷", "홈웨어");
 
     private final ElasticsearchOperations elasticsearchOperations;
+    private final Tracer tracer;
 
     @Override
     public SearchResult searchByKeywordWithFilters(ProductSearchCondition condition, List<String> tokens, int page) {
@@ -173,7 +177,18 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
 
     // 쿼리 실행 및 결과 매핑
     private SearchResult executeQuery(NativeQuery query, int limit) {
+        long startedAt = System.nanoTime();
         SearchHits<ProductDocument> hits = elasticsearchOperations.search(query, ProductDocument.class);
+        // Spring Data 검색 호출 전체 시간에는 응답 역직렬화/도큐먼트 매핑도 포함된다.
+        long clientMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+        long tookMs = hits.getExecutionDuration().toMillis();
+        Span currentSpan = tracer.currentSpan();
+        if (currentSpan != null) {
+            currentSpan.tag("es.client_ms", clientMs)
+                .tag("es.took_ms", tookMs)
+                // 차이는 연결 대기만을 뜻하지 않는다. 전송/응답 처리 등도 포함된다.
+                .tag("es.outside_took_ms", clientMs - tookMs);
+        }
 
         List<ProductSearchResponse.ProductSummary> products = hits.getSearchHits().stream()
                 .map(hit -> toSummary(hit.getContent()))

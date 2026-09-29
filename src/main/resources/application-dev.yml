@@ -73,6 +73,8 @@ server:
   port: ${SERVER_PORT:8080}
   address: 0.0.0.0
   tomcat:
+    mbeanregistry:
+      enabled: true
     threads:
       max: ${TOMCAT_THREADS_MAX:200} # Tuned for M3 Max Concurrency
       min-spare: ${TOMCAT_THREADS_MIN_SPARE:25}
@@ -83,29 +85,34 @@ server:
     max-keep-alive-requests: ${TOMCAT_MAX_KEEP_ALIVE_REQUESTS:100}
 
 management:
+  observations:
+    annotations:
+      enabled: true
   endpoints:
     web:
       exposure:
         include: prometheus, health, info
 
   tracing:
-    enabled: false
+    enabled: true
     sampling:
-      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.01}
     propagation:
       propagate: tracecontext,baggage
 
   otlp:
     tracing:
       endpoint: ${OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+      export:
+        enabled: true
 
 logging:
   level:
     org:
       elasticsearch.client: ERROR
       hibernate:
-        sql: ERROR
-        type.descriptor.sql.BasicBinder: TRACE
+        SQL: INFO
+        orm.jdbc.bind: INFO
         orm.jdbc.internal.LogicalConnectionImpl: ERROR
       springframework.orm.jpa: ERROR
       springframework.transaction: ERROR
