@@ -145,7 +145,7 @@ public class ProductRepositoryImpl implements ProductRepositoryCustom {
         BigDecimal cursorPrice = cursor.price();
         if (priceSort == ProductSearchCondition.PriceSort.HIGHEST && cursorPrice != null) {
             return product.defaultPrice.lt(cursorPrice)
-                    .or(product.defaultPrice.eq(cursorPrice).and(product.productId.gt(cursor.productId())));
+                    .or(product.defaultPrice.eq(cursorPrice).and(product.productId.lt(cursor.productId())));
         }
         if (priceSort == ProductSearchCondition.PriceSort.LOWEST && cursorPrice != null) {
             return product.defaultPrice.gt(cursorPrice)

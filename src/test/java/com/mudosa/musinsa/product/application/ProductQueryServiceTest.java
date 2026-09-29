@@ -14,11 +14,15 @@ import com.mudosa.musinsa.product.domain.repository.CategoryRepository;
 import com.mudosa.musinsa.product.domain.repository.OptionValueRepository;
 import com.mudosa.musinsa.product.domain.model.OptionValue;
 import com.mudosa.musinsa.product.infrastructure.search.repository.ProductIndexSearchQueryRepository;
+import com.mudosa.musinsa.product.infrastructure.search.config.ProductIndexConfig;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
@@ -44,6 +48,9 @@ public class ProductQueryServiceTest extends ServiceConfig {
 	private OptionValueRepository optionValueRepository;
 	@MockBean
 	private ProductIndexSearchQueryRepository productIndexSearchQueryRepository;
+
+	@MockitoBean
+	private ProductIndexConfig productIndexConfig;
 
 	private Long userId;
 	private Long brandId;
@@ -392,9 +399,10 @@ public class ProductQueryServiceTest extends ServiceConfig {
 			.containsExactly(cheapId);
 	}
 
-	@Test
-	@DisplayName("동일 가격일 때 낮은 가격 정렬 커서가 productId로 타이브레이크한다.")
-	void searchProductsWithLowestPriceCursorPagingSamePriceUsesIdOrder() {
+	@ParameterizedTest
+	@EnumSource(ProductSearchCondition.PriceSort.class)
+	@DisplayName("동일 가격일 때 가격 정렬 방향에 맞게 중복·누락 없이 다음 페이지를 조회한다.")
+	void searchProductsWithPriceCursorPagingSamePriceUsesIdOrder(ProductSearchCondition.PriceSort priceSort) {
 		// given
 		Long firstId = productCommandService.createProduct(
 			createProductRequest("동일가1", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(7000)), brandId, userId);
@@ -404,7 +412,7 @@ public class ProductQueryServiceTest extends ServiceConfig {
 			createProductRequest("동일가3", topsCategoryPath, ProductGenderType.ALL, BigDecimal.valueOf(7000)), brandId, userId);
 
 		ProductSearchCondition firstPageCondition = ProductSearchCondition.builder()
-			.priceSort(ProductSearchCondition.PriceSort.LOWEST)
+			.priceSort(priceSort)
 			.limit(2)
 			.build();
 
@@ -415,12 +423,12 @@ public class ProductQueryServiceTest extends ServiceConfig {
 		assertThat(firstPage.isHasNext()).isTrue();
 		assertThat(firstPage.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductId)
-			.containsExactly(firstId, secondId);
+			.containsExactly(priceSort == ProductSearchCondition.PriceSort.HIGHEST ? thirdId : firstId, secondId);
 		assertThat(firstPage.getNextCursor()).isEqualTo("7000:" + secondId);
 
 		// when: cursor로 다음 페이지 요청
 		ProductSearchCondition secondPageCondition = ProductSearchCondition.builder()
-			.priceSort(ProductSearchCondition.PriceSort.LOWEST)
+			.priceSort(priceSort)
 			.limit(2)
 			.cursor(firstPage.getNextCursor())
 			.build();
@@ -429,7 +437,8 @@ public class ProductQueryServiceTest extends ServiceConfig {
 		assertThat(secondPage.isHasNext()).isFalse();
 		assertThat(secondPage.getProducts())
 			.extracting(ProductSearchResponse.ProductSummary::getProductId)
-			.containsExactly(thirdId);
+			.containsExactly(priceSort == ProductSearchCondition.PriceSort.HIGHEST ? firstId : thirdId);
+		assertThat(secondPage.getNextCursor()).isNull();
 	}
 
 	@Test
