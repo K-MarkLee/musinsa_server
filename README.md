@@ -1,139 +1,225 @@
+<div align="center">
+  <h1>Musinsa · Product Search &amp; Query Optimization</h1>
+  <p>Designing how product data is read and searched, then testing those decisions against measurements.</p>
 
-# 🔍 검색 서비스 고도화 보고서 (Search Optimization Report)
+  <p>
+    <img alt="E-commerce backend" src="https://img.shields.io/badge/Type-E--commerce%20Backend-F97316?style=flat-square">
+    <img alt="Backend development" src="https://img.shields.io/badge/Focus-Backend%20Development-111827?style=flat-square">
+    <img alt="Java 21" src="https://img.shields.io/badge/Java-21-6B7280?style=flat-square">
+  </p>
 
+  <p><strong>English</strong> · <a href="./README.ko.md">한국어</a></p>
 
-## 0. 프로젝트 화면
-유튜브 링크 : https://youtu.be/oC8-prv8Qdo
-
-<img src="./docs/images/musinsang-gif.webp" alt="gif" width="720" />
-
-
-
----
-
-## 1. 프로젝트 개요 (Overview)
-본 프로젝트는 단순한 기능 구현에서 시작하여, 대용량 트래픽과 데이터 상황을 가정하고 점진적으로 시스템을 고도화한 **2개월간의 엔지니어링 기록**입니다.
-
-### 프로젝트 여정 (Evolution Journey)
-
-#### Phase 1: 기능 구현 (MVP)
-- **목표**: 이커머스의 핵심 도메인인 “상품”을 중심으로 요구사항을 정리하고, MVP 수준의 CRUD를 빠르게 구현.
-- **요구사항 명세**: 상품 등록/수정/삭제, 상품 조회(목록/상세), 검색/필터, 페이징 등.
-
-<br>
-
-#### Phase 2: 리팩토링 및 테스트 (Stability)
-- **목표**: 테스트 기반 리팩토링으로 구조적 안정성 확보.
-- **테스트 전략**:
-  - Unit Test로 도메인/서비스 로직을 빠르게 검증.
-  - Integration Test로 API/DB 연동 및 주요 플로우를 검증.
-- **리팩토링 포인트**:
-  - Controller-Service-Repository 계층 책임을 명확히 분리.
-  - **SRP(단일 책임 원칙) + CQRS 관점 분리**: 상품 관리(Command)와 조회/검색(Query) 책임을 분리해 변경 영향도를 축소.
-
-<br>
-
-#### Phase 3: 대용량 데이터 챌린지 (Scalability)
-- **상황**: 네이버 쇼핑 API를 활용해 상품 데이터를 대량 적재하고(약 1,000만 건), 로컬 환경에서 부하 테스트를 수행.
-- **목표**: 병목을 찾고, 성능 개선 포인트를 “지표 기반”으로 확인(Grafana, k6, Prometheus).
-- **진행**:
-  - 대용량 데이터 환경에서 기존 `LIKE` 기반 검색의 한계를 확인하고 검색 전용 엔진(Elasticsearch) 도입.
-  - 로컬 리소스(디바이스) 한계로 인해, AWS 배포까지 완료했으나 AWS 환경에서의 추가 튜닝/개선은 시간 관계상 진행하지 못함.
-
+  <p>
+    <a href="#demo">Demo</a> ·
+    <a href="#project-at-a-glance">Project &amp; role</a> ·
+    <a href="#key-decisions-and-evidence">Key decisions</a> ·
+    <a href="#tech-stack">Tech &amp; rationale</a> ·
+    <a href="#architecture">Architecture</a> ·
+    <a href="#measurement-setup-and-scenarios">Setup &amp; scenarios</a> ·
+    <a href="#single-request-improvements">Case studies</a> ·
+    <a href="#troubleshooting">Troubleshooting</a> ·
+    <a href="#limits-and-next-steps">Next steps</a>
+  </p>
+</div>
 
 ---
 
-## 2. 기술 스택 (Tech Stack)
-<img src="./docs/images/Skills.png" alt="Skills" width="720" />
+## Demo
 
+![Product browsing and search demo](docs/images/musinsang-gif.webp)
 
----
-
-## 3. 담당 기능 (Responsibilities)
-### 상품 조회 (List)
-- 정렬: 기본 정렬, 가격 낮은 순, 가격 높은 순
-- 필터: 카테고리 기반 필터링
-
-### 상품 상세 조회 (Detail)
-- 검색 결과에서 선택한 옵션(색상/사이즈 등)이 선택된 상태로 상세 페이지 진입/조회
-
-### 상품 검색 (Search)
-- 검색 대상: 브랜드명, 카테고리, 상품명, 색상, 사이즈
-- 추가 기능: 필터링 및 정렬 지원
+<h3 align="center"><a href="https://youtu.be/oC8-prv8Qdo">Watch the demo</a></h3>
 
 ---
 
-## 4. ERD와 아키텍쳐
-> 요구사항 명세서를 기반으로 주요 엔티티 및 관계를 설정했습니다.
+## Project at a Glance
 
-<img src="https://raw.githubusercontent.com/K-MarkLee/musinsa_server/main/docs/images/erd.png" width="1000">
+A team e-commerce project modeled on Musinsa.<br>
+With dozens of options per product, it examines how to read and search the information each screen needs and where requests wait as load increases.
 
+### My Role
 
-<br>
-
-
-> 서버의 아키텍쳐 구성입니다.
-<img src="https://raw.githubusercontent.com/K-MarkLee/musinsa_server/main/docs/images/Server-Architecture.png" width="900">
-
-- Route 53, ALB, Bastion을 포함한 AWS 기반 아키텍처로 구성했습니다.
-
-- **시퀸스 다이어그램 및 인프라 정보는 [WIKI](https://github.com/K-MarkLee/musinsa_server/wiki) 에 있습니다.**
-
-<br>
-
-<br>
+I designed and implemented product listing, filtering, detail, and search; improved queries and response construction; and investigated connection pools, threads, and search bottlenecks with k6 measurements.<br>
+The case studies describe my work and validation within the team's product-read functionality.
 
 ---
 
-## 5. 성능 개선치
+## Key Decisions and Evidence
 
-**실제 상품 데이터 약 1,000만 건의 환경에서의 피크 타임 부하 테스트 개선치입니다.**
+| Problem | Design decision | Outcome | Evidence |
+| --- | --- | --- | --- |
+| Traversing options and stock for one list price | Store a representative price; remove list stock calculation | Mean 860.47→63.06ms | [Stored price](docs/en/improvements/list-price.md) |
+| COUNT for total pages and OFFSET costs | Remove COUNT and apply keyset pagination | Mean 74.14→16.52ms | [Pagination](docs/en/improvements/list-keyset.md) |
+| Repeated relationship reads for detail | Split relationship fetching; bulk-read the option dictionary | Mean 70.14→8.91ms | [Detail reads](docs/en/improvements/product-detail.md) |
+| Color/type intent missing from product titles | Apply option-level ES documents, multi-field matching, and relevance ranking | Returned results for “black skirt” missed by LIKE | [Search design](docs/en/improvements/product-search.md) |
+| Request waiting under load | Establish a baseline, then investigate pools, threads, and search | Four APIs each held 1,000 RPS in separate runs.<br>Detail/search waiting paths identified | [Baseline](#load-results) · [Investigations](#troubleshooting) |
 
-<br>
-
-### 단순 조회(List) 기준
-
-#### Performance
-- Summary: 30s -> 275ms
-
-<img src="./docs/images/list-30s.png" alt="List baseline 30s" width="720" />
-
-<img src="./docs/images/list-no-monitor.png" alt="List no monitor" width="720" />
-
-<br>
-
-<br>
-
-### 상세 조회(Detail) 기준
-
-#### Performance
-- Summary: 30s -> 723ms
-
-<img src="./docs/images/detail-no-monitor.png" alt="Detail no monitor" width="720" />
-
-<br>
-
-<br>
-
-
-### 검색(Search) 기준 (Elasticsearch)
-
-#### Performance
-- Summary: 5s -> 2.3s
-
-<img src="./docs/images/es-5s.png" alt="ES search 5s" width="720" />
-
-<img src="./docs/images/es-no-monitor.png" alt="ES no monitor" width="720" />
-
-<br>
-
-<br>
-
+The case studies include repeated measurements, evidence images, design decisions, and trade-offs.
 
 ---
 
-## 6. WIKI 및 참고 자료
-설계/트러블슈팅/성능 개선 과정은 WIKI에 단계별로 정리했습니다. 아래 링크에서 흐름대로 확인하실 수 있습니다.
+## Tech Stack
 
+| Area | Technologies |
+| --- | --- |
+| Backend | Java 21, Spring Boot 3.5.6, Spring Data JPA, QueryDSL |
+| Data / search | MySQL, Redis, Elasticsearch |
+| Measurement | k6, Prometheus, Grafana, Jaeger, ES Profile / hot threads |
+| Infrastructure / tests | Docker, AWS, JUnit, Spring Boot Test |
 
-[WIKI 바로가기](https://github.com/K-MarkLee/musinsa_server/wiki)
+### Why These Technologies
+
+| Technology | Alternatives | Reason for selection |
+| --- | --- | --- |
+| QueryDSL | JPA derived methods, `@Query`/JPQL, Specification | Compose and reuse optional filters, ordering, cursor predicates, and DTO reads in code |
+| MySQL | PostgreSQL | Meet relational-read requirements using the team's experience, reducing the effort to learn setup and operations |
+| Redis | Local cache, direct DB reads using the buffer pool | Separate repeated option values into a dictionary that instances can share and retrieve in bulk |
+| Elasticsearch | Existing LIKE, MySQL FULLTEXT | Express intent across attributes, synonyms, and relevance weights together |
+| Load testing and observability | Investigations centered on application logs and IDE profilers | Connect target load, resource metrics, and request spans to investigate latency and waiting |
+
+> **[Read the technology selection rationale →](docs/en/technology-decisions.md)**
+
+---
+
+## Architecture
+
+Read models serve each screen: representative fields and next-page availability for lists, options and inventory for detail, and multi-field matching and relevance for search.<br>
+The diagram shows product reads, search, and application observability.
+
+```mermaid
+flowchart TB
+    WEB["Web client"] -->|HTTP| API["Spring Boot product API"]
+    K6["k6 load generator"] -->|HTTP| API
+
+    subgraph DATA["Read stores"]
+        MYSQL[("MySQL<br/>Products, options, inventory")]
+        REDIS[("Redis<br/>Color and size dictionary")]
+        ES[("Elasticsearch<br/>Option-level search documents")]
+    end
+
+    API -->|"List, filter, detail / JPA, QueryDSL"| MYSQL
+    API -->|"Bulk dictionary reads for detail"| REDIS
+    API -->|"Search / product collapse"| ES
+
+    subgraph OBS["Application observability"]
+        PROM["Prometheus"]
+        GRAFANA["Grafana"]
+        JAEGER["Jaeger"]
+    end
+
+    PROM -.->|"Scrape Actuator metrics"| API
+    GRAFANA -.->|"Query time series"| PROM
+    API -.->|"Export OTLP spans"| JAEGER
+```
+
+<details>
+<summary>Full ERD</summary>
+
+<img src="./docs/images/erd-en.png" alt="Product domain ERD with English table labels" width="1000">
+
+</details>
+
+<details>
+<summary>AWS deployment architecture</summary>
+
+<img src="./docs/images/Server-Architecture.png" alt="AWS deployment architecture" width="900">
+
+The team's AWS deployment at the time; it is no longer running.<br>
+The performance measurements below were run locally, with execution conditions documented in the measurement setup.
+
+</details>
+
+---
+
+## Measurement Setup and Scenarios
+
+Products were collected through the [Naver Shopping Search API](https://developers.naver.com/docs/serviceapi/search/shopping/shopping.md) to test reads and search with real product information.<br>
+Color/size combinations expanded roughly 150,000 collected products into a product-option dataset on the scale of ten million records.<br>
+This was inspired by [Coupang's use of an option as its smallest product unit](https://developers.coupang.com/ko/getting-started/coupang-open-api).
+
+155,036 products formed the basis for 11,162,704 product-option records.
+
+![MySQL Workbench count of 11,162,704 product_option rows](docs/images/data.png)
+
+This fixed dataset was used for 1-VU before/after comparisons and staged individual-API load.<br>
+The detailed document covers data distribution, the local environment, k6 scenario selection, and the 1,000-RPS target and pass criteria.
+
+> **[Dataset, environment, and k6 scenario details →](docs/en/environment.md)**
+
+---
+
+## Single-Request Improvements
+
+The comparison shows mean API latency before and after each change, measured at 1 VU after warm-up.
+
+![API-specific before/after latency: list price, list keyset, list thumbnail/DTO, filter indexes, detail reads, and search](docs/images/query-improvements-en.png)
+
+| API | Change and case study | Before mean | After mean | Reduction |
+| --- | --- | ---: | ---: | ---: |
+| Product list | [Stored price / removed list stock calculation →](docs/en/improvements/list-price.md) | 860.47ms | 63.06ms | 92.7% |
+| Product list / scroll | [COUNT removal / keyset pagination →](docs/en/improvements/list-keyset.md) | 74.14ms | 16.52ms | 77.7% |
+| Product list | [Stored thumbnail / direct DTO projection →](docs/en/improvements/list-thumbnail-dto.md) | 16.52ms | 4.76ms | 71.2% |
+| Product filter | [Composite filter / sort indexes →](docs/en/improvements/filter-indexes.md) | 30.96ms | 8.14ms | 73.7% |
+| Product detail | [Split relationship reads / dictionary cache →](docs/en/improvements/product-detail.md) | 70.14ms | 8.91ms | 87.3% |
+| Product search | [MySQL LIKE → ES search model →](docs/en/improvements/product-search.md) | 89.28ms | 23.30ms | 73.9% |
+
+Each row is a separate comparison: the first five average three additional runs, while search averages one initial run and three additional runs.<br>
+Search spans different ES revisions and different LIKE/ES matching and ordering, so it describes responsiveness as the search feature changed.
+
+---
+
+## Load Results
+
+The table summarizes the final run of each API's baseline load test.<br>
+Each document contains stage/condition tables, resource observations, and original k6, Spring Boot/Hikari, and Jaeger images.
+
+| API and full results | Completed hold | Hold mean | Hold p95 | Outcome |
+| --- | --- | ---: | ---: | --- |
+| [Product list →](docs/en/load-tests/product-list.md) | 1,000 RPS · 120s | 2.64ms | 4.26ms | No HTTP failures or recorded drops |
+| [Product scroll →](docs/en/load-tests/product-scroll.md) | 1,000 RPS · 120s | 2.44ms | 3.95ms | No HTTP failures or recorded drops |
+| [Product filter →](docs/en/load-tests/product-filter.md) | 1,000 RPS · 120s | 3.05ms | 5.03ms | No HTTP failures or recorded drops |
+| [Product detail →](docs/en/load-tests/product-detail.md) | 1,000 RPS · 120s | 5.07ms | 7.21ms | No HTTP failures or recorded drops |
+| [Product search →](docs/en/load-tests/product-search.md) | 250 RPS · 30s | 15.39ms | 40.53ms | 179 drops in the following ramp; early abort |
+
+`dropped_iterations` counts scheduled iterations that could not start.<br>
+Even the aborted search run had zero HTTP failures, so successful responses alone do not establish that the target load was delivered.
+
+List, scroll, and filter met the 1,000-RPS target in this baseline and were not tested above it.<br>
+These results establish that the target load passed under those conditions; they do not establish maximum throughput.
+
+---
+
+## Troubleshooting
+
+Detail progressed to higher-load waiting investigations after meeting the 1,000-RPS baseline; search followed its baseline abort.<br>
+Pool and thread changes test specific hypotheses, with changed and fixed conditions documented per experiment.
+
+| Problem | Observation and decision | Case study |
+| --- | --- | --- |
+| Detail DB connection waiting | With Tomcat 200 fixed, Hikari 10→50 reduced 2,000-RPS p95 from 875.2→58.6ms; 571 whole-run drops remained.<br>Further expansion had little throughput benefit and reached the DB connection limit | [Hikari / MySQL connection limit →](docs/en/troubleshooting/hikari.md) |
+| Tomcat busy at its cap | With Hikari 50 fixed, Tomcat 200→500 did not improve 3,000-RPS throughput; pending rose approximately 150→450 and p95 632.6→901.6ms | [Tomcat 50 / 200 / 500 →](docs/en/troubleshooting/tomcat.md) |
+| Repeated search load aborts | Transaction separation → HTTP-pool instrumentation and expansion → client/took split → ES CPU and search-queue investigation | [Search load investigation →](docs/en/troubleshooting/search-capacity.md) |
+| Search intent/result mismatch | Distinguished highest-field scoring from required token matching; revisited matching and ranking rules | [Search quality →](docs/en/troubleshooting/search-quality.md) |
+| Deduplication and pagination | Investigated option-document collapse / search_after constraints; current from/size still has deep-page costs | [Search pagination →](docs/en/troubleshooting/search-pagination.md) |
+| Deployed search-engine compatibility | Injected the response product header and supplied ES 7 compatibility request headers to bypass the client check | [OpenSearch deployment →](docs/en/troubleshooting/opensearch-deployment.md) |
+| Cost of observability itself | Reduced DEBUG logs and unnecessary tracing while retaining targeted spans and pool metrics | [Observability overhead →](docs/en/troubleshooting/observability-overhead.md) |
+| Initial detail-path isolation | Compared mock controller, Security, and dummy service paths; traced service-entry waiting and DTO assembly with Jaeger | [Detail isolation experiment →](docs/en/troubleshooting/detail-isolation.md) |
+
+Connection-pool and worker-thread comparisons led to a local baseline of Hikari 50 and Tomcat 200.
+
+---
+
+## Limits and Next Steps
+
+The results cover read design against fixed product/option data and observations in a local environment.<br>
+Performance after deployment and consistency across representative fields, caches, and search indexes during updates remain separate validation work.
+
+| Follow-up | What to validate |
+| --- | --- |
+| Deployed-environment validation | Separate load generation from service resources on Azure; examine throughput, latency, and bottlenecks under the network/resource layout |
+| Update consistency | Representative price/thumbnail updates, Redis dictionary refresh, DB→ES propagation, retries, and reindexing |
+| Redis vs. local memory vs. RDB | Compare latency, network costs, refresh, and failure dependencies using the same dictionary and response |
+| ES nested model | Compare option documents with product-root nested modeling for option combinations, reads, index size, and update costs |
+
+> **[Read the limitations and follow-up details →](docs/en/future-work.md)**
