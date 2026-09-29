@@ -10,7 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Slf4j
-@Service
+// 상품 조회 측정 중 비활성화. 토스 설정과 연동 빈을 함께 복원.
+// @Service
 @RequiredArgsConstructor
 public class TossPaymentStrategy implements PaymentStrategy {
 

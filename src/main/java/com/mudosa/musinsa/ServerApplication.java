@@ -26,10 +26,14 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "com\\.mudosa\\.musinsa\\.brand\\.domain\\.(controller|service)\\..*",
         "com\\.mudosa\\.musinsa\\.coupon\\.(service|presentation)\\..*",
         "com\\.mudosa\\.musinsa\\.event\\.service\\.EventCouponService",
-        "com\\.mudosa\\.musinsa\\.event\\.presentation\\.controller\\.EventController"
+        "com\\.mudosa\\.musinsa\\.event\\.presentation\\.controller\\.EventController",
+        "com\\.mudosa\\.musinsa\\.notification\\.controller\\.NotificationController",
+        "com\\.mudosa\\.musinsa\\.notification\\.service\\.(NotificationService|FcmService)",
+        "com\\.mudosa\\.musinsa\\.notification\\.event\\.NotificationEventListener"
     })
 })
-@EnableScheduling
+// 상품 조회 측정 중 스케줄러 비활성화.
+// @EnableScheduling
 @MapperScan(
     basePackages = {
         "com.mudosa.musinsa.settlement.domain.repository",

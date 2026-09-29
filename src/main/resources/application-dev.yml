@@ -1,4 +1,12 @@
 spring:
+  # 검색 측정: 채팅 브로커 자동 설정 제외. 상품 캐시는 사용자 정의 RedisConfig로 유지.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME}
@@ -44,16 +52,16 @@ spring:
     # username: ${OPENSEARCH_USERNAME}
     # password: ${OPENSEARCH_PASSWORD}
 
-tosspayments:
-  secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
-  client-key: test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm
-  confirm_url: ${TOSS_CONFIRM_URL}
-  base_cancel_url: ${TOSS_CANCEL_URL}
-
-fcm:
-  service-account-file: key/fdbdproject.json
-  topic-name: fdbdMessage
-  project-id: fdbdproject
+#tosspayments:
+#  secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6
+#  client-key: test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm
+#  confirm_url: ${TOSS_CONFIRM_URL}
+#  base_cancel_url: ${TOSS_CANCEL_URL}
+#
+#fcm:
+#  service-account-file: key/fdbdproject.json
+#  topic-name: fdbdMessage
+#  project-id: fdbdproject
 
 aws:
   s3:

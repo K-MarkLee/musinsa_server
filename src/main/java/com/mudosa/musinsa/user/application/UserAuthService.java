@@ -17,7 +17,8 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
-@Service
+// 상품 조회 측정 중 비활성화. 복원 시 의존 서비스도 함께 활성화.
+// @Service
 public class UserAuthService {
 
     private final UserRepository userRepository;

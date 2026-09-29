@@ -26,7 +26,8 @@ import java.util.Base64;
 import java.util.List;
 
 @RequiredArgsConstructor
-@Service
+// 상품 조회 측정 중 비활성화. 토스 설정과 연동 빈을 함께 복원.
+// @Service
 @Slf4j
 public class TossPaymentService {
 

@@ -20,7 +20,8 @@ import static com.mudosa.musinsa.user.CookieUtils.createRefreshTokenCookie;
 
 @Slf4j
 @RequiredArgsConstructor
-@RestController
+// 상품 조회 측정 중 비활성화. 복원 시 의존 서비스도 함께 활성화.
+// @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "회원 인증", description = " 로그인, 인증 관련 API")
 public class UserAuthController {
