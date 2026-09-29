@@ -73,7 +73,8 @@ public class RedisConfig {
      * Redisson 클라이언트 추가 (분산 락용)
      */
 
-    @Bean
+    // 쿠폰 기능과 함께 비활성화. 복원 시 Redisson 자동 설정 제외도 함께 점검한다.
+    // @Bean
     public RedissonClient redissonClient(){
 
         Config config = new Config();

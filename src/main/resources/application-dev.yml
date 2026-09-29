@@ -103,3 +103,7 @@ logging:
       springframework.transaction: ERROR
       springframework.web.client.RestTemplate: ERROR
       com.mudosa.musinsa.common.client: ERROR
+
+# 로컬 상품 조회 실행용 공개 기본값. dev 외 환경에서는 JWT_SECRET을 설정한다.
+jwt:
+  secret: ${JWT_SECRET:bXVzaW5zYS1sb2NhbC1kZXZlbG9wbWVudC1rZXktb25seQ==}
