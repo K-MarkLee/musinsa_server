@@ -39,7 +39,7 @@ public class ProductIndexSearchQueryRepositoryImpl implements ProductIndexSearch
 
     private static final String FIELD_PRODUCT_ID = "productId";
     private static final String FIELD_PRODUCT_NAME = "productName";
-    private static final String FIELD_KR_BRAND_TEXT = "krBrandName.text";
+    private static final String FIELD_KR_BRAND_TEXT = "krBrandName";
     private static final String FIELD_EN_BRAND_TEXT = "enBrandName";
     private static final String FIELD_CATEGORY_PATH = "categoryPath";
     private static final String FIELD_CATEGORY_TEXT = "categoryPath.text";
