@@ -37,10 +37,10 @@ USER spring
 
 # 헬스체크 설정 (optional, actuator 사용 시)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:${SERVER_PORT:-8080}/actuator/health || exit 1
+  CMD curl -f http://localhost:${MANAGEMENT_SERVER_PORT:-8082}/actuator/health || exit 1
 
 # 애플리케이션 포트 노출
-EXPOSE 8080
+EXPOSE 8080 8082
 
 # JVM 옵션 및 실행
 ENTRYPOINT ["java", \
