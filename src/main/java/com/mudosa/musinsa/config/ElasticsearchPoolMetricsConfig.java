@@ -21,8 +21,6 @@ public class ElasticsearchPoolMetricsConfig {
     @SuppressWarnings("deprecation") // ES 8 REST client uses Apache HttpComponents 4.
     ApplicationRunner elasticsearchPoolMetrics(RestClient client, MeterRegistry registry) {
         return args -> {
-            // ponytail: Apache 4.1.5 exposes no pool getter; read once for dev diagnostics.
-            // Recheck this adapter/test when upgrading the client; never replace its SSL/connection setup.
             try {
                 var httpClient = client.getHttpClient();
                 var field = ReflectionUtils.findField(httpClient.getClass(), "connmgr");

@@ -22,8 +22,8 @@ spring:
       validation-timeout: 5000
       leak-detection-threshold: ${DB_POOL_LEAK_DETECT_MS:0}
 
-  kafka:
-    bootstrap-servers: localhost:9092
+#  kafka:
+#    bootstrap-servers: localhost:9092
   # rabbitmq:
   #   host: ${RABBIT_HOST}
   #   port: 61613
