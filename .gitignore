@@ -39,11 +39,13 @@ out/
 
 ### Environment Variables ###
 .env
+.dev.env
 .env.local
 .env.dev
 .env.test
 .env.prod
 !.env.prod.example
+src/main/resources/dev.env
 
 ### Logs ###
 *.log
