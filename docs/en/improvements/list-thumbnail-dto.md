@@ -1,20 +1,15 @@
-# Product list: thumbnail storage and direct DTO projection
+# Product list: stored thumbnail and direct DTO projection
 
-[한국어](../../ko/improvements/list-thumbnail-dto.md) · [README](../../../README.md) · [Measurement setup](../environment.md)
+[한국어](../../ko/improvements/list-thumbnail-dto.md) · [README](../../../README.md)
 
 ---
 
-## Problem and comparison conditions
+## Problem and test conditions
 
-After stored prices and keyset, lists still loaded Product entities, searched each image collection for a thumbnail, and copied fields into DTOs.<br>
-Unloaded image relationships could cause additional SQL.<br>
-DTOs already existed; their construction path changed here.
+Even with the representative price and keyset in place, the list still loaded product entities, looked up each product's thumbnail from its image list, and then copied everything into the response DTO.
 
-Available products were read in ascending ID order, 24 at a time, using fixed cursors at the first page and depths 100/1,000/5,000.<br>
-Each position used one initial call, four warm-ups, and 30 measured calls, repeated three times.<br>
-Each execution measured 360 requests; three additional runs produced 1,080 samples per version.<br>
-Before values reuse the [keyset remeasurement](list-keyset.md).<br>
-Image downloads and browser rendering are excluded.
+I used the same four cursor positions as the keyset test. For each position, one batch was 1 first request → 4 warm-up requests → 30 measured requests at 1 VU, and the batch was run 4 times.<br>
+The "before" values are the "after" values from the [keyset measurements](list-keyset.md).
 
 ---
 
@@ -22,48 +17,39 @@ Image downloads and browser rendering are excluded.
 
 | Run | Before mean | Before p95 | After mean | After p95 |
 | --- | --- | --- | --- | --- |
-| Initial screenshot | 19.32ms | 25.44ms | 6.09ms | 8.42ms |
-| Additional run 1 | 17.51ms | 22.48ms | 5.35ms | 7.92ms |
-| Additional run 2 | 16.17ms | 18.86ms | 4.73ms | 6.22ms |
-| Additional run 3 | 15.88ms | 17.95ms | 4.20ms | 5.36ms |
-| Additional 3 runs combined | 16.52ms | — | 4.76ms | — |
+| Run 1 | 17.51ms | 22.48ms | 5.35ms | 7.92ms |
+| Run 2 | 16.17ms | 18.86ms | 4.73ms | 6.22ms |
+| Run 3 | 15.88ms | 17.95ms | 4.20ms | 5.36ms |
+| Run 4 | 19.26ms | 25.02ms | 6.09ms | 8.42ms |
+| Mean of 4 runs | 17.21ms | — | 5.09ms | — |
 
-The additional runs averaged 16.52→4.76ms, a 71.2% reduction, excluding the initial screenshot.<br>
-All 1,080 after samples succeeded; means/p95 came from individual InfluxDB request durations.<br>
-The server was already running and caches were not cleared.<br>
-After means fell from 5.35→4.73→4.20ms across runs.<br>
-Reusing the earlier baseline does not isolate warm-up or execution-order effects completely.
+The 4-run mean went from 17.21ms to 5.09ms, a 70.4% reduction.
 
-Before: keyset read path
+**Before the thumbnail and DTO change**
 
-![Before: keyset read path](../../images/evidence/list-keyset-2.png)
+![Before the thumbnail and DTO change](../../images/evidence/list-keyset-2.png)
 
-After thumbnail/DTO change
+**After the thumbnail and DTO change**
 
-![After thumbnail/DTO change](../../images/evidence/list-dto-2.png)
-
-*The source page reused the keyset before image (19.26ms), while its initial DTO table records 19.32ms.<br>
-These are not forced into one aggregate; both are excluded from the additional-three-run mean.*
+![After the thumbnail and DTO change](../../images/evidence/list-dto-2.png)
 
 ---
 
-## Why it became faster
+## Why it was slow and what changed
+
+The list only needs a few values such as the product name, price, and thumbnail, but the original implementation loaded whole product entities and walked each product's image list to pick the thumbnail.<br>
+When the image relationship wasn't loaded yet, this ran an extra query per product, and every response also repeated the step of building entities and then copying them into DTOs.
+
+To cut this, I denormalized the main image URL into a `thumbnail_image` column on the product table, and changed the query to select only the columns the list needs straight into a DTO with QueryDSL.<br>
+The extra lookups through the image table and the intermediate entities are gone, and the query reads only the columns it needs from the product table.
 
 ```text
-Before: DB → Product entity → image collection / thumbnail lookup → ProductSummary → JSON
-After: selected DB columns → ProductSummary → JSON
+Before: DB → product entity → find thumbnail in image list → ProductSummary → JSON
+After:  required columns from DB → ProductSummary → JSON
 ```
 
-Thumbnail denormalization retains the image table and also stores one URL in `thumbnail_image`; it does not copy an image file.<br>
-Creation/update prefers the thumbnail-marked image, falling back to the first image.
-
-Direct DTO projection constructs `ProductSummary` in the application from returned columns.<br>
-The DB does not construct Java objects; DTO allocation and JSON serialization remain.<br>
-It avoids the intermediate Product entity and image traversal.<br>
-QueryDSL can query entities or DTOs, so syntax alone is not the explanation.
-
 ```java
-// Simplified projection; the actual response contains more fields.
+// The real response has more fields.
 .select(Projections.constructor(
     ProductSummary.class,
     product.productId,
@@ -73,21 +59,12 @@ QueryDSL can query entities or DTOs, so syntax alone is not the explanation.
 )).from(product)
 ```
 
-Stored thumbnails and direct projection could be applied independently but changed together here.<br>
-SQL counts, allocations, GC reductions, and individual contributions were not measured.<br>
-Description and other columns remain, so this is not response-size minimization.<br>
-A retained mapper method does not imply the list path still calls it.
-
 ---
 
-## Decisions and trade-offs
+## Choices and trade-offs
 
-- Duplicated thumbnail: Backfill existing products and synchronize source/summary URLs on replacement, deletion, or concurrent edits.<br>
-  Otherwise list and detail images can differ.
-- Query/response coupling: Selected columns must match DTO constructor order and types; response changes can require repository changes.
-- Defaults and updates: The former mapper's `defaultPrice=null → 0` handling does not automatically carry over.<br>
-  Changing a DTO does not update the DB.<br>
-  Check null/missing values as well as normal response data.
+- **Consistency**: The thumbnail URL is also a copy of a value in the image table, so it has to be updated whenever the main image is changed or deleted.
+  Otherwise the list and the detail page show different images.<br>
 
-Response IDs/order/count/prices/URLs/cursors and image-SQL reduction need explicit validation.<br>
-Stored prices, COUNT removal, and keyset are common conditions and must not be counted again as this change's gain.
+
+- **Query tied to the response**: The selected columns are tied to the DTO constructor's field order and types, so adding or changing a response field means changing the query too.<br>

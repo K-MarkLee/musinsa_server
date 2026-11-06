@@ -1,152 +1,75 @@
-# Why These Technologies
+# Why these technologies
 
 [한국어](../ko/technology-decisions.md) · [README](../../README.md)
 
 ---
 
-## QueryDSL — choosing how to write JPA queries
+## QueryDSL
 
-### Requirements
-
-Optional category, gender, brand, and price-ordering conditions needed to be combined with corresponding cursor predicates and list DTO reads.
-
-| Alternative | Suitable use | Consideration for this project |
+| Approach | Good fit for | In this project |
 | --- | --- | --- |
-| Spring Data JPA derived methods | Simple conditions and fixed query shapes | Optional combinations can increase the number and complexity of method names |
-| `@Query` / JPQL | Explicit, stable joins and query structures | Optional predicates, ordering, and cursors must be maintained in string queries |
-| Specification | Compose and reuse JPA Criteria predicates | Compare readability when combining conditions with DTO reads and ordering |
-| QueryDSL — implemented | Express predicates, ordering, joins, and projections in Java | Requires Q-type generation and another dependency |
+| Spring Data JPA derived queries | Simple, fixed conditions | One more method for every new filter combination |
+| JPQL (`@Query`) | Queries with fixed joins and structure | Optional conditions, sorting, and cursors have to be concatenated as strings |
+| JDBC, native SQL | Complex SQL that uses DB features directly | Everything managed by hand, without entity mapping or type checking |
+| **QueryDSL (chosen)** | Queries that assemble conditions, sorting, and selected columns in code | Needs build setup to generate Q-types |
 
-### Reason for selection
-
-QueryDSL keeps JPA while allowing small filter/order/cursor expressions to be reused and DTO reads to be written in the same query flow.<br>
-The comparison is between ways of writing JPA queries, not QueryDSL versus JPA itself.
-
-### Trade-offs
-
-Q-types must be generated and maintained, and QueryDSL does not guarantee efficient SQL.<br>
-Data volume, execution plans, and indexes were examined separately.<br>
-Execution speed was not compared with other query-authoring approaches.
-
-[List DTOs](improvements/list-thumbnail-dto.md) · [Filter indexes](improvements/filter-indexes.md) · [Spring Data JPA query methods](https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html) · [Specification](https://docs.spring.io/spring-data/jpa/reference/jpa/specifications.html)
+The list API combines category, brand, and gender filters, sorting, and cursor conditions differently on every request.<br>
+I used QueryDSL to build these complex, dynamic queries in Java code rather than strings, and to select only the needed columns straight into DTOs.<br>
+The trade-off is extra build configuration to generate the Q-types.
 
 ---
 
-## MySQL — relational data and team experience
+## MySQL
 
-### Requirements
-
-Product, option, inventory, and brand relationships needed to be managed, with SQL and indexes supporting filtering, ordering, and pagination.
-
-| Criterion | MySQL — implemented | PostgreSQL — alternative |
+| Comparison | MySQL (chosen) | PostgreSQL |
 | --- | --- | --- |
-| Relational reads | Current queries use joins, ordering, and composite indexes | An alternative for the same relational-read requirements |
-| Actual query costs | Plans, indexes, and connection waiting observed on the dataset | Requires a separate comparison with equivalent data, queries, and environment |
-| Development and operations | Use team experience and the existing JPA, Docker, and observability setup | Consider team familiarity and the setup, deployment, and operations work to learn |
+| Team familiarity | A DB most of the team had used | Some parts would have to be learned |
+| Relational queries | Joins, sorting, and composite indexes are enough | Equally capable |
+| Full-text search in the DB | FULLTEXT-level | More full-text features and extensions |
 
-### Reason for selection
-
-MySQL supported the required relational reads, while the team's experience reduced the work needed to learn setup and operations.<br>
-Read structures and indexes were improved within the existing JPA/Docker setup, with costs examined through execution plans and connection waiting.
-
-### Trade-offs
-
-PostgreSQL also supports the required relational reads and [multiple index types](https://www.postgresql.org/docs/current/indexes.html), so this choice does not establish a performance advantage over it.<br>
-Execution plans and tuning results observed in MySQL cannot be applied directly to another database; changing databases would require validating the actual queries again.<br>
-Current measurements concern changes to read structures and settings within MySQL; representative-field updates and write consistency remain follow-up validation.
-
-[Representative price](improvements/list-price.md) · [Filter plans](improvements/filter-indexes.md) · [Connection pools](troubleshooting/hikari.md)
+The project only needed ordinary relational queries, so instead of picking a DB for a performance or feature edge, I went with MySQL, which the team knew best.<br>
+If search had to be handled inside the DB as well, I would have chosen PostgreSQL for its richer full-text search.<br>
+Since search was split out into Elasticsearch, that difference didn't matter much.
 
 ---
 
-## Redis — compared with local caching and direct DB reads
+## Redis
 
-### Requirements
-
-Detail responses needed repeated color/size dictionary values for multiple options.<br>
-The dictionary contains 60 entries; prices, inventory, and complete product responses are not cached.
-
-| Alternative | Benefit | Cost |
+| Approach | Pros | Cons |
 | --- | --- | --- |
-| Local cache | Remove network round trips for dictionary reads | Per-instance loading, refresh, invalidation, and value differences |
-| DB joins / bulk reads | Read with source data and reduce separate cache dependencies | DB round trips, joins, and repeated string transfer remain considerations even with a warm buffer pool |
-| Redis — implemented | A shared external dictionary and `multiGet` bulk reads | Network/serialization, Redis availability, initialization, and refresh policies |
+| Local cache | No network round trip | Each server has to load and refresh its own copy |
+| Direct DB query | No extra store needed | Puts load on the DB on every request |
+| **Redis (chosen)** | Shared in one place even across servers, with no DB load | Adds a network round trip and needs refresh and failure handling |
 
-### Reason for selection
-
-Redis separates repeated dictionary reads from DB relationship traversal and retrieves the required values together with `multiGet`.<br>
-A common dictionary can be managed in one place instead of maintaining a local copy in each instance.<br>
-Sharing across instances is a design benefit; its operational effect was not validated by the current measurements.
-
-### Trade-offs
-
-Redis adds network round trips and serialization, along with cache refresh and failure handling.<br>
-The buffer pool keeps DB pages in memory, so it is considered within the direct-DB-read alternative.<br>
-A dictionary this small may be simpler to keep in local memory or read from the DB in bulk.
-
-Relationship fetching and Redis use changed together, so the entire detail improvement is not attributed to Redis.<br>
-Relative performance and dictionary refresh/miss/failure policies remain follow-up work.
-
-[Detail reads and cache scope](improvements/product-detail.md) · [Alternative validation](future-work.md)
+Option values such as colors and sizes, and categories, are data that almost never changes.<br>
+I used Redis to keep this data in a separate store that every server can share, and to remove the DB load of reading it entirely.<br>
+At first, though, I didn't fully account for the network round trip a Redis lookup also costs, and handling for changed values or an unresponsive Redis is still needed.
 
 ---
 
-## Elasticsearch — compared with LIKE and MySQL FULLTEXT
+## Elasticsearch
 
-### Requirements
-
-Search needed to find intent spread across product names, colors, and types, such as “black skirt,” and control relevance with synonyms and field weights.
-
-| Alternative | Fit to the search requirement | Implementation and operating costs |
+| Approach | How it searches | In this project |
 | --- | --- | --- |
-| Existing LIKE | Contiguous title matching and ID ordering | Uses the existing DB; token, multi-field, and relevance behavior need additional implementation |
-| MySQL FULLTEXT | Supports CJK ngrams and relevance | Requires search indexes and query design; assess the required synonyms, option relationships, and weighting |
-| Elasticsearch — implemented | A search model for morphology, synonyms, multiple fields, and weights | Separate server/index operations, DB propagation, reindexing, and recovery |
+| LIKE | Finds a continuous string in the product name | Can't find queries like "블랙 스커트" (black skirt) whose words are spread across fields |
+| MySQL FULLTEXT | Word-level search with relevance | Hard to control Korean morphological analysis, synonyms, and per-field weights in detail |
+| **Elasticsearch (chosen)** | Morphological analysis, synonyms, multi-field search, and weighting | A separate server to operate and keep in sync with the DB |
 
-### Reason for selection
-
-ES supports morphological analysis, synonyms, and multi-field matching, with required matches and relevance ranking controlled separately.<br>
-One document per option preserves actual color/size combinations, while `productId` collapse groups duplicate product results.
-
-### Trade-offs
-
-A separate search server and index need to be operated, with DB change propagation, reindexing, and recovery to design.<br>
-Product fields are repeated across option documents, and grouping results by product adds query costs and pagination constraints.<br>
-A product-root nested model is a follow-up alternative that preserves option combinations with a different document structure; both read and update costs need comparison.
-
-The LIKE comparison changes search behavior, so latency alone does not explain adoption.<br>
-FULLTEXT is a retrospective alternative without direct quality or performance measurements.
-
-[Search case study](improvements/product-search.md) · [Search pagination](troubleshooting/search-pagination.md) · [FULLTEXT relevance](https://dev.mysql.com/doc/refman/8.4/en/fulltext-natural-language.html) · [CJK ngrams](https://dev.mysql.com/doc/refman/8.4/en/fulltext-search-ngram.html)
+User queries mix color, item type, and brand, and that information is spread across the product name, options, and category.<br>
+I needed fine control over the condition that each word must match at least one of several fields (`minimum_should_match`), plus the Nori analyzer to split Korean product names into words and synonyms for colors and sizes, so I chose Elasticsearch over FULLTEXT.<br>
+To find only the option combinations actually for sale, though, search had to run per option, which called for extra design such as collapse or nested documents to group options by product.
 
 ---
 
-## Load testing and observability — connect load, resources, and request paths
+## Load testing and monitoring
 
-### Requirements
+| Tool | Why I used it |
+| --- | --- |
+| k6 | To drive load at a set number of requests per second, and keep the scenario and pass criteria in code |
+| Prometheus | To collect metrics such as Hikari connections, Tomcat threads, and the ES connection pool over time |
+| Grafana | To put throughput, latency, and resource metrics on one timeline and see what changed when |
+| Jaeger | To see where time went inside a single request |
+| ES Profile | To see which operations in a search query are expensive |
+| ES hot threads | To see where ES spends CPU under load |
 
-Inputs and load needed to be repeatable, with resource state and waiting inside requests observed when response times increased.
-
-### Reason for selection
-
-Logs help inspect individual events, while profilers help investigate method execution and CPU use.<br>
-The following tools complement them by connecting repeatable load, resource changes over time, and request spans.
-
-| Tool | Reason for selection and role in this project | Application |
-| --- | --- | --- |
-| k6 | Record inputs, load, and thresholds in JavaScript; check latency, HTTP failures, and drops in 1-VU comparisons and target-rate tests | [Scenarios and criteria](environment.md) |
-| Prometheus | Collect time series for Hikari active/pending, Tomcat busy, and ES HTTP pools to relate changes to load stages | [Connection pools](troubleshooting/hikari.md) |
-| Grafana | Compare throughput, latency, and resources on the same dashboard timeline to select intervals for investigation | [Load results](../../README.md#load-results) |
-| Jaeger | Inspect request spans to locate time spent entering the service, fetching DB data, and assembling DTOs | [Detail-path isolation](troubleshooting/detail-isolation.md) |
-| ES Profile | Inspect query-operation execution to investigate costly search operations | [Search query costs](troubleshooting/search-capacity.md) |
-| ES hot threads | Inspect thread stacks under load to identify work running when CPU use and search queues rise | [Search CPU and queues](troubleshooting/search-capacity.md) |
-
-### Trade-offs
-
-Collection, storage, and tracing consume resources, and observability tools on the same host can affect load-test results.<br>
-DEBUG logs and unnecessary tracing were reduced, and ES Profile diagnostics were kept separate from ordinary load measurements.
-
-Metrics changing together identify a possible cause that needs to be checked through experiments.<br>
-Individual traces and hot-thread samples do not represent all requests; overall latency and hold statistics follow the load-test measurements and aggregation criteria.
-
-[Observability overhead](troubleshooting/observability-overhead.md) · [Prometheus collection model](https://prometheus.io/docs/introduction/overview/) · [Jaeger architecture](https://www.jaegertracing.io/docs/1.76/architecture/) · [ES Profile scope and overhead](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/search-profile)
+Only by looking at the load generator, metrics over time, and the inside of a single request together could I connect "when it got slow, what piled up at that moment, and where the request was waiting."

@@ -1,6 +1,6 @@
 <div align="center">
-  <h1>Musinsa · Product Search &amp; Query Optimization</h1>
-  <p>Designing how product data is read and searched, then testing those decisions against measurements.</p>
+  <h1>Musinsang · Product Listing &amp; Search Optimization</h1>
+  <p>A backend project that designs how each product's data is read and searched, and validates those choices with measurements.</p>
 
   <p>
     <img alt="E-commerce backend" src="https://img.shields.io/badge/Type-E--commerce%20Backend-F97316?style=flat-square">
@@ -12,8 +12,8 @@
 
   <p>
     <a href="#demo">Demo</a> ·
-    <a href="#project-at-a-glance">Project &amp; role</a> ·
-    <a href="#key-decisions-and-evidence">Key decisions</a> ·
+    <a href="#about-the-project">About &amp; role</a> ·
+    <a href="#summary">Summary</a> ·
     <a href="#tech-stack">Tech &amp; rationale</a> ·
     <a href="#architecture">Architecture</a> ·
     <a href="#measurement-setup-and-scenarios">Setup &amp; scenarios</a> ·
@@ -29,33 +29,33 @@
 
 ![Product browsing and search demo](docs/images/musinsang-gif.webp)
 
-<h3 align="center"><a href="https://youtu.be/oC8-prv8Qdo">Watch the demo</a></h3>
+<h3 align="center"><a href="https://youtu.be/oC8-prv8Qdo">Watch the demo video</a></h3>
 
 ---
 
-## Project at a Glance
+## About the Project
 
-A team e-commerce project modeled on Musinsa.<br>
-With dozens of options per product, it examines how to read and search the information each screen needs and where requests wait as load increases.
+A team e-commerce project modeled on Musinsa, a major Korean fashion marketplace. <br>
+With dozens of options attached to every product, it deals with how to read and search the information each screen needs, and where requests end up waiting as load grows.
 
 ### My Role
 
-I designed and implemented product listing, filtering, detail, and search; improved queries and response construction; and investigated connection pools, threads, and search bottlenecks with k6 measurements.<br>
-The case studies describe my work and validation within the team's product-read functionality.
+I owned the product domain on a team of six. <br>
+I collected and loaded the product data, designed the data model, and built the product create/update, list, detail, and search APIs. I then measured performance with k6, analyzed the bottlenecks, and reworked how the data is queried.
 
 ---
 
-## Key Decisions and Evidence
+## Summary
 
-| Problem | Design decision | Outcome | Evidence |
+| Problem | Design decision | Result | Details |
 | --- | --- | --- | --- |
-| Traversing options and stock for one list price | Store a representative price; remove list stock calculation | Mean 860.47→63.06ms | [Stored price](docs/en/improvements/list-price.md) |
-| COUNT for total pages and OFFSET costs | Remove COUNT and apply keyset pagination | Mean 74.14→16.52ms | [Pagination](docs/en/improvements/list-keyset.md) |
-| Repeated relationship reads for detail | Split relationship fetching; bulk-read the option dictionary | Mean 70.14→8.91ms | [Detail reads](docs/en/improvements/product-detail.md) |
-| Color/type intent missing from product titles | Apply option-level ES documents, multi-field matching, and relevance ranking | Returned results for “black skirt” missed by LIKE | [Search design](docs/en/improvements/product-search.md) |
-| Request waiting under load | Establish a baseline, then investigate pools, threads, and search | Four APIs each held 1,000 RPS in separate runs.<br>Detail/search waiting paths identified | [Baseline](#load-results) · [Investigations](#troubleshooting) |
+| The list walked options and stock to work out each price | Store a representative price and drop the stock calculation from the list | Mean 832.14→63.30ms | [Representative price](docs/en/improvements/list-price.md) |
+| COUNT and OFFSET cost just to compute the total page count | Remove COUNT and switch to keyset pagination | Mean 73.07→17.21ms | [Pagination](docs/en/improvements/list-keyset.md) |
+| Repeated queries to build the detail response | Split queries by relationship and batch-load the option dictionary | Mean 69.47→9.11ms | [Product detail](docs/en/improvements/product-detail.md) |
+| Search intent for colors and item types that aren't in the product name | Per-option ES documents, multi-field matching, and relevance ranking | Returns results for "블랙 스커트" (black skirt), which LIKE missed | [Search design](docs/en/improvements/product-search.md) |
+| Requests waiting longer as load increases | Confirm the baseline load, then investigate connection pools, threads, and the search path | Each of the 4 APIs held 1,000 RPS on its own.<br>Traced where detail and search requests wait | [Baseline results](#high-load-results) · [Bottlenecks](#troubleshooting) |
 
-The case studies include repeated measurements, evidence images, design decisions, and trade-offs.
+Each linked document covers the details.
 
 ---
 
@@ -64,28 +64,16 @@ The case studies include repeated measurements, evidence images, design decision
 | Area | Technologies |
 | --- | --- |
 | Backend | Java 21, Spring Boot 3.5.6, Spring Data JPA, QueryDSL |
-| Data / search | MySQL, Redis, Elasticsearch |
+| Data and search | MySQL, Redis, Elasticsearch |
 | Measurement | k6, Prometheus, Grafana, Jaeger, ES Profile / hot threads |
-| Infrastructure / tests | Docker, AWS, JUnit, Spring Boot Test |
+| Infrastructure and testing | Docker, AWS, JUnit, Spring Boot Test |
 
-### Why These Technologies
-
-| Technology | Alternatives | Reason for selection |
-| --- | --- | --- |
-| QueryDSL | JPA derived methods, `@Query`/JPQL, Specification | Compose and reuse optional filters, ordering, cursor predicates, and DTO reads in code |
-| MySQL | PostgreSQL | Meet relational-read requirements using the team's experience, reducing the effort to learn setup and operations |
-| Redis | Local cache, direct DB reads using the buffer pool | Separate repeated option values into a dictionary that instances can share and retrieve in bulk |
-| Elasticsearch | Existing LIKE, MySQL FULLTEXT | Express intent across attributes, synonyms, and relevance weights together |
-| Load testing and observability | Investigations centered on application logs and IDE profilers | Connect target load, resource metrics, and request spans to investigate latency and waiting |
-
-> **[Read the technology selection rationale →](docs/en/technology-decisions.md)**
+> **[Why these technologies →](docs/en/technology-decisions.md)**
 
 ---
 
 ## Architecture
 
-Read models serve each screen: representative fields and next-page availability for lists, options and inventory for detail, and multi-field matching and relevance for search.<br>
-The diagram shows product reads, search, and application observability.
 
 ```mermaid
 flowchart TB
@@ -93,14 +81,14 @@ flowchart TB
     K6["k6 load generator"] -->|HTTP| API
 
     subgraph DATA["Read stores"]
-        MYSQL[("MySQL<br/>Products, options, inventory")]
-        REDIS[("Redis<br/>Color and size dictionary")]
-        ES[("Elasticsearch<br/>Option-level search documents")]
+        MYSQL[("MySQL<br/>products, options, stock")]
+        REDIS[("Redis<br/>color and size dictionary")]
+        ES[("Elasticsearch<br/>per-option search documents")]
     end
 
-    API -->|"List, filter, detail / JPA, QueryDSL"| MYSQL
-    API -->|"Bulk dictionary reads for detail"| REDIS
-    API -->|"Search / product collapse"| ES
+    API -->|"list, filter, detail / JPA, QueryDSL"| MYSQL
+    API -->|"detail dictionary batch lookup"| REDIS
+    API -->|"search / collapse by product"| ES
 
     subgraph OBS["Application observability"]
         PROM["Prometheus"]
@@ -108,25 +96,25 @@ flowchart TB
         JAEGER["Jaeger"]
     end
 
-    PROM -.->|"Scrape Actuator metrics"| API
-    GRAFANA -.->|"Query time series"| PROM
-    API -.->|"Export OTLP spans"| JAEGER
+    PROM -.->|"scrape Actuator metrics"| API
+    GRAFANA -.->|"query time series"| PROM
+    API -.->|"export OTLP spans"| JAEGER
 ```
 
 <details>
 <summary>Full ERD</summary>
 
-<img src="./docs/images/erd-en.png" alt="Product domain ERD with English table labels" width="1000">
+<img src="./docs/images/erd-en.png" alt="Product domain ERD" width="1000">
 
 </details>
 
 <details>
-<summary>AWS deployment architecture</summary>
+<summary>AWS deployment</summary>
 
 <img src="./docs/images/Server-Architecture.png" alt="AWS deployment architecture" width="900">
 
-The team's AWS deployment at the time; it is no longer running.<br>
-The performance measurements below were run locally, with execution conditions documented in the measurement setup.
+This is the AWS setup used when the team service was deployed; it is no longer running.<br>
+The performance measurements below were run locally, and the conditions are described in the measurement setup section.
 
 </details>
 
@@ -134,92 +122,152 @@ The performance measurements below were run locally, with execution conditions d
 
 ## Measurement Setup and Scenarios
 
-Products were collected through the [Naver Shopping Search API](https://developers.naver.com/docs/serviceapi/search/shopping/shopping.md) to test reads and search with real product information.<br>
-Color/size combinations expanded roughly 150,000 collected products into a product-option dataset on the scale of ten million records.<br>
-This was inspired by [Coupang's use of an option as its smallest product unit](https://developers.coupang.com/ko/getting-started/coupang-open-api).
+To test listing and search on real product data, I collected 155,036 products with the [Naver Shopping Search API](https://developers.naver.com/docs/serviceapi/search/shopping/shopping.md).<br>
+I then combined colors and sizes to load about 72 options per product, 11,162,704 product options in total.<br>
+This was inspired by [Coupang's approach of treating each option as the smallest product unit](https://developers.coupang.com/ko/getting-started/coupang-open-api).
 
-155,036 products formed the basis for 11,162,704 product-option records.
+All measurements were run on a single Apple M3 Max machine (36GB memory), with k6, the application, the DB, ES, and the observability tools all running in Docker.
 
-![MySQL Workbench count of 11,162,704 product_option rows](docs/images/data.png)
+<details>
+<summary>Test data</summary>
 
-This fixed dataset was used for 1-VU before/after comparisons and staged individual-API load.<br>
-The detailed document covers data distribution, the local environment, k6 scenario selection, and the 1,000-RPS target and pass criteria.
+![11,162,704 product_option rows in MySQL Workbench](docs/images/data.png)
 
-> **[Dataset, environment, and k6 scenario details →](docs/en/environment.md)**
+I combined colors and sizes for the 155,036 products collected with the [Naver Shopping Search API](https://developers.naver.com/docs/serviceapi/search/shopping/shopping.md) to generate 11,162,704 product options in total.<br>
+Each product has about 72 options on average (min 50, max 95). The collected product data wasn't very clean, so brands and options were assigned arbitrarily, and the option distribution differs from that of real sellers.
+
+</details>
+
+<details>
+<summary>Target load and scenarios</summary>
+
+**Scenarios**
+
+Based on how users look for products in a real shopping app, I split the tests into five APIs: list, scroll, filter, detail, and search.<br>
+Each API was load-tested on its own, and load was defined as requests per second (RPS) rather than a number of VUs.
+
+| API | Test scope |
+| --- | --- |
+| List | First page of 24 products |
+| Scroll | Pages 1–5 in a row using the response cursor |
+| Filter | 10 filters × 3 sort orders, first 24 products |
+| Detail | 5 products with 60–72 options each, in rotation |
+| Search | 스커트 (skirt), 블랙 스커트 (black skirt), 나이키 (Nike), 나이키 후드 (Nike hoodie) |
+
+**Target load**
+
+![Excerpt from an article on Musinsa's MAU in June 2024](docs/images/evidence/musinsa-mau-2024-06.png)
+
+I started from [Musinsa's 5.49 million MAU as of June 2024](https://www.fi.co.kr/main/view.asp?idx=82843).<br>
+Shopping apps usually have a DAU/MAU ratio of [about 10–25%](https://clevertap.com/blog/dau-vs-mau-app-stickiness-metrics/), so I used the top of that range, 25%, for a DAU of about 1.37 million.<br>
+I assumed each visit makes 15–20 product API calls, based on [an average of about 4.4 pages per mobile shopping session](https://www.opensend.com/post/pages-per-session-ecommerce) plus extra calls to load more while scrolling, which gives an average of about 240–320 RPS.<br>
+To account for event peaks such as Black Friday, I took 4× the average, about 950–1,270 RPS, as the peak, and set the target at 1,000 RPS, the low end of that range.<br>
+This is the peak for all product APIs combined, but each API was tested on its own, so each one took more load than its real share.
+
+**Response time criteria**
+
+[Google reported that a 0.5-second slowdown in search results cut traffic by 20%](https://glinden.blogspot.com/2006/11/marissa-mayer-at-web-20.html), and [Nielsen treats 1 second as the limit for keeping a user's flow of thought uninterrupted](https://www.nngroup.com/articles/response-times-3-important-limits/).<br>
+With that in mind, I aimed for p95 under 500ms, and defined a pass as holding 1,000 RPS for 120 seconds with p95 under 1 second and no HTTP failures or drops.<br>
+All four APIs that passed stayed under p95 10ms.
+
+</details>
 
 ---
 
 ## Single-Request Improvements
 
-The comparison shows mean API latency before and after each change, measured at 1 VU after warm-up.
+I compared the mean API response time before and after each change at 1 VU, after warm-up.
 
-![API-specific before/after latency: list price, list keyset, list thumbnail/DTO, filter indexes, detail reads, and search](docs/images/query-improvements-en.png)
+![Mean response time before and after each change: list representative price, list keyset, list thumbnail and DTO, filter indexes, product detail, and search](docs/images/query-improvements-en.png)
 
-| API | Change and case study | Before mean | After mean | Reduction |
+### Product list and scroll
+
+| Step | Change and details | Before mean | After mean | Reduction |
 | --- | --- | ---: | ---: | ---: |
-| Product list | [Stored price / removed list stock calculation →](docs/en/improvements/list-price.md) | 860.47ms | 63.06ms | 92.7% |
-| Product list / scroll | [COUNT removal / keyset pagination →](docs/en/improvements/list-keyset.md) | 74.14ms | 16.52ms | 77.7% |
-| Product list | [Stored thumbnail / direct DTO projection →](docs/en/improvements/list-thumbnail-dto.md) | 16.52ms | 4.76ms | 71.2% |
-| Product filter | [Composite filter / sort indexes →](docs/en/improvements/filter-indexes.md) | 30.96ms | 8.14ms | 73.7% |
-| Product detail | [Split relationship reads / dictionary cache →](docs/en/improvements/product-detail.md) | 70.14ms | 8.91ms | 87.3% |
-| Product search | [MySQL LIKE → ES search model →](docs/en/improvements/product-search.md) | 89.28ms | 23.30ms | 73.9% |
+| 1 | [Stored representative price, no stock calculation in the list →](docs/en/improvements/list-price.md) | 832.14ms | 63.30ms | 92.4% |
+| 2 | [COUNT removed, keyset pagination →](docs/en/improvements/list-keyset.md) | 73.07ms | 17.21ms | 76.5% |
+| 3 | [Stored thumbnail, direct DTO projection →](docs/en/improvements/list-thumbnail-dto.md) | 17.21ms | 5.09ms | 70.4% |
 
-Each row is a separate comparison: the first five average three additional runs, while search averages one initial run and three additional runs.<br>
-Search spans different ES revisions and different LIKE/ES matching and ordering, so it describes responsiveness as the search feature changed.
+
+### Product filters
+
+| Change and details | Before mean | After mean | Reduction |
+| --- | ---: | ---: | ---: |
+| [Composite indexes for filters and sorting →](docs/en/improvements/filter-indexes.md) | 30.35ms | 7.04ms | 76.8% |
+
+### Product detail
+
+| Change and details | Before mean | After mean | Reduction |
+| --- | ---: | ---: | ---: |
+| [Split relationship queries, option dictionary cache →](docs/en/improvements/product-detail.md) | 69.47ms | 9.11ms | 86.9% |
+
+
+### Product search
+
+| Change and details | Before mean | After mean |
+| --- | ---: | ---: |
+| [MySQL LIKE → ES search model →](docs/en/improvements/product-search.md) | 89.28ms | 23.30ms |
+
 
 ---
 
-## Load Results
+## High-Load Results
 
-The table summarizes the final run of each API's baseline load test.<br>
-Each document contains stage/condition tables, resource observations, and original k6, Spring Boot/Hikari, and Jaeger images.
+These are the baseline load test results for each API; the linked documents have the details.<br>
 
-| API and full results | Completed hold | Hold mean | Hold p95 | Outcome |
-| --- | --- | ---: | ---: | --- |
-| [Product list →](docs/en/load-tests/product-list.md) | 1,000 RPS · 120s | 2.64ms | 4.26ms | No HTTP failures or recorded drops |
-| [Product scroll →](docs/en/load-tests/product-scroll.md) | 1,000 RPS · 120s | 2.44ms | 3.95ms | No HTTP failures or recorded drops |
-| [Product filter →](docs/en/load-tests/product-filter.md) | 1,000 RPS · 120s | 3.05ms | 5.03ms | No HTTP failures or recorded drops |
-| [Product detail →](docs/en/load-tests/product-detail.md) | 1,000 RPS · 120s | 5.07ms | 7.21ms | No HTTP failures or recorded drops |
-| [Product search →](docs/en/load-tests/product-search.md) | 250 RPS · 30s | 15.39ms | 40.53ms | 179 drops in the following ramp; early abort |
+| API and details | Completed hold stage | Hold mean | Hold p95 | Result |
+| --- | --- | ---: | ---: |--------------------|
+| [Product list →](docs/en/load-tests/product-list.md) | 1,000 RPS, 120s | 2.64ms | 4.26ms | No HTTP failures or drops |
+| [Product scroll →](docs/en/load-tests/product-scroll.md) | 1,000 RPS, 120s | 2.44ms | 3.95ms | No HTTP failures or drops |
+| [Product filters →](docs/en/load-tests/product-filter.md) | 1,000 RPS, 120s | 3.05ms | 5.03ms | No HTTP failures or drops |
+| [Product detail →](docs/en/load-tests/product-detail.md) | 1,000 RPS, 120s | 5.07ms | 7.21ms | No HTTP failures or drops |
+| [Product search →](docs/en/load-tests/product-search.md) | 250 RPS, 30s | 15.39ms | 40.53ms | 179 drops in the next ramp, stopped early |
 
-`dropped_iterations` counts scheduled iterations that could not start.<br>
-Even the aborted search run had zero HTTP failures, so successful responses alone do not establish that the target load was delivered.
-
-List, scroll, and filter met the 1,000-RPS target in this baseline and were not tested above it.<br>
-These results establish that the target load passed under those conditions; they do not establish maximum throughput.
+Search responded without HTTP errors, but as load rose and responses slowed, k6 ran out of VUs to start new requests, producing 179 `dropped_iterations` and stopping the test. <br>
+This wasn't an API error: search had reached what it could handle in this local environment, and the cause is traced in the troubleshooting section below.
 
 ---
 
 ## Troubleshooting
 
-Detail progressed to higher-load waiting investigations after meeting the 1,000-RPS baseline; search followed its baseline abort.<br>
-Pool and thread changes test specific hypotheses, with changed and fixed conditions documented per experiment.
+After confirming the baseline load, I traced where detail requests wait under higher load, and why the search test stops.
 
-| Problem | Observation and decision | Case study |
-| --- | --- | --- |
-| Detail DB connection waiting | With Tomcat 200 fixed, Hikari 10→50 reduced 2,000-RPS p95 from 875.2→58.6ms; 571 whole-run drops remained.<br>Further expansion had little throughput benefit and reached the DB connection limit | [Hikari / MySQL connection limit →](docs/en/troubleshooting/hikari.md) |
-| Tomcat busy at its cap | With Hikari 50 fixed, Tomcat 200→500 did not improve 3,000-RPS throughput; pending rose approximately 150→450 and p95 632.6→901.6ms | [Tomcat 50 / 200 / 500 →](docs/en/troubleshooting/tomcat.md) |
-| Repeated search load aborts | Transaction separation → HTTP-pool instrumentation and expansion → client/took split → ES CPU and search-queue investigation | [Search load investigation →](docs/en/troubleshooting/search-capacity.md) |
-| Search intent/result mismatch | Distinguished highest-field scoring from required token matching; revisited matching and ranking rules | [Search quality →](docs/en/troubleshooting/search-quality.md) |
-| Deduplication and pagination | Investigated option-document collapse / search_after constraints; current from/size still has deep-page costs | [Search pagination →](docs/en/troubleshooting/search-pagination.md) |
-| Deployed search-engine compatibility | Injected the response product header and supplied ES 7 compatibility request headers to bypass the client check | [OpenSearch deployment →](docs/en/troubleshooting/opensearch-deployment.md) |
-| Cost of observability itself | Reduced DEBUG logs and unnecessary tracing while retaining targeted spans and pool metrics | [Observability overhead →](docs/en/troubleshooting/observability-overhead.md) |
-| Initial detail-path isolation | Compared mock controller, Security, and dummy service paths; traced service-entry waiting and DTO assembly with Jaeger | [Detail isolation experiment →](docs/en/troubleshooting/detail-isolation.md) |
+| Problem | Bottleneck found | What I did and the result | Details |
+| --- | --- | --- | --- |
+| Detail throughput stalled at 2,000 RPS | Waiting for DB connections | Hikari 10 → 50, p95 875ms → 59ms | [Hikari →](docs/en/troubleshooting/hikari.md) |
+| Detail stuck at about 2,100 RPS when driven at 3,000 RPS | Average CPU on the shared host above 96% | More connections and threads didn't raise throughput, so Hikari 50 and Tomcat 200 were kept | [Tomcat →](docs/en/troubleshooting/tomcat.md) |
+| Search stopped in the ramp after holding 250 RPS | DB connection wait → ES HTTP connection wait → wait inside ES | Separating the transaction and enlarging the pool cut the waits, but the target load wasn't reached | [Search bottleneck →](docs/en/troubleshooting/search-capacity.md) |
 
-Connection-pool and worker-thread comparisons led to a local baseline of Hikari 50 and Tomcat 200.
+Each pool and thread comparison was run once per setting. In the extended scenario with an extra load stage, p95 in the 2,000 RPS stage for the same setting measured 266ms.
+
+**Other issues**
+
+- [Isolating the detail bottleneck](docs/en/troubleshooting/detail-isolation.md): The Security span looked long, so I swapped parts of the path for mocks and narrowed the investigation down to the wait before entering the service, the queries, and response assembly.
+- [Search quality](docs/en/troubleshooting/search-quality.md): Every token in the query must match, and relevance weights are configured separately.
+- [Search pagination](docs/en/troubleshooting/search-pagination.md): With the current relevance sort, collapse can't be combined with search_after, so I used from/size. Deep pages are still expensive.
+- [OpenSearch deployment compatibility](docs/en/troubleshooting/opensearch-deployment.md): Injected the product response header and applied compatibility request headers to get around the existing client's connection problem.
+- [When observability backfires](docs/en/troubleshooting/observability-overhead.md): Cut back DEBUG logging and excessive tracing for load tests.
 
 ---
 
 ## Limits and Next Steps
 
-The results cover read design against fixed product/option data and observations in a local environment.<br>
-Performance after deployment and consistency across representative fields, caches, and search indexes during updates remain separate validation work.
+These results come from testing the query design locally on a fixed set of products and options.<br>
+Performance in a real deployment, and keeping representative values, caches, and the search index consistent when data changes, are left as follow-up work.
 
-| Follow-up | What to validate |
+<details>
+<summary>Follow-up work</summary>
+
+| Follow-up | What to check |
 | --- | --- |
-| Deployed-environment validation | Separate load generation from service resources on Azure; examine throughput, latency, and bottlenecks under the network/resource layout |
-| Update consistency | Representative price/thumbnail updates, Redis dictionary refresh, DB→ES propagation, retries, and reindexing |
-| Redis vs. local memory vs. RDB | Compare latency, network costs, refresh, and failure dependencies using the same dictionary and response |
-| ES nested model | Compare option documents with product-root nested modeling for option combinations, reads, index size, and update costs |
+| Validate in a real deployment | Separate the load generator from service resources on AWS or Azure, and check throughput, latency, and bottlenecks under different network and resource layouts |
+| Consistency on data changes | Updating representative prices and thumbnails, applying Redis dictionary changes, propagating DB changes to ES, retrying failures, and validating reindexing |
+| Compare Redis, local memory, and an RDB | Compare lookup latency, network cost, refresh, and failure dependencies for the same option dictionary and response |
+| Validate an ES nested model | Compare the current per-option documents with a product-centric nested model on option combinations, queries, index size, and update cost |
 
-> **[Read the limitations and follow-up details →](docs/en/future-work.md)**
+- **Deployment environment:** Local and deployed numbers come from different hardware and networks, so I plan to compare them separately rather than merge them into one improvement figure.
+- **Consistency:** The representative price currently only goes down when a cheaper option is added. There is no recalculation yet when the cheapest option sells out or goes up in price, and no path for applying DB changes to ES.
+- **Option dictionary:** The 60 colors and sizes live in Redis but have no TTL or DB fallback. The dictionary is small enough that local memory might be simpler, so I plan to compare them under the same load.
+- **Search document structure:** Nested documents are still stored as separate option documents internally, so I won't assume nested is faster just because it removes collapse; I plan to compare read and update costs together.
+
+</details>

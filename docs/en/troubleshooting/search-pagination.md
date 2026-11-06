@@ -1,69 +1,54 @@
-# Deduplicating option documents and paginating product search
+# De-duplicating option documents and paginating search
 
-[한국어](../../ko/troubleshooting/search-pagination.md) · [README](../../../README.md) · [Measurement setup](../environment.md)
-
----
-
-## Why search individual options?
-
-Color, size, price, and stock vary between options of the same product.<br>
-Separate arrays of colors and sizes can match a combination that is not sold: for example, black/M when the available options are black/S and red/M.
-
-Each option became an independent document so its attributes could be evaluated together.<br>
-This introduced another problem: multiple matching options could fill the result list with the same product.<br>
-Search operates on options, while the UI displays products.
+[한국어](../../ko/troubleshooting/search-pagination.md) · [README](../../../README.md)
 
 ---
 
-## Decision: collapse by productId
+## Problem
 
-I grouped matching options by `productId` and returned the representative selected by the requested ordering.<br>
-Relevance selects the highest-scoring option; ascending price selects the cheapest matching option.<br>
-[Collapse behavior](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/collapse-search-results)
+Because search documents are per option, showing the results as-is let several options of the same product take up several slots in the list.<br>
+Search had to run per option while the screen showed results per product, and that gap had to be closed.
+
+---
+
+## Fix: grouping by productId (collapse)
+
+Option documents with the same `productId` are collapsed into one, and only one representative option per product, chosen by the sort order, is returned in the list.<br>
+For relevance sorting, that's the highest-scoring option; for lowest-price sorting, it's the cheapest option that matches the conditions.<br>
+[Collapse documentation](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/collapse-search-results)
 
 ```mermaid
 flowchart LR
     A[Search conditions] --> B[Matching option documents]
     B --> C[Collapse by productId]
     C --> D[Representative option per product]
-    D --> E[Deduplicated product list]
+    D --> E[Product list without duplicates]
 ```
 
 ---
 
-## The pagination conflict
+## Why search_after couldn't be used
 
-Infinite scrolling initially called for `search_after`.<br>
-With collapse, however, the collapse and sort fields must be identical and secondary sorts are disallowed.<br>
-Grouping by product ID while sorting by relevance or price did not fit that restriction.
+I wanted to use `search_after` for infinite scroll, but using it with collapse requires the collapse field and the sort field to be the same.<br>
+Results are grouped by product ID but sorted by relevance or price, so that condition couldn't be met.
 
-| Alternative | Decision |
+| Alternative | Assessment |
 | --- | --- |
-| Fetch many options and merge in the application | An average of 72 options × 30 products = 2,160 documents still does not guarantee 30 unique products.<br>Matching option counts vary, and transferring and merging more documents adds work. |
-| Fetch batches in parallel and merge | Product deduplication, global ordering, and page boundaries still need application logic. |
-| collapse + from/size | Selected to keep grouping and ordering in ES while returning pages of products. |
+| Fetch plenty of options and merge them in the application | Each product has a different number of matching options, so even 2,160 options (72 on average × 30 products) can't guarantee 30 distinct products. |
+| Fetch in several rounds and merge | The application would have to handle de-duplication, overall sorting, and page boundaries. |
+| collapse + from/size | Chosen because ES handles de-duplication and sorting and pages by product. |
 
-The cursor now contains a page number, translated into `from/size`.<br>
-The API retains a cursor-shaped interface while the internal pagination strategy changes.
-
----
-
-## Trade-offs
-
-- Deep pages: Larger offsets require collecting earlier results and remain subject to the result-window limit, including relevance-sorted searches.
-- Product counts: Total hits counts matching option documents before collapse.<br>
-  A unique-product count requires separate aggregation.
-- Search work: Group selection adds work alongside matching and scoring.<br>
-  The [load investigation](search-capacity.md) observed these search, scoring, and grouping paths.
+So the cursor holds a page number, and the next set of products is fetched with `from/size`.
 
 ---
 
-## Alternative: a product document with nested options
+## Choices and trade-offs
 
-A product-level document with `nested` options preserves each option's attribute combinations while returning products directly.<br>
-It could remove product-deduplication collapse and support `search_after` on product-level sort values.<br>
-[Nested document model](https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/nested)
+- **Deep pages**: As `from` grows, ES has to gather all the earlier results too, so the cost goes up.
+  Search results are rarely paged through as deeply as a list, though, so this isn't a real problem for the first few pages.<br>
 
-Nested options still become separate Lucene documents searched in relation to their parent.<br>
-Option updates also entail reindexing the product's nested document block.<br>
-The decision therefore balances search latency, relevance, and option-update cost, rather than treating removal of collapse as a complete optimization.
+
+- **Total product count**: The total hit count in a search result is the number of option documents before collapsing, so showing a product count on screen needs a separate aggregation.<br>
+
+
+- **Search cost**: Picking a representative per product adds to the work of matching and scoring option documents. This cost also showed up in the [search bottleneck investigation](search-capacity.md).<br>

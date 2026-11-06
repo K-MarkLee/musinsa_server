@@ -1,59 +1,49 @@
-# Product detail: Tomcat workers and connection waiting
+# Product detail: Tomcat thread count and connection waits
 
-[한국어](../../ko/troubleshooting/tomcat.md) · [README](../../../README.md) · [Measurement setup](../environment.md)
-
-After Hikari 50 reduced connection waiting, throughput still plateaued near 2,100 RPS at a 3,000-RPS target.<br>
-With Tomcat busy reaching its cap, I tested whether more worker threads increased throughput.
+[한국어](../../ko/troubleshooting/tomcat.md) · [README](../../../README.md)
 
 ---
 
-## Scenario and comparison
+## Problem and test conditions
 
-Five products were requested in rotation with Hikari 50, 1,000 preallocated/maximum VUs, and a five-second HTTP timeout.<br>
-Tomcat 50/200/500 each ran once.<br>
-Holds were 50 RPS for 30s → 1,000 for 45s → 1,500 for 60s → 2,000 for 75s → 3,000 for 60s → 50 for 30s, with 15-second ramps: six minutes 15 seconds total.<br>
-Performance-triggered early aborts were disabled.
+Even after Hikari 50 reduced connection waits, throughput at 3,000 RPS stayed at about 2,100 RPS, and busy Tomcat threads were capped at the limit of 200.<br>
+To see whether more threads would raise throughput, I fixed Hikari at 50 and compared Tomcat 50, 200, and 500.
 
-Tomcat 200 reuses the Hikari-50 run of this extended scenario, not the initial five-minute run.<br>
-Throughput approximates hold-stage completed requests divided by duration; metric means use one-second queries over the hold.<br>
-Whole-run drops are not limited to the 3,000-RPS stage.
+I rotated through 5 products and ran each setting once with a 1,000 VU limit and a 5-second timeout.<br>
+The load used the same stages as Hikari experiment 2 (50 → 1,000 → 1,500 → 2,000 → 3,000 → 50 RPS).
 
 ---
 
-## Tomcat 50/200/500: more threads waiting for the same connections
+## Tomcat 50, 200, 500: thread count and connection waits
 
 | Hikari fixed at 50 | Tomcat 50 | 200 | 500 |
 | --- | ---: | ---: | ---: |
-| Approx.<br>throughput at 2,000 RPS | 1,999 | 1,998 | 1,998 |
-| 2,000 RPS mean, ms | 51.2 | 77.2 | 73.3 |
-| p95 at 2,000 RPS, ms | 158.4 | 265.9 | 238.2 |
-| 2,000 RPS p99, ms | 253.9 | 434.6 | 446.3 |
-| Approx.<br>throughput at 3,000 RPS | 2,112 | 2,121 | 2,063 |
-| Mean at 3,000 RPS, ms | 472.0 | 469.4 | 482.9 |
-| p95 at 3,000 RPS, ms | 613.3 | 632.6 | 901.6 |
-| p99 at 3,000 RPS, ms | 724.3 | 758.3 | 1,312.9 |
-| Mean Hikari active | 49.6 | 49.8 | 49.9 |
-| Mean Hikari pending | 0 | 149.8 | 449.9 |
-| Mean Tomcat busy | 50 | 200 | 500 |
-| Mean host CPU | 96.6% | 96.6% | 96.8% |
-| Whole-run drops | 57,148 | 57,291 | 61,498 |
+| 2,000 RPS throughput (RPS) | 1,999 | 1,998 | 1,998 |
+| 2,000 RPS mean (ms) | 51.2 | 77.2 | 73.3 |
+| 2,000 RPS p95 (ms) | 158.4 | 265.9 | 238.2 |
+| 2,000 RPS p99 (ms) | 253.9 | 434.6 | 446.3 |
+| 3,000 RPS throughput (RPS) | 2,112 | 2,121 | 2,063 |
+| 3,000 RPS mean (ms) | 472.0 | 469.4 | 482.9 |
+| 3,000 RPS p95 (ms) | 613.3 | 632.6 | 901.6 |
+| 3,000 RPS p99 (ms) | 724.3 | 758.3 | 1,312.9 |
+| 3,000 RPS avg. connections in use | 49.6 | 49.8 | 49.9 |
+| 3,000 RPS avg. waiting for a connection | 0 | 149.8 | 449.9 |
+| 3,000 RPS avg. Tomcat busy | 50 | 200 | 500 |
+| 3,000 RPS avg. host CPU | 96.6% | 96.6% | 96.8% |
+| Total drops | 57,148 | 57,291 | 61,498 |
 
-The four metric-average rows describe the 3,000-RPS hold.<br>
-From 200 to 500, pending rose from approximately 150 to 450 while active DB connections remained approximately 50.<br>
-Throughput did not improve; p95 rose from 632.6 to 901.6ms.
+Raising Tomcat from 200 to 500 increased connection waits from about 150 to 450, but the work actually using DB connections stayed at about 50 and throughput didn't go up.<br>
+If anything, p95 at 3,000 RPS got longer, from 632.6ms to 901.6ms.<br>
+Tomcat 50, on the other hand, had no connection waits, but its throughput was also about 2,100 RPS, and at 2,000 RPS it had the lowest p95 of the three settings.
 
-Tomcat 50 had zero Hikari pending but only approximately 2,112 RPS.<br>
-All three runs had zero HTTP failures and connection timeouts, but retained drops.<br>
-Reducing Hikari waiting alone did not achieve the target throughput.
+More threads lengthened the queue in front of the connection pool, and fewer threads just moved that queue to the request queue; throughput didn't change either way.
 
 ---
 
-## Decision
+## Assessment
 
-Increasing Tomcat from 200 to 500 added waiting and raised p95 without increasing throughput.<br>
-I reverted the increase and kept 200 as the local baseline.<br>
-Tomcat 50 had the lowest p95 in this detail scenario, making a smaller pool a candidate for mixed-API comparison.
+I kept Tomcat at 200.<br>
+At 3,000 RPS the host CPU went above 96% regardless of thread count and throughput stopped at about 2,100 RPS, and more threads only added waiting and latency.<br>
+Tomcat 50 had the lowest latency for the detail API on its own, but I didn't check whether that holds when it shares the server with other APIs, so I kept 200.
 
-At 2,000 RPS, throughput remained around 1,999 RPS across settings while mean/p95/p99 differed.<br>
-At 3,000 RPS, extra workers did not expand the processing capacity of approximately 50 active connections and increased waiting.<br>
-Limiting workers to lower Hikari pending is not the same as eliminating end-to-end waiting; throughput, latency, and drops must be assessed together.
+Settings can decide whether requests wait in the connection pool or in the request queue, but how much can be processed is set by this machine's CPU.

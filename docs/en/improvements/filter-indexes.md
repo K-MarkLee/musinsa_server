@@ -1,28 +1,92 @@
 # Product filters: composite indexes verified with execution plans
 
-[한국어](../../ko/improvements/filter-indexes.md) · [README](../../../README.md) · [Measurement setup](../environment.md)
+[한국어](../../ko/improvements/filter-indexes.md) · [README](../../../README.md)
 
 ---
 
-## Problem and comparison conditions
+## Problem and test conditions
 
-ID-ordered and price-ordered lists need different access paths.<br>
-Narrowing candidates with filters does not guarantee cheap retrieval of the cheapest/priciest 24 products.<br>
-Composite indexes were evaluated against filtering and ordering together.
+The product list supports category, brand, and gender filters, sorted by default order, lowest price, or highest price.<br>
+Even after the representative price was stored, there was no index matching the price sort, so filtered lists sorted by price were still slow.
 
-The test used the first page of `GET /api/products?limit=24`; SQL reads up to 25 rows for next-page detection.<br>
-Ten filters × three orders (ID, lowest price, highest price) produce 30 cases.<br>
-Categories were bags, tote bags, or tote/crossbody together; one fixed brand and unisex `ALL` were used.<br>
-ALL is a value, not an omitted filter.<br>
-Category-prefix and multi-category IN predicates stayed unchanged.
-
-For each case: one initial request, four warm-ups, and 30 measured calls, repeated three times.<br>
-An execution contains 2,700 measured / 3,150 total calls; three additional executions yield 8,100 measured / 9,450 total per state.<br>
-The without-index state retained PK, unique constraints, and the brand index required for its foreign key.
+I requested the first page of `GET /api/products?limit=24` under 30 conditions: 10 filters × 3 sort orders.<br>
+For each condition, one batch was 1 first request → 4 warm-up requests → 30 measured requests at 1 VU, and the batch was run 4 times.
 
 ---
 
-## Selected indexes
+## Repeated measurements
+
+| Run | Before mean | Before p95 | After mean | After p95 |
+| --- | --- |---| --- |---|
+| Run 1 | 31.15ms | 64.33ms | 8.35ms | 11.20ms |
+| Run 2 | 31.57ms | 65.28ms | 8.14ms | 11.04ms |
+| Run 3 | 30.17ms | 63.28ms | 7.94ms | 11.08ms |
+| Run 4 | 28.51ms | 63.25ms | 3.73ms | 5.61ms |
+| Mean of 4 runs | 30.35ms | — | 7.04ms | — |
+
+
+The 4-run mean went from 30.35ms to 7.04ms, a 76.8% reduction.<br>
+The p95 for the 4-run mean is recalculated from all request records across the four runs combined.
+
+**Before the indexes**
+
+![Before the indexes](../../images/evidence/filter-index-1.png)
+
+**After the indexes**
+
+![After the indexes](../../images/evidence/filter-index-2.png)
+
+<details>
+<summary>Results by filter and sort</summary>
+
+The category is Bags, the leaf category is Tote Bags, the multi-category filter is Tote Bags plus Crossbody Bags, the brand is one fixed brand, and the gender is unisex (`ALL`).<br>
+Each condition has 270 results from runs 1–3 combined.
+
+| Filter / sort | Before mean (ms) | Before p95 (ms) | After mean (ms) | After p95 (ms) |
+| --- | --- | --- | --- | --- |
+| No filter / default ID | 8.33 | 12.03 | 7.50 | 10.21 |
+| No filter / lowest price | 63.08 | 67.30 | 7.29 | 10.21 |
+| No filter / highest price | 63.30 | 66.59 | 7.87 | 10.36 |
+| Top category / default ID | 9.71 | 12.64 | 9.38 | 11.74 |
+| Top category / lowest price | 59.53 | 63.07 | 8.36 | 10.51 |
+| Top category / highest price | 59.27 | 62.17 | 7.96 | 10.34 |
+| Brand / default ID | 7.99 | 10.38 | 7.49 | 10.01 |
+| Brand / lowest price | 14.07 | 17.16 | 7.64 | 9.99 |
+| Brand / highest price | 14.07 | 17.43 | 7.37 | 9.41 |
+| Gender / default ID | 7.71 | 10.03 | 7.20 | 9.72 |
+| Gender / lowest price | 63.56 | 66.97 | 7.64 | 10.24 |
+| Gender / highest price | 63.79 | 67.05 | 7.49 | 11.19 |
+| Top category + brand / default ID | 8.31 | 11.58 | 9.36 | 11.74 |
+| Top category + brand / lowest price | 13.89 | 16.90 | 7.19 | 9.65 |
+| Top category + brand / highest price | 13.80 | 16.26 | 7.74 | 10.07 |
+| Top category + gender / default ID | 9.58 | 11.66 | 9.29 | 12.01 |
+| Top category + gender / lowest price | 61.30 | 65.24 | 7.93 | 11.12 |
+| Top category + gender / highest price | 62.28 | 68.44 | 7.76 | 10.53 |
+| Brand + gender / default ID | 7.48 | 10.43 | 7.73 | 10.43 |
+| Brand + gender / lowest price | 14.17 | 18.03 | 7.13 | 9.83 |
+| Brand + gender / highest price | 13.87 | 16.54 | 7.41 | 10.07 |
+| Top category + brand + gender / default ID | 8.39 | 11.09 | 9.27 | 11.33 |
+| Top category + brand + gender / lowest price | 14.49 | 17.12 | 7.96 | 10.41 |
+| Top category + brand + gender / highest price | 13.95 | 16.79 | 7.78 | 10.35 |
+| Leaf category / default ID | 10.02 | 13.17 | 9.62 | 12.00 |
+| Leaf category / lowest price | 54.85 | 58.51 | 8.28 | 10.78 |
+| Leaf category / highest price | 55.61 | 59.70 | 8.34 | 11.45 |
+| Multiple categories / default ID | 10.86 | 13.84 | 10.20 | 13.04 |
+| Multiple categories / lowest price | 60.87 | 64.57 | 8.81 | 11.09 |
+| Multiple categories / highest price | 60.79 | 64.40 | 9.27 | 12.38 |
+
+</details>
+
+---
+
+## Why it was slow and what changed
+
+A filtered list sorted by price has to find the matching products, sort them by price, and take the top 24.<br>
+Taking the Bags category sorted by lowest price as an example, there was no index for the price sort, so MySQL read the whole product table (155,036 rows), sorted all 39,891 matching rows, and then returned just 25.
+
+So I added a composite index ordered by availability, price, and product ID, plus a second one with the same order and brand in front.<br>
+MySQL now reads the index in price order and stops as soon as it finds 25 matching rows, so the rows read dropped from 155,036 to 343 and the separate sort disappeared.<br>
+The highest-price sort reads the same index backwards, and the default ID sort barely changed because it was already a fast lookup on the primary key.
 
 ```sql
 CREATE INDEX idx_product_price
@@ -31,154 +95,32 @@ CREATE INDEX idx_product_brand_price
     ON product (brand_id, is_available, default_price, product_id);
 ```
 
-Query code stayed fixed while both indexes were applied together.<br>
-The category candidate was excluded from the final state.
-
----
-
-## Repeated measurements
-
-Values are milliseconds.<br>
-Additional-run aggregates are separate from aggregates including the initial screenshot.
-
-| Run | Before mean | Before p95 | After mean | After p95 |
-| --- | --- | --- | --- | --- |
-| Initial screenshot | 28.51 | 63.25 | 3.73 | 5.61 |
-| Additional run 1 | 31.15 | 64.33 | 8.35 | 11.20 |
-| Additional run 2 | 31.57 | 65.28 | 8.14 | 11.04 |
-| Additional run 3 | 30.17 | 63.28 | 7.94 | 11.08 |
-| Additional 3 runs combined | 30.96 | 64.45 | 8.14 | 11.12 |
-| All 4 runs combined | 30.35 | 64.21 | 7.04 | 10.81 |
-
-The additional-run mean is 30.96→8.14ms, a 73.7% reduction, with every measured response HTTP 200.<br>
-Pooled p95 was recomputed from individual request values, not averaged across run percentiles.<br>
-Additional after means of 8.35/8.14/7.94ms exceed the initial screenshot's 3.73ms; the reason was not isolated.
-
-Before indexes: k6
-
-![Before indexes: k6](../../images/evidence/filter-index-1.png)
-
-After indexes: k6
-
-![After indexes: k6](../../images/evidence/filter-index-2.png)
-
----
-
-## Repeated results by filter and order
-
-Additional runs only: 270 requests per case per state.<br>
-Values are milliseconds.<br>
-Cases have equal weight, not production traffic proportions.
-
-| Filter / order | Before mean | Before p95 | After mean | After p95 |
-| --- | --- | --- | --- | --- |
-| No filter / ID | 8.33 | 12.03 | 7.50 | 10.21 |
-| No filter / Lowest price | 63.08 | 67.30 | 7.29 | 10.21 |
-| No filter / Highest price | 63.30 | 66.59 | 7.87 | 10.36 |
-| Parent category / ID | 9.71 | 12.64 | 9.38 | 11.74 |
-| Parent category / Lowest price | 59.53 | 63.07 | 8.36 | 10.51 |
-| Parent category / Highest price | 59.27 | 62.17 | 7.96 | 10.34 |
-| Brand / ID | 7.99 | 10.38 | 7.49 | 10.01 |
-| Brand / Lowest price | 14.07 | 17.16 | 7.64 | 9.99 |
-| Brand / Highest price | 14.07 | 17.43 | 7.37 | 9.41 |
-| Gender / ID | 7.71 | 10.03 | 7.20 | 9.72 |
-| Gender / Lowest price | 63.56 | 66.97 | 7.64 | 10.24 |
-| Gender / Highest price | 63.79 | 67.05 | 7.49 | 11.19 |
-| Parent category + Brand / ID | 8.31 | 11.58 | 9.36 | 11.74 |
-| Parent category + Brand / Lowest price | 13.89 | 16.90 | 7.19 | 9.65 |
-| Parent category + Brand / Highest price | 13.80 | 16.26 | 7.74 | 10.07 |
-| Parent category + Gender / ID | 9.58 | 11.66 | 9.29 | 12.01 |
-| Parent category + Gender / Lowest price | 61.30 | 65.24 | 7.93 | 11.12 |
-| Parent category + Gender / Highest price | 62.28 | 68.44 | 7.76 | 10.53 |
-| Brand + Gender / ID | 7.48 | 10.43 | 7.73 | 10.43 |
-| Brand + Gender / Lowest price | 14.17 | 18.03 | 7.13 | 9.83 |
-| Brand + Gender / Highest price | 13.87 | 16.54 | 7.41 | 10.07 |
-| Parent category + Brand + Gender / ID | 8.39 | 11.09 | 9.27 | 11.33 |
-| Parent category + Brand + Gender / Lowest price | 14.49 | 17.12 | 7.96 | 10.41 |
-| Parent category + Brand + Gender / Highest price | 13.95 | 16.79 | 7.78 | 10.35 |
-| Leaf category / ID | 10.02 | 13.17 | 9.62 | 12.00 |
-| Leaf category / Lowest price | 54.85 | 58.51 | 8.28 | 10.78 |
-| Leaf category / Highest price | 55.61 | 59.70 | 8.34 | 11.45 |
-| Multiple categories / ID | 10.86 | 13.84 | 10.20 | 13.04 |
-| Multiple categories / Lowest price | 60.87 | 64.57 | 8.81 | 11.09 |
-| Multiple categories / Highest price | 60.79 | 64.40 | 9.27 | 12.38 |
-
-Price ordering improved substantially, while some ID-ordered combinations increased slightly.<br>
-Not every case improved.
-
----
-
-## Execution plan: examined rows and sorting
-
-The plan reads bags and descendants in ascending price/ID order with LIMIT 25.<br>
-`IGNORE INDEX (idx_product_price)` supplies the comparison without the price index.
-
-Plan without price index
-
-![Plan without price index](../../images/evidence/filter-index-3.png)
-
-Plan with price index
-
-![Plan with price index](../../images/evidence/filter-index-4.png)
-
-| Metric | Without index | With index |
+| Item | Without index | With index |
 | --- | --- | --- |
-| Recorded actual time (ms) | 0.05..73.9 | 0.25..1.41 |
-| Recorded end time | 73.9ms | 1.41ms — 98.09% lower |
-| Access | Full product table scan | Price index range scan |
-| Scan actual rows | 155,036 | 343 — 99.78% fewer |
-| Filter output rows | 39,891 | 25 |
-| Separate sort input | 39,891 filtered rows | None — index price order |
-| Returned rows | 25 | 25 |
+| Access method | Full scan of the product table | Range scan on the price composite index |
+| Rows read | 155,036 | 343 |
+| Rows that matched | 39,891 | 25 |
+| Separate sort | 39,891 rows sorted | None |
+| Execution time | 73.9ms | 1.41ms |
 
-Reading in index price order and stopping after 25 qualifying rows reduced scanned rows from 155,036→343 and removed separate sorting.<br>
-These actual times describe one SQL plan, not the 30.96→8.14ms mean API comparison.<br>
-Row counts come from the equivalent-condition plan record; timings come from the attached rerun.
+**Execution plan without the price index**
 
----
+![Execution plan without the price index](../../images/evidence/filter-index-3.png)
 
-## Why these indexes
+**Execution plan with the price index**
 
-One path fixes availability before price/ID ordering; the other fixes brand and availability first.<br>
-Descending price/ID can use reverse traversal.<br>
-The former brand-only index narrowed the brand range without providing price order.
-
-ID ordering already benefits from the PK, so it should not show the same reduction.<br>
-Rare category/gender matches can require examining many entries to obtain 25 results.<br>
-Individual contributions of the two indexes were not isolated.
-
-<br>
-
-### Why the category candidate was excluded
-
-`(is_available, category_path, default_price, product_id)` orders price within each category path.<br>
-It does not directly provide global price order across multiple descendant paths in a prefix query.<br>
-For bags, the price index found 25 results after 343 rows; forcing the category candidate sent 39,891 rows to sorting.<br>
-That is post-index-condition output, not the count of all inspected index entries.
-
-For the same 4,707 tote-bag candidates and top 25 results:
-
-| Predicate | Selected index | Read → returned rows |
-| --- | --- | --- |
-| LOWER + LIKE | Price | 730 → 25 |
-| LIKE without LOWER | Price | 730 → 25 |
-| LOWER + equality | Price | 730 → 25 |
-| Equality without LOWER | Category composite | 25 → 25 |
-
-Removing LOWER alone was insufficient.<br>
-The candidate helped leaf-category equality, but was not retained for the existing parent/descendant behavior.
+![Execution plan with the price index](../../images/evidence/filter-index-4.png)
 
 ---
 
-## Trade-offs and measurement limits
+## Choices and trade-offs
 
-Indexes consume storage/buffer-pool space and add write-maintenance costs.<br>
-Two price paths were prioritized instead of indexing every combination.<br>
-Availability selectivity alone does not explain the gain; ordering and LIMIT matter together.<br>
-The brand composite replaced the FK-supporting single-column index while preserving the constraint.
+- **Write cost**: More indexes mean every product insert or price change also has to update them, and they take more storage.
+  So instead of covering every filter combination, I only built the two price-sort paths with the biggest impact.<br>
 
-The same running server/restored DB ran three without-index executions followed by three with-index executions.<br>
-Warm-up was used without restarting or clearing caches.<br>
-The 256MiB MySQL buffer pool and SQL logging/monitoring settings stayed unchanged.<br>
-Write costs, body correctness, deep pages, and concurrency remain separate.<br>
-The final two indexes were restored and the category candidate removed after measurement.
+
+- **No category index**: I also compared an index that included the category, but filtering on a top-level category has to read several subcategories together, so it can't produce one overall price order directly.
+  For the Bags condition, the price index read only 343 rows while the category index still had to sort 39,891, and it only helped when a single subcategory was selected, so I left it out.<br>
+
+
+- **Edge cases**: When few products match a filter such as category or gender, MySQL has to read further along the index to fill 25 rows.<br>

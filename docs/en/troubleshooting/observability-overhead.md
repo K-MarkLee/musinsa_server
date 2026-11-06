@@ -1,35 +1,30 @@
-# Observability overhead: scope logging and tracing for load
+# When observability backfires: sizing logs and tracing for load tests
 
-[한국어](../../ko/troubleshooting/observability-overhead.md) · [README](../../../README.md) · [Measurement setup](../environment.md)
-
----
-
-## Problem: development settings carried into load tests
-
-DEBUG logs and broad OpenTelemetry instrumentation remained enabled under high load.<br>
-More requests produced more SQL/bind logs, spans, serialization, and export traffic.<br>
-The application and monitoring tools such as Jaeger and Grafana shared the same machine, competing for CPU, memory, and I/O.
+[한국어](../../ko/troubleshooting/observability-overhead.md) · [README](../../../README.md)
 
 ---
 
-## Changes
+## Problem
 
-| Area | Change | Purpose |
+I ran load tests with the DEBUG logs and broad tracing I had used during development still turned on.<br>
+As requests increased, so did SQL and bind-parameter log output and span creation and export, and the application and observability tools such as Jaeger and Grafana were all sharing the same machine's CPU, memory, and disk.
+
+---
+
+## Fix
+
+| Target | Change | Effect |
 | --- | --- | --- |
-| SQL/bind logging | INFO instead of DEBUG/TRACE | Reduce detailed per-request logging. |
-| Instrumentation scope | Remove unnecessary observation points | Reduce spans that did not contribute to diagnosis. |
-| Trace collection | Default sampling of 1% | Reduce the cost of tracing every request. |
-| Diagnostic signals | Retain read/ES spans and connection-pool metrics | Preserve visibility into processing and waiting. |
+| SQL and bind-parameter logs | DEBUG, TRACE → INFO | Less detailed logging on every request |
+| Tracing scope | Removed instrumentation points not used for root-cause analysis | Fewer unnecessary spans created and exported |
+| Trace collection | 1% sampling | Lower cost than tracing every request |
+| Diagnostic metrics | Kept query and ES call spans and connection pool metrics | Processing time and where requests wait are still visible |
 
-Responses improved after observation was reduced, and subsequent load tests used this configuration.<br>
-[Applied configuration](../../../src/main/resources/application-dev.yml)
+Responses improved after narrowing the observability scope, and every later load test used these settings. → [Applied settings](../../../src/main/resources/application-dev.yml)
 
 ---
 
-## Decision and trade-off
+## Choices and trade-offs
 
-Monitoring consumes resources alongside the service.<br>
-I therefore used different collection scopes for feature development and high-load diagnosis: lower routine logging and sampling, with targeted spans and metrics for the area under investigation.
-
-Lower sampling reduces the opportunity to inspect individual requests.<br>
-Metrics provide throughput, p95, failures, and pool waiting; Jaeger provides execution order and delay locations within sampled requests.
+- **Fewer requests to trace**: Lower sampling means fewer chances to trace an individual request.
+  So I used metrics for throughput, p95, errors, and connection waits, and used Jaeger only to see where time went inside a request.<br>

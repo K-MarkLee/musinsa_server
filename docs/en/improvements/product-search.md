@@ -1,24 +1,16 @@
-# Search design: from a product-name substring to option-aware intent
+# Search design: from product-name strings to options and search intent
 
-[한국어](../../ko/improvements/product-search.md) · [README](../../../README.md) · [Measurement setup](../environment.md)
-
-A product-name substring cannot express intent well when color, product type, and brand live in different fields.<br>
-ES was chosen to preserve option relationships, search across attributes, and rank results.<br>
-This document records changed results and their costs alongside latency.
+[한국어](../../ko/improvements/product-search.md) · [README](../../../README.md)
 
 ---
 
-## Comparison scenario
+## Problem and test conditions
 
-Four queries were called equally: `스커트` (skirt), `블랙 스커트` (black skirt), `나이키` (Nike), and `나이키 후드` (Nike hoodie).<br>
-Each `GET /api/products?limit=10&keyword=...` retrieves the first ten results.<br>
-For each query: one initial call, four warm-ups, and 30 measured calls, repeated three times.<br>
-Each execution has 360 measured / 420 total calls; three additional executions provide 1,080 measured samples per method, with zero HTTP failures.
+The original search used LIKE to find products whose name contained the keyword as one continuous string.<br>
+So a query like "블랙 스커트" (black skirt), where the color lives in the options and the item type lives in the category, returned nothing at all.
 
-Additional executions ran ES before LIKE.<br>
-Apps restarted between versions, but DB/ES caches were not cleared.<br>
-Timed k6 calls checked HTTP success without validating JSON bodies.<br>
-Result screenshots are separate observations.
+I requested the first 10 results the same number of times for four keywords: `스커트` (skirt), `블랙 스커트` (black skirt), `나이키` (Nike), and `나이키 후드` (Nike hoodie).<br>
+For each keyword, one batch was 1 first request → 4 warm-up requests → 30 measured requests at 1 VU, and the batch was run 4 times.
 
 ---
 
@@ -26,222 +18,158 @@ Result screenshots are separate observations.
 
 | Run | Before mean | Before p95 | After mean | After p95 |
 | --- | --- | --- | --- | --- |
-| Additional run 1 | 89.96ms | 174.35ms | 25.75ms | 60.19ms |
-| Additional run 2 | 90.19ms | 175.78ms | 22.95ms | 54.48ms |
-| Additional run 3 | 89.91ms | 176.34ms | 22.37ms | 53.50ms |
-| Initial screenshot | 87.06ms | 168.54ms | 22.14ms | 47.06ms |
-| Arithmetic mean of 4 runs | 89.28ms | 173.75ms | 23.30ms | 53.81ms |
+| Run 1 | 89.96ms | 174.35ms | 25.75ms | 60.19ms |
+| Run 2 | 90.19ms | 175.78ms | 22.95ms | 54.48ms |
+| Run 3 | 89.91ms | 176.34ms | 22.37ms | 53.50ms |
+| Run 4 | 87.06ms | 168.54ms | 22.14ms | 47.06ms |
+| Mean of 4 runs | 89.28ms | — | 23.30ms | — |
 
-The arithmetic mean of run means is 89.28→23.30ms, a 73.9% reduction.<br>
-The final p95 cells, 173.75/53.81ms, average run percentiles; they are not percentiles pooled across all requests.
+The 4-run mean went from 89.28ms to 23.30ms, a 73.9% reduction.<br>
+LIKE and ES don't find the same results, so this is the response time after changing how search works, not a speed-up of the same feature.
 
-Additional runs use individual InfluxDB durations.<br>
-The initial ES screenshot represents the restored introduction version; additional runs include response-field limiting and a brand-search-field correction.<br>
-These are not four identical-code repeats.<br>
-Matching and ordering also differ, so this does not compare algorithms producing an identical result set.
+**LIKE search**
 
-Initial LIKE k6 screenshot
+![LIKE search](../../images/evidence/search-design-5.png)
 
-![Initial LIKE k6 screenshot](../../images/evidence/search-design-5.png)
+**ES search**
 
-Initial ES k6 screenshot
-
-![Initial ES k6 screenshot](../../images/evidence/search-design-10.png)
+![ES search](../../images/evidence/search-design-10.png)
 
 ---
 
-## Observed result differences
-
-These screenshots illustrate individual queries, not a quantitative relevance evaluation.<br>
-A result screenshot alone does not establish exactly which field matched every returned product.
+## Differences in the results
 
 <details>
-<summary>Skirt: LIKE / Elasticsearch</summary>
+<summary>블랙 스커트 (black skirt): LIKE / Elasticsearch</summary>
 
-LIKE returns product-name substring matches in ID order; ES ordering also reflects category and other relevance.<br>
-Repetition in a title alone does not determine BM25 rank.
+LIKE returned nothing because no product name contained the continuous string "블랙 스커트".<br>
+ES split the query into 블랙 and 스커트, searched for each word across several fields, and returned results.
 
-Skirt LIKE results
+**블랙 스커트 LIKE results**
 
-![Skirt LIKE results](../../images/evidence/search-design-1.png)
+![블랙 스커트 LIKE results](../../images/evidence/search-design-2.png)
 
-Skirt ES results
+**블랙 스커트 ES results**
 
-![Skirt ES results](../../images/evidence/search-design-6.png)
+![블랙 스커트 ES results](../../images/evidence/search-design-7.png)
 
 </details>
 
 <details>
-<summary>Black skirt: LIKE / Elasticsearch</summary>
+<summary>스커트 (skirt): LIKE / Elasticsearch</summary>
 
-LIKE found no contiguous phrase.<br>
-ES matched the tokens separately and returned results; exact field attribution requires a separate explain.
+LIKE returns products with 스커트 in the name in ID order, while ES returns them ranked by relevance across several fields, including the category.
 
-Black skirt LIKE results
+**스커트 LIKE results**
 
-![Black skirt LIKE results](../../images/evidence/search-design-2.png)
+![스커트 LIKE results](../../images/evidence/search-design-1.png)
 
-Black skirt ES results
+**스커트 ES results**
 
-![Black skirt ES results](../../images/evidence/search-design-7.png)
-
-</details>
-
-<details>
-<summary>Nike: LIKE / Elasticsearch</summary>
-
-LIKE uses title inclusion while ES combines multiple fields.<br>
-Source brand values include sellers, so neither screenshot establishes verified official-brand identity.
-
-Nike LIKE results
-
-![Nike LIKE results](../../images/evidence/search-design-3.png)
-
-Nike ES results
-
-![Nike ES results](../../images/evidence/search-design-8.png)
+![스커트 ES results](../../images/evidence/search-design-6.png)
 
 </details>
 
 <details>
-<summary>Nike hoodie: LIKE / Elasticsearch</summary>
+<summary>나이키 (Nike): LIKE / Elasticsearch</summary>
 
-LIKE can miss titles with an intervening word, such as Nike Club Hoodie.<br>
-In current ES results, the hoodie-category contribution can outrank another item with a higher title contribution.
+LIKE only returns products with 나이키 in the name, while ES ranks results by scores across several fields, including the product name and brand.
 
-Nike hoodie LIKE results
+**나이키 LIKE results**
 
-![Nike hoodie LIKE results](../../images/evidence/search-design-4.png)
+![나이키 LIKE results](../../images/evidence/search-design-3.png)
 
-Nike hoodie ES results
+**나이키 ES results**
 
-![Nike hoodie ES results](../../images/evidence/search-design-9.png)
+![나이키 ES results](../../images/evidence/search-design-8.png)
+
+</details>
+
+<details>
+<summary>나이키 후드 (Nike hoodie): LIKE / Elasticsearch</summary>
+
+LIKE misses product names with another word in between, such as "나이키 클럽 후드" (Nike Club hoodie).<br>
+ES finds those products too, and the hoodie category score moves them toward the top.
+
+**나이키 후드 LIKE results**
+
+![나이키 후드 LIKE results](../../images/evidence/search-design-4.png)
+
+**나이키 후드 ES results**
+
+![나이키 후드 ES results](../../images/evidence/search-design-9.png)
 
 </details>
 
 ---
 
-## Document unit: one sellable option
+## Why I changed it and how it is designed
 
-Flattening all colors and sizes onto a product can match a combination that no individual option offers.<br>
-I used one document per option, applied stock and availability filters, then collapsed on `productId` to return products.
+User queries mix color, item type, and brand, and that information is spread across the product name, options, category, and brand.<br>
+LIKE can't search for those parts separately, so I moved to Elasticsearch, which can search several fields together and sort by relevance.
+
+**One document per option**
+
+If a product document only stores its colors and sizes as lists, a product that sells only black/S and red/M still matches a search for "black M".<br>
+To match only the combinations that are actually for sale, I made one document per option and grouped options of the same product by `productId` (collapse) so results come back per product.<br>
+The product name, representative price, and thumbnail are stored in the document as well, so building the search response doesn't read the DB again.
 
 ```mermaid
 flowchart LR
-    A[MySQL products and options] --> B[One search document per option]
-    B --> C[Availability / stock / category / brand filters]
-    C --> D[Per-token field matching + relevance scores]
-    D --> E[Collapse by productId]
+    A[MySQL products and options] --> B[Search document per option]
+    B --> C[Filters: on sale, in stock, category, brand]
+    C --> D[Per-token field matching + relevance score]
+    D --> E[productId collapse]
     E --> F[Product list]
 ```
 
-This allows individual option updates but repeats shared product and brand information.<br>
-Updating a product can require updating many documents; approximately 155,000 products expand to approximately 11 million option documents.<br>
-A product document with nested options is a candidate, but search cost must be compared with reindexing costs when options change.<br>
-That migration has not been implemented or measured.
+**Korean analysis and synonyms**
 
-Product name, brand, representative price, and thumbnail come from ES to reduce DB rereads for search lists.<br>
-The thumbnail is not a query-matching field; its baseline keyword mapping was retained.<br>
-Stock/availability filters do not imply automatic synchronization from DB updates.
+Product names and brands are split into words with the Korean morphological analyzer (Nori), and colors and sizes are linked to synonyms.<br>
+For example, 블랙, black, 검정색, and blk all match the same color, and M, 미디엄, and medium all match the same size.
 
----
+| Field | Setting |
+| --- | --- |
+| Product name, Korean brand | Nori analysis |
+| English brand | Standard text analysis |
+| Category | Exact path filter + Nori-analyzed search |
+| Color, size | Original value + search with synonyms |
 
-## Analyzers, multifields, and update cost
+**Separating match conditions from scoring**
 
-| Field | Mapping | Reason |
-| --- | --- | --- |
-| productName / krBrandName | text + nori_default | Tokenized Korean search |
-| enBrandName | text | English-brand search |
-| categoryPath | keyword + text subfield (nori_default) | Path filters and category-token matching |
-| colorOptions / sizeOptions | keyword + text subfields (nori_color / nori_size) | Original option values and synonym-expanded search forms |
+Every word in the query has to match at least one of the product name, category, color, size, or brand for a product to be included.<br>
+Ranking then gives different weights depending on which field the whole query matched.
 
-`nori_default` uses a Nori tokenizer, part-of-speech filtering, reading-form conversion, and lowercasing.<br>
-Color/size analyzers lowercase, expand synonyms, and apply part-of-speech/reading-form filters; search uses `nori_default`.<br>
-Examples connect 블랙/black/검정색/blk and M/미디엄/medium.<br>
-Index-time synonym changes require reindexing existing documents.
+| Field the query matched | Weight |
+| --- | ---: |
+| Category, color | 3 |
+| Product name | 2 |
+| Size, brand | 1 |
 
-Multifields index the same value as keyword/text representations; this differs from querying multiple fields with `multi_match`.
+I set the weights by going through the collected product data myself, then tuned them by checking the results for representative queries.<br>
+Product names collected from Naver Shopping often bundle several items into one name or include sales copy, so I weighted the category, which classifies each product precisely, above the product name.<br>
+Users tend to look for products by color more than by size, so among option attributes, color is weighted above size.<br>
+Many sellers resell well-known brands, so the brand field often holds the seller's name instead of the actual brand, which is why brand is weighted below the product name.
 
----
+**Field weight settings**
 
-## Separate matching requirements from ranking
-
-The index uses Nori and synonym analysis, with distinct exact-filter and text-search fields.<br>
-Every input token must match at least one of product name, category, color, size, or brand.<br>
-These token clauses are combined with `must`.<br>
-Additional `should` matches for the whole query affect ranking.
-
-| Whole-query field | Boost | Rationale |
-| --- | ---: | --- |
-| Category / color | 3 | Emphasize product type and option attributes |
-| Product name | 2 | Useful meaning mixed with promotional text |
-| Size / Korean and English brand | 1 | Supporting clues; collected brand data can include seller names |
-
-These boosts are not separately applied to the required per-token clauses.<br>
-They are initial design assumptions, not an optimum established from user logs or relevance judgments.<br>
-Color is not assumed universally more important than brand.
-
-Whole-query field boosts
-
-![Whole-query field boosts](../../images/evidence/search-design-11.png)
-
-In the collected data, 131,962 descriptions duplicated product titles.<br>
-Descriptions were excluded to avoid adding repeated matches without new information.<br>
-Promotional titles and inaccurate attributes remain data-quality problems that a search engine alone does not solve.
-
-A concrete title/category score reversal is documented separately in [search-quality troubleshooting](../troubleshooting/search-quality.md).<br>
-Boosts multiply scores rather than assigning fixed ranks; they do not correct erroneous source categories or brands.
+![Field weight settings](../../images/evidence/search-design-11.png)
 
 ---
 
-## Why results and latency changed
+## Choices and trade-offs
 
-LIKE uses product-name substrings and ID order; ES uses morphology, synonyms, multiple fields, and relevance ordering.<br>
-The change serves richer cross-attribute intent, and latency also fell in this comparison.<br>
-It does not establish that LIKE used a full scan or attribute saved milliseconds to one ES operation.<br>
-Queries were equally weighted because empty-result requests can be faster.
+- **Document count and duplication**: 150,000 products become about 11 million option documents, and shared information such as the product name and brand is repeated in every option document.
+  When product information changes, all of that product's option documents have to be rewritten.<br>
 
----
 
-## One-shard diagnostic
+- **Cost of grouping by product**: Every search has the extra step of grouping option documents by product, and with the current sort, `search_after` can't be used with collapse, so paging uses `from/size`, which gets more expensive on deeper pages.
+  Search results are rarely paged through thousands of pages the way a list is, so I judged this cost to be small for the first few pages users actually look at.<br>
 
-One-shard diagnostic
 
-![One-shard diagnostic](../../images/evidence/search-design-12.png)
+- **Sync and operations**: A separate search server has to be operated, and DB changes need a path into ES.
+  Changing synonym rules requires a full reindex to apply them to existing documents.<br>
 
-The one-shard screenshot shows 38.55ms mean / 99.95ms p95, versus 22.14ms / 47.06ms for the initial two-shard screenshot: approximately 1.74× / 2.12× higher.<br>
-Shards can execute in parallel on one node, but equivalence of mappings, analyzers, data, cache, and post-reindex merge state was not established.<br>
-This is not an isolated shard-count effect, is excluded from the four-run LIKE/ES aggregate, and the baseline index was restored.
+Related: [Search quality](../troubleshooting/search-quality.md) · [Search pagination](../troubleshooting/search-pagination.md) · [Search bottleneck investigation](../troubleshooting/search-capacity.md)
 
----
-
-## Operational settings and trade-offs
-
-| Setting | Baseline | Meaning / trade-off |
-| --- | --- | --- |
-| Index | product | Baseline documents and analyzers |
-| number_of_shards | 2 | Shard-level parallelism plus merge/management cost |
-| number_of_replicas | 0 | Single-node measurement; no failover replica |
-| refresh_interval | 10s | Search-visibility delay versus refresh work; benefit not isolated |
-| index.queries.cache.enabled | true | Reusable eligible filter document sets, not every complete query response |
-
-A ten-second refresh is not ten-second polling of MySQL.<br>
-Query-cache hits/misses and usage were not measured, so cache benefit is not claimed as the cause.<br>
-Richer search requires operating ES, indexing/reindexing, propagating changes, and recovering failed updates.<br>
-Duplicated product data, collapse, and result merging remain costs.
-
----
-
-## Current limits and follow-up
-
-Unlike the list's keyset path, search uses `from/size` and a page-number cursor.<br>
-Collapse and sorting restrictions are covered in [search and operations troubleshooting](../troubleshooting/search-pagination.md).<br>
-Accurate unique-product totals are not guaranteed, and deep-page cost remains.
-
-DB-to-ES propagation and recovery need separate validation.<br>
-An index refresh interval does not establish synchronization with MySQL.<br>
-The measured local index used two shards and zero replicas; it does not represent a highly available deployment.
-
-At higher load, search CPU work and queueing remained after connection limits were increased.<br>
-[Search bottleneck investigation](../troubleshooting/search-capacity.md) separates observations from unmeasured query costs and shared-host effects.<br>
-Current query construction is in [ProductIndexSearchQueryRepositoryImpl](../../../src/main/java/com/mudosa/musinsa/product/infrastructure/search/repository/ProductIndexSearchQueryRepositoryImpl.java).
+Current query: [ProductIndexSearchQueryRepositoryImpl](../../../src/main/java/com/mudosa/musinsa/product/infrastructure/search/repository/ProductIndexSearchQueryRepositoryImpl.java)

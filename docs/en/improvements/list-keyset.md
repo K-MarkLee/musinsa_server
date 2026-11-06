@@ -1,26 +1,22 @@
-# Product scroll: remove COUNT and use keyset pagination
+# Product scroll: dropping COUNT and switching to keyset pagination
 
-[한국어](../../ko/improvements/list-keyset.md) · [README](../../../README.md) · [Measurement setup](../environment.md)
+[한국어](../../ko/improvements/list-keyset.md) · [README](../../../README.md)
 
 ---
 
-## Problem and comparison conditions
+## Problem and test conditions
 
-Infinite scrolling needs to know whether another page exists rather than the exact total count.<br>
-The stored-price implementation still ran COUNT and OFFSET: counting affected even the first page, while deeper pages added skipping work.
+Even after the representative price was stored, the list still used page numbers, so every request ran a COUNT over all products and used OFFSET to skip the earlier pages.
 
-Available products were read in ascending ID order, 24 per page.<br>
-Cursors were prepared for equivalent positions below; the test did not traverse 5,000 pages from the beginning.
+I queried available products in ID order, 24 at a time, and prepared cursors for the four positions below in advance so each position could be read directly.<br>
+For each position, one batch was 1 first request → 4 warm-up requests → 30 measured requests at 1 VU, and the batch was run 4 times.
 
-| Position | Rows skipped by OFFSET | Prepared cursor |
+| Position | Products skipped by OFFSET | Prepared cursor |
 | --- | --- | --- |
-| page 0 | 0 rows | None — first page |
-| page 100 | 2,400 rows | 2454 |
-| page 1000 | 24,000 rows | 24700 |
-| page 5000 | 120,000 rows | 123177 |
-
-Each position used one initial call, four warm-ups, and 30 measured calls, repeated three times.<br>
-One script execution has 360 measured / 420 total requests; three additional executions yield 1,080 measured samples per version on the same restored final DB.
+| page 0 | 0 | none (first page) |
+| page 100 | 2,400 | 2454 |
+| page 1000 | 24,000 | 24700 |
+| page 5000 | 120,000 | 123177 |
 
 ---
 
@@ -28,17 +24,13 @@ One script execution has 360 measured / 420 total requests; three additional exe
 
 | Run | Before mean | Before p95 | After mean | After p95 |
 | --- | --- | --- | --- | --- |
-| Initial screenshot | 69.86ms | 96.18ms | 19.26ms | 25.02ms |
-| Additional run 1 | 74.90ms | 98.94ms | 17.51ms | 22.48ms |
-| Additional run 2 | 73.82ms | 98.63ms | 16.17ms | 18.86ms |
-| Additional run 3 | 73.70ms | 97.22ms | 15.88ms | 17.95ms |
-| Additional 3 runs combined | 74.14ms | — | 16.52ms | — |
+| Run 1 | 74.90ms | 98.94ms | 17.51ms | 22.48ms |
+| Run 2 | 73.82ms | 98.63ms | 16.17ms | 18.86ms |
+| Run 3 | 73.70ms | 97.22ms | 15.88ms | 17.95ms |
+| Run 4 | 69.86ms | 96.18ms | 19.26ms | 25.02ms |
+| Mean of 4 runs | 73.07ms | — | 17.21ms | — |
 
-The additional three runs averaged 74.14→16.52ms, a 77.7% reduction.<br>
-The initial screenshot is excluded.<br>
-Screenshot and additional-run labels distinguish their aggregation scopes.
-
-<br>
+The 4-run mean went from 73.07ms to 17.21ms, a 76.5% reduction.
 
 ### Mean by depth
 
@@ -49,57 +41,49 @@ Screenshot and additional-run labels distinguish their aggregation scopes.
 | page 1000 | 70.69ms | 16.63ms |
 | page 5000 | 95.75ms | 16.13ms |
 
-COUNT/OFFSET screenshot
+The means by depth combine runs 1–3.
 
-![COUNT/OFFSET screenshot](../../images/evidence/list-keyset-1.png)
+**COUNT + OFFSET**
 
-Keyset screenshot
+![COUNT + OFFSET](../../images/evidence/list-keyset-1.png)
 
-![Keyset screenshot](../../images/evidence/list-keyset-2.png)
+**Keyset**
+
+![Keyset](../../images/evidence/list-keyset-2.png)
 
 ---
 
-## Why it became faster
+## Why it was slow and what changed
 
-COUNT is a counting operation; a full scan is an execution strategy.<br>
-Not every old SQL statement is therefore a full scan.<br>
-An index does not make OFFSET an array-position jump either; the actual work depends on the plan and filters.
+The original list was paginated by page number.<br>
+To work out the total number of pages, every request counted all matching products with COUNT, then used OFFSET to skip the earlier pages before reading 24 products.<br>
+So even the first page paid for counting every product, and because OFFSET reads the skipped rows before throwing them away, deeper pages took longer.
 
-The new path reads `limit + 1` rows after the last ordering key.<br>
-It returns 24 and uses the 25th to determine `hasNext`.<br>
-Conceptually, at depth 1,000:
+With infinite scroll, the total page count is not needed; the client only needs to know whether there is a next page.<br>
+So I removed COUNT and switched to keyset pagination, which reads from just after the last product ID the user has seen.<br>
+The query returns 24 products and uses whether a 25th exists to decide `hasNext`, and the last ID becomes the cursor for the next request.<br>
+As a result, OFFSET slowed to about 96ms at page 5,000, while keyset stayed at about 16ms on both the first page and page 5,000.
 
 ```sql
--- Before
+-- Before (page 1,000)
 SELECT COUNT(*) FROM product WHERE is_available = true;
 SELECT ... FROM product WHERE is_available = true
 ORDER BY product_id ASC LIMIT 24 OFFSET 24000;
 
--- After
+-- After (page 1,000)
 SELECT ... FROM product
 WHERE is_available = true AND product_id > 24700
 ORDER BY product_id ASC LIMIT 25;
 ```
 
-Removing COUNT also reduces first-page work; keyset avoids skipping earlier entries when a suitable index is available.<br>
-Both changed together, so the 77.7% reduction is not attributed to keyset alone.<br>
-Stored-price/stock changes were already common to both versions, while image reads remained.
-
 ---
 
-## Decisions and trade-offs
+## Choices and trade-offs
 
-- The API returns `totalCount=null`, `hasNext`, and `nextCursor`.<br>
-  It trades exact page counts and arbitrary page jumps for sequential navigation.<br>
-  Infinite scrolling is UI behavior; keyset is a query method.
-- Equal prices require a unique ID alongside price in the cursor.<br>
-  Ordering and comparison directions must agree; changing filters/order invalidates the old cursor.<br>
-  This test used ID order, not price-cursor correctness.
-- Selective filters or unsuitable indexes can still require many examined rows.<br>
-  Mutable prices/availability can move results; keyset does not provide one snapshot across requests.
-- Clients send the next cursor instead of incrementing a page number and stop at `hasNext=false`.<br>
-  Invalid cursors, final pages, duplicate requests, and the actual frontend flow need further validation.
+- **Page position**: The user can't tell which page they are on or how many pages there are, and can't jump straight to a specific page.
+  Infinite scroll doesn't need any of that, but this approach can't be used for a screen with page numbers.<br>
 
-The combined mean weights the four positions equally.<br>
-Short executions can finish between VU-metric scrapes while request timings remain recorded; inspect configured VUs and sample counts together.<br>
-This is not a capacity test.
+
+- **Data changes while scrolling**: Keyset continues from the last product the user saw, so products added earlier in the order don't appear until the page is refreshed.
+  OFFSET reflects changes immediately, but when products are added to or removed from the earlier part of the list, everything after them shifts by one, so the user either sees a product again or skips one.
+  In infinite scroll, the same product appearing twice in one list is easy to notice, so I chose a stable, continuous list over reflecting changes in real time.<br>

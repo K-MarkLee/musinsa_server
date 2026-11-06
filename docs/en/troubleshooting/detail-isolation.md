@@ -1,53 +1,49 @@
-# Product detail: isolating waiting and DTO assembly with mocks
+# Product detail: narrowing down waits and DTO assembly with mocks
 
-[한국어](../../ko/troubleshooting/detail-isolation.md) · [README](../../../README.md) · [Measurement setup](../environment.md)
-
----
-
-## Starting point: a long Security span
-
-Detail throughput plateaued around 2,000 RPS, while Jaeger showed a long Security span.<br>
-I replaced request layers with mocks to determine whether authentication itself was slow or whether the enclosing span included downstream waiting and processing.
+[한국어](../../ko/troubleshooting/detail-isolation.md) · [README](../../../README.md)
 
 ---
 
-## Measurements with layers replaced
+## Problem
 
-| Stage | Request path | Measured RPS | Finding |
-| --- | --- | ---: | --- |
-| 1 | Mock Controller without Security | 41,000 | The simple response path handled substantially more requests than the detail API. |
-| 2 | Mock Controller with Security | 42,000 | Throughput remained high with Security, directing the investigation downstream. |
-| 3 | Mock Service with Dummy DB | 66,000 | Replacing real business and DB work substantially increased throughput. |
-| 4 | Real detail Service | 2,000 | The investigation narrowed to relationship reads and response assembly. |
-
-Each row replaced a different part of the request path.<br>
-Starting from the outer layers directed attention to service-entry waiting and real detail processing instead of changing Security itself.
+Detail throughput stopped at about 2,000 RPS, and in Jaeger the Security span looked the longest.<br>
+To separate whether authentication itself was slow or something running inside it was, I replaced the request path with mocks one layer at a time, starting from the outside, and measured each step.
 
 ---
 
-## Two areas identified with Jaeger and code
+## Measurements by layer
 
-The first was waiting before the service body.<br>
-A long enclosing Security span did not mean authentication consumed its entire duration.<br>
-Child-span start times and connection-pool metrics exposed waiting before application processing began.
+| Step | Path tested | Measured RPS |
+| --- | --- | ---: |
+| 1 | Mock controller, without Security | 41,000 |
+| 2 | Mock controller, with Security | 42,000 |
+| 3 | Mock service, dummy DB | 66,000 |
+| 4 | Real detail service | 2,000 |
 
-The second was assembling retrieved data into DTOs.<br>
-Walking product, option, image, and option-value relationships combined lazy loading with repeated transformations.<br>
-Fetch-joining multiple to-many relationships could also multiply rows, so reducing query count alone did not address the full read and assembly cost.
-
----
-
-## Change: restructure reads and assembly
-
-I separated product/option/inventory reads, image reads, and option-value mappings, then combined the results into the response.<br>
-Repeated color/size dictionary values were fetched in batches; price and inventory remained DB reads.
-
-The [detail improvement](../improvements/product-detail.md) documents repeated measurements of this redesign and the 70.14→8.91ms result.<br>
-Follow-up [Hikari tuning](hikari.md) examined connection-acquisition waiting under concurrency, and the [Tomcat comparison](tomcat.md) examined worker counts.
+Throughput didn't change with Security included, so authentication wasn't the cause.<br>
+As soon as the path switched to the real service and DB, throughput fell to 2,000 RPS, which narrowed the cause down to the detail service itself.
 
 ---
 
-## Decision
+## What I found
 
-Instead of identifying the cause from the name of the longest enclosing span, I narrowed the executed path with mocks and connected child spans to the implementation.<br>
-This focused the changes on connection waiting, relationship reads, and DTO assembly.
+The first cause was waiting before the service was entered.<br>
+The Security span was long, but judging from when its child spans started and from the connection pool metrics, most of that time wasn't authentication work; it was waiting for a DB connection before the service method ran.
+
+The second was response assembly.<br>
+The response was built by lazily loading the product, option, image, and option-value relationships one at a time, which repeated queries and conversions, and joining several relationships at once would have multiplied the rows.
+
+---
+
+## Fix
+
+I split the relationships into separate queries by the unit they were needed in, and changed the color and size dictionary to be read in one call.<br>
+This brought the detail mean from 69.47ms to 9.11ms. → [Product detail improvement](../improvements/product-detail.md)<br>
+DB connection waits were covered next in the [Hikari experiment](hikari.md) and the [Tomcat experiment](tomcat.md).
+
+---
+
+## Assessment
+
+Rather than tuning the Security config because it had the longest span, I swapped the path out one layer at a time to find the cause.<br>
+That let me focus on the real causes: connection waits, how relationships were loaded, and how the response was assembled.
